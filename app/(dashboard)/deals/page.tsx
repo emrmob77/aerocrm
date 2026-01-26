@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 // Types
 interface Deal {
@@ -377,10 +378,11 @@ export default function DealsPage() {
 // Deal Card Component
 function DealCard({ deal, onDragStart, hasLeftBorder }: { deal: Deal; onDragStart: (deal: Deal) => void; hasLeftBorder?: boolean }) {
   return (
-    <div 
+    <Link 
+      href={`/deals/${deal.id}`}
       draggable
       onDragStart={() => onDragStart(deal)}
-      className={`bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group ${hasLeftBorder ? 'border-l-4 border-l-primary' : ''}`}
+      className={`block bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group ${hasLeftBorder ? 'border-l-4 border-l-primary' : ''}`}
     >
       <div className="flex justify-between items-start mb-2">
         <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">{deal.company}</span>
@@ -420,17 +422,18 @@ function DealCard({ deal, onDragStart, hasLeftBorder }: { deal: Deal; onDragStar
           </div>
         )}
       </div>
-    </div>
+    </Link>
   )
 }
 
 // Won Deal Card Component (Special styling)
 function WonDealCard({ deal, onDragStart }: { deal: Deal; onDragStart: (deal: Deal) => void }) {
   return (
-    <div 
+    <Link 
+      href={`/deals/${deal.id}`}
       draggable
       onDragStart={() => onDragStart(deal)}
-      className="bg-emerald-50/50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+      className="block bg-emerald-50/50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
     >
       <div className="absolute -right-2 -top-2 text-emerald-200/50 dark:text-emerald-900/20 pointer-events-none">
         <span className="material-symbols-outlined text-[80px]">check_circle</span>
@@ -463,7 +466,7 @@ function WonDealCard({ deal, onDragStart }: { deal: Deal; onDragStart: (deal: De
           </div>
         )}
       </div>
-    </div>
+    </Link>
   )
 }
 

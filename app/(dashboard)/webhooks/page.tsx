@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 // Webhook data
 const webhooksData = [
@@ -11,10 +12,10 @@ const webhooksData = [
 
 // Settings menu items
 const settingsMenu = [
-  { icon: 'person', label: 'Profil', active: false },
-  { icon: 'group', label: 'Ekip Yönetimi', active: false },
-  { icon: 'api', label: 'Webhooks', active: true },
-  { icon: 'security', label: 'API Anahtarları', active: false },
+  { icon: 'person', label: 'Profil', href: '/settings', active: false },
+  { icon: 'group', label: 'Ekip Yönetimi', href: '/settings/team', active: false },
+  { icon: 'api', label: 'Webhooks', href: '/webhooks', active: true },
+  { icon: 'security', label: 'API Anahtarları', href: '/settings/developer', active: false },
 ]
 
 export default function WebhooksPage() {
@@ -56,9 +57,9 @@ export default function WebhooksPage() {
             <h3 className="text-xs font-bold text-[#64748b] uppercase tracking-wider mb-4 px-2">Ayarlar</h3>
             <nav className="space-y-1">
               {settingsMenu.map((item, index) => (
-                <a
+                <Link
                   key={index}
-                  href="#"
+                  href={item.href}
                   className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                     item.active
                       ? 'text-primary bg-primary/5 border border-primary/10 font-bold'
@@ -67,7 +68,7 @@ export default function WebhooksPage() {
                 >
                   <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
                   {item.label}
-                </a>
+                </Link>
               ))}
             </nav>
           </div>
@@ -83,10 +84,19 @@ export default function WebhooksPage() {
               </div>
               <h1 className="text-2xl font-extrabold text-[#0f172a] dark:text-white tracking-tight">Webhook Yapılandırması</h1>
             </div>
-            <button className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md transition-all">
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              Yeni Webhook Ekle
-            </button>
+            <div className="flex items-center gap-3">
+              <Link 
+                href="/webhooks/logs"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-[#e2e8f0] dark:border-slate-600 text-[#0f172a] dark:text-white text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+              >
+                <span className="material-symbols-outlined text-[20px]">history</span>
+                Gönderim Logları
+              </Link>
+              <button className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md transition-all">
+                <span className="material-symbols-outlined text-[20px]">add</span>
+                Yeni Webhook Ekle
+              </button>
+            </div>
           </div>
 
           {/* Webhooks Table */}
