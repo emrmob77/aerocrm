@@ -6,11 +6,11 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
 
 ## Görevler
 
-- [ ] 1. Proje Kurulumu ve Temel Altyapı
-  - Next.js 14 projesi oluştur (App Router)
-  - TypeScript, Tailwind CSS, ESLint, Prettier konfigürasyonu
-  - Supabase client kurulumu ve environment variables
-  - Temel klasör yapısı oluştur (app, components, lib, types, hooks)
+- [x] 1. Proje Kurulumu ve Temel Altyapı ✅
+  - Next.js 14 projesi oluştur (App Router) ✅
+  - TypeScript, Tailwind CSS, ESLint, Prettier konfigürasyonu ✅
+  - Supabase client kurulumu ve environment variables ✅
+  - Temel klasör yapısı oluştur (app, components, lib, types, hooks) ✅
   - _Gereksinimler: Tüm temel gereksinimler için altyapı_
 
 - [ ]* 1.1 Test ortamı kurulumu
