@@ -96,6 +96,14 @@ export default function DealsPage() {
       <div className="px-6 lg:px-10 py-6 space-y-4 bg-[#f5f6f8] dark:bg-[#101722]">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-[#0d121c] dark:text-white text-3xl font-black tracking-tight">Anlaşmalar</h1>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/deals/new"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+            >
+              <span className="material-symbols-outlined text-lg">add</span>
+              Yeni Anlaşma
+            </Link>
           <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
             <button 
               onClick={() => setViewMode('kanban')}
@@ -119,6 +127,7 @@ export default function DealsPage() {
               <span className="material-symbols-outlined text-[18px]">list</span>
               Liste
             </button>
+          </div>
           </div>
         </div>
         
