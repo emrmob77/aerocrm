@@ -2,19 +2,32 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { usePathname } from 'next/navigation'
 
-interface HeaderProps {
-  sidebarCollapsed?: boolean
+// Breadcrumb mapping
+const pageTitles: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/deals': 'Anlaşmalar',
+  '/contacts': 'Kişiler',
+  '/sales': 'Satışlar',
+  '/reports': 'Raporlar',
+  '/proposals': 'Teklifler',
+  '/analytics': 'Analitik',
+  '/webhooks': 'Webhooks',
+  '/integrations': 'Entegrasyonlar',
+  '/settings': 'Ayarlar',
 }
 
-export function Header({ sidebarCollapsed = false }: HeaderProps) {
+export function Header() {
+  const pathname = usePathname()
   const [showSearch, setShowSearch] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
   const notificationsRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
+
+  const currentPageTitle = pageTitles[pathname] || 'Sayfa'
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -53,54 +66,65 @@ export function Header({ sidebarCollapsed = false }: HeaderProps) {
   }, [])
 
   const notifications = [
-    { id: 1, message: 'ABC Ltd teklifi görüntüledi', time: '5 dk önce', read: false },
-    { id: 2, message: 'Yeni anlaşma eklendi', time: '1 saat önce', read: false },
-    { id: 3, message: 'XYZ Co teklifi imzaladı 🎉', time: '2 saat önce', read: true },
+    { id: 1, message: 'Teklif gönderildi - Global Teknoloji A.Ş.', time: '10 dk önce', read: false },
+    { id: 2, message: 'Anlaşma kapatıldı - TeknoPark Ltd.', time: '2 saat önce', read: false },
+    { id: 3, message: 'Toplantı planlandı - Arkas Lojistik', time: '4 saat önce', read: true },
   ]
 
   const unreadCount = notifications.filter(n => !n.read).length
 
   return (
-    <header className={cn(
-      'fixed top-0 right-0 z-30 h-16 bg-white dark:bg-aero-slate-800 border-b border-aero-slate-200 dark:border-aero-slate-700 flex items-center justify-between px-6 transition-all duration-300',
-      sidebarCollapsed ? 'left-16' : 'left-60'
-    )}>
+    <header className="flex items-center justify-between px-8 py-4 bg-white dark:bg-[#161e2b] border-b border-[#e7ebf4] dark:border-gray-800">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm">
+        <Link href="/dashboard" className="text-[#48679d] dark:text-gray-400 hover:text-primary transition-colors">
+          Ana Sayfa
+        </Link>
+        <span className="text-[#48679d] dark:text-gray-600">/</span>
+        <span className="text-[#0d121c] dark:text-white font-semibold">{currentPageTitle}</span>
+      </div>
+
       {/* Search */}
-      <div ref={searchRef} className="relative flex-1 max-w-md">
-        <button
-          onClick={() => setShowSearch(true)}
-          className="flex items-center gap-3 w-full px-4 py-2 rounded-lg border border-aero-slate-200 dark:border-aero-slate-600 text-aero-slate-400 hover:border-aero-slate-300 dark:hover:border-aero-slate-500 transition-colors"
-        >
-          <span className="material-symbols-outlined text-xl">search</span>
-          <span className="text-sm">Ara...</span>
-          <kbd className="ml-auto hidden sm:inline-flex items-center gap-1 px-2 py-0.5 bg-aero-slate-100 dark:bg-aero-slate-700 rounded text-xs text-aero-slate-500">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-        </button>
+      <div ref={searchRef} className="flex-1 max-w-lg mx-8">
+        <div className="relative group">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <span className="material-symbols-outlined text-[#48679d] dark:text-gray-400">search</span>
+          </div>
+          <input
+            onClick={() => setShowSearch(true)}
+            className="block w-full pl-10 pr-12 py-2 border-none bg-[#f5f6f8] dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary/50 text-sm placeholder:text-[#48679d] transition-all"
+            placeholder="Müşteri, teklif veya rapor ara..."
+            type="text"
+            readOnly
+          />
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-xs font-semibold text-gray-400 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">⌘K</kbd>
+          </div>
+        </div>
 
         {/* Search Modal */}
         {showSearch && (
           <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-20 z-50">
-            <div className="w-full max-w-2xl bg-white dark:bg-aero-slate-800 rounded-xl shadow-2xl overflow-hidden animate-scale-in">
-              <div className="p-4 border-b border-aero-slate-200 dark:border-aero-slate-700">
+            <div className="w-full max-w-2xl bg-white dark:bg-[#161e2b] rounded-xl shadow-2xl overflow-hidden">
+              <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800">
                 <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-xl text-aero-slate-400">search</span>
+                  <span className="material-symbols-outlined text-xl text-[#48679d]">search</span>
                   <input
                     type="text"
-                    placeholder="Anlaşma, kişi veya teklif ara..."
-                    className="flex-1 bg-transparent border-none outline-none text-aero-slate-900 dark:text-white placeholder:text-aero-slate-400"
+                    placeholder="Müşteri, teklif veya rapor ara..."
+                    className="flex-1 bg-transparent border-none outline-none text-[#0d121c] dark:text-white placeholder:text-[#48679d]"
                     autoFocus
                   />
                   <button
                     onClick={() => setShowSearch(false)}
-                    className="px-2 py-1 text-xs text-aero-slate-500 hover:text-aero-slate-700 dark:hover:text-aero-slate-300"
+                    className="px-2 py-1 text-xs text-[#48679d] hover:text-[#0d121c] dark:hover:text-white"
                   >
                     ESC
                   </button>
                 </div>
               </div>
               <div className="p-4">
-                <p className="text-sm text-aero-slate-500">Aramaya başlamak için yazmaya başlayın...</p>
+                <p className="text-sm text-[#48679d]">Aramaya başlamak için yazmaya başlayın...</p>
               </div>
             </div>
           </div>
@@ -108,36 +132,25 @@ export function Header({ sidebarCollapsed = false }: HeaderProps) {
       </div>
 
       {/* Right Actions */}
-      <div className="flex items-center gap-2">
-        {/* Quick Actions */}
-        <Link
-          href="/deals/new"
-          className="hidden sm:flex items-center gap-2 px-3 py-2 bg-aero-blue-500 hover:bg-aero-blue-600 text-white rounded-lg text-sm font-medium transition-colors"
-        >
-          <span className="material-symbols-outlined text-lg">add</span>
-          Yeni Anlaşma
-        </Link>
-
+      <div className="flex items-center gap-4">
         {/* Notifications */}
         <div ref={notificationsRef} className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2 rounded-lg text-aero-slate-500 hover:bg-aero-slate-100 dark:hover:bg-aero-slate-700 transition-colors"
+            className="relative p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
           >
-            <span className="material-symbols-outlined text-xl">notifications</span>
+            <span className="material-symbols-outlined">notifications</span>
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 bg-aero-red-500 text-white text-xs font-medium rounded-full flex items-center justify-center">
-                {unreadCount}
-              </span>
+              <span className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-red-500"></span>
             )}
           </button>
 
           {/* Notifications Dropdown */}
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-aero-slate-800 rounded-xl shadow-xl border border-aero-slate-200 dark:border-aero-slate-700 overflow-hidden animate-fade-in">
-              <div className="p-4 border-b border-aero-slate-200 dark:border-aero-slate-700 flex items-center justify-between">
-                <h3 className="font-semibold text-aero-slate-900 dark:text-white">Bildirimler</h3>
-                <button className="text-sm text-aero-blue-500 hover:text-aero-blue-600">
+            <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-[#161e2b] rounded-xl shadow-xl border border-[#e7ebf4] dark:border-gray-800 overflow-hidden z-50">
+              <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800 flex items-center justify-between">
+                <h3 className="font-bold text-[#0d121c] dark:text-white">Bildirimler</h3>
+                <button className="text-sm text-primary hover:underline font-semibold">
                   Tümünü okundu işaretle
                 </button>
               </div>
@@ -145,20 +158,17 @@ export function Header({ sidebarCollapsed = false }: HeaderProps) {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={cn(
-                      'p-4 border-b border-aero-slate-100 dark:border-aero-slate-700 last:border-0 hover:bg-aero-slate-50 dark:hover:bg-aero-slate-700/50 cursor-pointer transition-colors',
-                      !notification.read && 'bg-aero-blue-50/50 dark:bg-aero-blue-900/10'
-                    )}
+                    className={`p-4 border-b border-[#e7ebf4] dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors ${!notification.read ? 'bg-primary/5' : ''}`}
                   >
                     <div className="flex items-start gap-3">
                       {!notification.read && (
-                        <span className="w-2 h-2 mt-2 rounded-full bg-aero-blue-500 flex-shrink-0" />
+                        <span className="w-2 h-2 mt-2 rounded-full bg-primary flex-shrink-0" />
                       )}
                       <div className="flex-1">
-                        <p className="text-sm text-aero-slate-900 dark:text-white">
+                        <p className="text-sm text-[#0d121c] dark:text-white font-medium">
                           {notification.message}
                         </p>
-                        <p className="text-xs text-aero-slate-500 mt-1">
+                        <p className="text-xs text-[#48679d] mt-1">
                           {notification.time}
                         </p>
                       </div>
@@ -166,70 +176,61 @@ export function Header({ sidebarCollapsed = false }: HeaderProps) {
                   </div>
                 ))}
               </div>
-              <div className="p-3 border-t border-aero-slate-200 dark:border-aero-slate-700">
-                <Link
-                  href="/notifications"
-                  className="block text-center text-sm text-aero-blue-500 hover:text-aero-blue-600"
-                >
-                  Tüm bildirimleri gör
-                </Link>
-              </div>
             </div>
           )}
         </div>
+
+        {/* Settings */}
+        <button className="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+          <span className="material-symbols-outlined">settings</span>
+        </button>
+
+        {/* Divider */}
+        <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
 
         {/* User Menu */}
         <div ref={userMenuRef} className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-aero-slate-100 dark:hover:bg-aero-slate-700 transition-colors"
+            className="flex items-center gap-3"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white font-medium text-sm">
-              E
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-bold text-[#0d121c] dark:text-white">Ahmet Yılmaz</p>
+              <p className="text-xs text-[#48679d] dark:text-gray-400">Satış Müdürü</p>
             </div>
-            <span className="hidden sm:block text-sm font-medium text-aero-slate-700 dark:text-aero-slate-300">
-              Emrah
-            </span>
-            <span className="material-symbols-outlined text-lg text-aero-slate-400">
-              expand_more
-            </span>
+            <div className="size-10 rounded-full border-2 border-primary p-0.5">
+              <div className="w-full h-full rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                AY
+              </div>
+            </div>
           </button>
 
           {/* User Dropdown */}
           {showUserMenu && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-aero-slate-800 rounded-xl shadow-xl border border-aero-slate-200 dark:border-aero-slate-700 overflow-hidden animate-fade-in">
-              <div className="p-4 border-b border-aero-slate-200 dark:border-aero-slate-700">
-                <p className="font-medium text-aero-slate-900 dark:text-white">Emrah</p>
-                <p className="text-sm text-aero-slate-500">emrah@example.com</p>
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#161e2b] rounded-xl shadow-xl border border-[#e7ebf4] dark:border-gray-800 overflow-hidden z-50">
+              <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800">
+                <p className="font-bold text-[#0d121c] dark:text-white">Ahmet Yılmaz</p>
+                <p className="text-sm text-[#48679d]">ahmet@aerocrm.com</p>
               </div>
               <div className="py-2">
                 <Link
                   href="/settings"
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-aero-slate-700 dark:text-aero-slate-300 hover:bg-aero-slate-100 dark:hover:bg-aero-slate-700 transition-colors"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#0d121c] dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <span className="material-symbols-outlined text-xl">settings</span>
+                  <span className="material-symbols-outlined">settings</span>
                   Hesap Ayarları
                 </Link>
                 <Link
                   href="/settings/team"
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-aero-slate-700 dark:text-aero-slate-300 hover:bg-aero-slate-100 dark:hover:bg-aero-slate-700 transition-colors"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#0d121c] dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <span className="material-symbols-outlined text-xl">group</span>
+                  <span className="material-symbols-outlined">group</span>
                   Takım Yönetimi
                 </Link>
-                <Link
-                  href="/settings/billing"
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-aero-slate-700 dark:text-aero-slate-300 hover:bg-aero-slate-100 dark:hover:bg-aero-slate-700 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-xl">credit_card</span>
-                  Faturalama
-                </Link>
               </div>
-              <div className="border-t border-aero-slate-200 dark:border-aero-slate-700 py-2">
-                <button
-                  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-aero-red-500 hover:bg-aero-red-50 dark:hover:bg-aero-red-900/20 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-xl">logout</span>
+              <div className="border-t border-[#e7ebf4] dark:border-gray-800 py-2">
+                <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <span className="material-symbols-outlined">logout</span>
                   Çıkış Yap
                 </button>
               </div>

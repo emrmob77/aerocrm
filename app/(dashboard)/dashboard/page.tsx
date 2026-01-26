@@ -1,259 +1,296 @@
 'use client'
 
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
 
 // Mock data - will be replaced with real data from Supabase
 const metrics = [
   { 
     label: 'Açık Teklifler', 
     value: '12', 
-    change: '+3', 
-    trend: 'up', 
-    icon: 'description',
-    color: 'text-aero-blue-500'
+    badge: '+2 yeni',
+    badgeColor: 'text-green-500',
+    icon: 'assignment',
+    iconBg: 'bg-blue-50 dark:bg-blue-900/30',
+    iconColor: 'text-blue-600',
+    badgeType: 'Aktif'
   },
   { 
     label: 'Bu Ay Kazanılan', 
-    value: '₺45,000', 
-    change: '+12%', 
-    trend: 'up', 
+    value: '₺45.000', 
+    badge: '+8.4%',
+    badgeColor: 'text-green-500',
     icon: 'payments',
-    color: 'text-aero-green-500'
+    iconBg: 'bg-green-50 dark:bg-green-900/30',
+    iconColor: 'text-green-600',
+    badgeType: null
   },
   { 
     label: 'Dönüşüm Oranı', 
     value: '34%', 
-    change: '+5%', 
-    trend: 'up', 
+    badge: '+2%',
+    badgeColor: 'text-green-500',
     icon: 'trending_up',
-    color: 'text-aero-amber-500'
+    iconBg: 'bg-purple-50 dark:bg-purple-900/30',
+    iconColor: 'text-purple-600',
+    badgeType: null
   },
   { 
     label: 'Pipeline Değeri', 
-    value: '₺120,000', 
-    change: '-', 
-    trend: 'neutral', 
-    icon: 'monitoring',
-    color: 'text-aero-slate-500'
+    value: '₺120.000', 
+    badge: null,
+    badgeColor: '',
+    icon: 'account_tree',
+    iconBg: 'bg-orange-50 dark:bg-orange-900/30',
+    iconColor: 'text-orange-600',
+    badgeType: 'Toplam'
   },
 ]
 
 const recentActivities = [
   { 
     id: 1, 
-    type: 'proposal_viewed',
-    message: 'ABC Ltd teklifi görüntüledi', 
-    time: '5 dakika önce',
-    icon: 'visibility',
-    iconBg: 'bg-aero-blue-100 dark:bg-aero-blue-900/30',
-    iconColor: 'text-aero-blue-500'
+    title: 'Teklif gönderildi - Global Teknoloji A.Ş.',
+    description: 'Bulut hizmetleri paketi için yeni revizyon iletildi.',
+    time: '10 dk önce',
+    icon: 'mail',
+    iconBg: 'bg-blue-100 dark:bg-blue-900/40',
+    iconColor: 'text-primary',
+    hasLine: true
   },
   { 
     id: 2, 
-    type: 'deal_won',
-    message: 'XYZ Co anlaşması kazanıldı! 🎉', 
-    time: '1 saat önce',
-    icon: 'emoji_events',
-    iconBg: 'bg-aero-green-100 dark:bg-aero-green-900/30',
-    iconColor: 'text-aero-green-500'
+    title: 'Anlaşma kapatıldı - TeknoPark Ltd.',
+    description: '₺15.000 değerindeki proje onayı alındı.',
+    time: '2 saat önce',
+    icon: 'check_circle',
+    iconBg: 'bg-green-100 dark:bg-green-900/40',
+    iconColor: 'text-green-600',
+    hasLine: true
   },
   { 
     id: 3, 
-    type: 'proposal_sent',
-    message: 'DEF Şirketi için teklif gönderildi', 
-    time: '2 saat önce',
-    icon: 'send',
-    iconBg: 'bg-aero-amber-100 dark:bg-aero-amber-900/30',
-    iconColor: 'text-aero-amber-500'
+    title: 'Toplantı planlandı - Arkas Lojistik',
+    description: 'Yarın saat 14:00\'da sunum randevusu oluşturuldu.',
+    time: '4 saat önce',
+    icon: 'event',
+    iconBg: 'bg-orange-100 dark:bg-orange-900/40',
+    iconColor: 'text-orange-600',
+    hasLine: false
   },
-  { 
-    id: 4, 
-    type: 'contact_added',
-    message: 'Yeni kişi eklendi: Mehmet Demir', 
-    time: '3 saat önce',
-    icon: 'person_add',
-    iconBg: 'bg-aero-slate-100 dark:bg-aero-slate-700',
-    iconColor: 'text-aero-slate-500'
-  },
-  { 
-    id: 5, 
-    type: 'proposal_signed',
-    message: 'GHI Ltd teklifi imzaladı', 
-    time: '5 saat önce',
-    icon: 'draw',
-    iconBg: 'bg-aero-green-100 dark:bg-aero-green-900/30',
-    iconColor: 'text-aero-green-500'
-  },
+]
+
+const webhookActivities = [
+  { endpoint: '/api/v1/deals', method: 'POST', status: '200 OK', statusColor: 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-500', duration: '142ms', time: 'Az önce' },
+  { endpoint: '/api/v1/invoices', method: 'POST', status: '201 Created', statusColor: 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-500', duration: '210ms', time: '2 dk önce' },
+  { endpoint: '/api/v1/auth', method: 'POST', status: '401 Unauth', statusColor: 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-500', duration: '45ms', time: '5 dk önce' },
 ]
 
 const quickActions = [
-  { label: 'Yeni Anlaşma', href: '/deals/new', icon: 'add_circle', color: 'bg-aero-blue-500' },
-  { label: 'Teklif Oluştur', href: '/proposals/new', icon: 'description', color: 'bg-aero-green-500' },
-  { label: 'Kişi Ekle', href: '/contacts/new', icon: 'person_add', color: 'bg-aero-amber-500' },
-  { label: 'Rapor Al', href: '/analytics', icon: 'download', color: 'bg-aero-slate-500' },
+  { label: 'Yeni Anlaşma', icon: 'add_task', href: '/deals/new' },
+  { label: 'Teklif Oluştur', icon: 'note_add', href: '/proposals/new' },
+  { label: 'Müşteri Ekle', icon: 'person_add', href: '/contacts/new' },
+  { label: 'Rapor Al', icon: 'analytics', href: '/reports' },
 ]
 
-// Get greeting based on time
-function getGreeting() {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'Günaydın'
-  if (hour < 18) return 'İyi günler'
-  return 'İyi akşamlar'
-}
-
 export default function DashboardPage() {
-  const greeting = getGreeting()
-
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
-      <div className="bg-gradient-primary rounded-2xl p-8 text-white">
-        <h1 className="text-2xl font-bold mb-2">
-          {greeting}, Emrah! 👋
-        </h1>
-        <p className="text-white/80">
-          Bugün 3 teklif yanıt bekliyor ve 2 anlaşma takip gerektiriyor.
+      <div className="flex flex-col gap-1">
+        <h2 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">
+          Günaydın, Ahmet!
+        </h2>
+        <p className="text-[#48679d] dark:text-gray-400">
+          İşte bugünkü satış performansına ve sistem sağlığına dair genel bakış.
         </p>
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {metrics.map((metric, index) => (
           <div 
             key={index} 
-            className="card p-6 hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-[#161e2b] p-6 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm"
           >
-            <div className="flex items-start justify-between mb-4">
-              <span className={cn('material-symbols-outlined text-2xl', metric.color)}>
-                {metric.icon}
-              </span>
-              {metric.trend !== 'neutral' && (
-                <span className={cn(
-                  'flex items-center text-xs font-medium',
-                  metric.trend === 'up' ? 'text-aero-green-500' : 'text-aero-red-500'
-                )}>
-                  <span className="material-symbols-outlined text-sm">
-                    {metric.trend === 'up' ? 'arrow_upward' : 'arrow_downward'}
-                  </span>
-                  {metric.change}
-                </span>
+            <div className="flex items-center justify-between mb-4">
+              <div className={`p-2 ${metric.iconBg} ${metric.iconColor} rounded-lg`}>
+                <span className="material-symbols-outlined">{metric.icon}</span>
+              </div>
+              {metric.badgeType && (
+                <span className="text-xs font-semibold text-gray-400">{metric.badgeType}</span>
+              )}
+              {metric.badge && !metric.badgeType && (
+                <span className={`text-xs font-semibold ${metric.badgeColor}`}>{metric.badge}</span>
               )}
             </div>
-            <p className="text-2xl font-bold text-aero-slate-900 dark:text-white mb-1">
-              {metric.value}
-            </p>
-            <p className="text-sm text-aero-slate-500">
-              {metric.label}
-            </p>
+            <h3 className="text-sm font-medium text-[#48679d] dark:text-gray-400">{metric.label}</h3>
+            <div className="flex items-baseline gap-2 mt-1">
+              <p className="text-2xl font-bold text-[#0d121c] dark:text-white">{metric.value}</p>
+              {metric.badge && metric.badgeType === 'Aktif' && (
+                <span className={`text-xs ${metric.badgeColor} font-bold`}>{metric.badge}</span>
+              )}
+            </div>
           </div>
         ))}
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity - 2 columns */}
-        <div className="lg:col-span-2 card">
-          <div className="p-6 border-b border-aero-slate-200 dark:border-aero-slate-700">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-aero-slate-900 dark:text-white">
-                Son Aktiviteler
-              </h2>
-              <Link 
-                href="/activities" 
-                className="text-sm text-aero-blue-500 hover:text-aero-blue-600 font-medium"
-              >
-                Tümünü Gör
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column - 2/3 width */}
+        <div className="lg:col-span-2 flex flex-col gap-8">
+          {/* Recent Activity */}
+          <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-[#e7ebf4] dark:border-gray-800 flex justify-between items-center">
+              <h3 className="font-bold text-lg text-[#0d121c] dark:text-white">Son Aktivite</h3>
+              <button className="text-sm text-primary font-semibold hover:underline">Tümünü Gör</button>
+            </div>
+            <div className="p-6">
+              <ul className="space-y-6">
+                {recentActivities.map((activity) => (
+                  <li key={activity.id} className="flex gap-4">
+                    <div className="relative">
+                      <div className={`size-10 rounded-full ${activity.iconBg} flex items-center justify-center ${activity.iconColor} z-10 relative`}>
+                        <span className="material-symbols-outlined text-sm">{activity.icon}</span>
+                      </div>
+                      {activity.hasLine && (
+                        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-0.5 h-full bg-gray-100 dark:bg-gray-800 -z-0"></div>
+                      )}
+                    </div>
+                    <div className={`flex-1 ${activity.hasLine ? 'pb-4' : ''}`}>
+                      <div className="flex justify-between">
+                        <p className="text-sm font-bold text-[#0d121c] dark:text-white">{activity.title}</p>
+                        <span className="text-xs text-[#48679d] dark:text-gray-400">{activity.time}</span>
+                      </div>
+                      <p className="text-sm text-[#48679d] dark:text-gray-400 mt-1">{activity.description}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Webhook Activity */}
+          <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-[#e7ebf4] dark:border-gray-800 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">webhook</span>
+                <h3 className="font-bold text-lg text-[#0d121c] dark:text-white">Webhook Aktivitesi</h3>
+              </div>
+              <span className="px-2.5 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-bold rounded-full flex items-center gap-1">
+                <span className="size-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                Canlı
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-[#f5f6f8] dark:bg-gray-800/50">
+                  <tr>
+                    <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase">Endpoint</th>
+                    <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase">Durum</th>
+                    <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase">Süre</th>
+                    <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase">Zaman</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e7ebf4] dark:divide-gray-800">
+                  {webhookActivities.map((activity, index) => (
+                    <tr key={index}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[#0d121c] dark:text-gray-300">{activity.method}</span>
+                          <span className="text-sm font-medium text-[#0d121c] dark:text-white">{activity.endpoint}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold ${activity.statusColor}`}>
+                          {activity.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-[#48679d] dark:text-gray-400">{activity.duration}</td>
+                      <td className="px-6 py-4 text-sm text-[#48679d] dark:text-gray-400">{activity.time}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-4 bg-[#f5f6f8]/50 dark:bg-gray-800/30 border-t border-[#e7ebf4] dark:border-gray-800 text-center">
+              <Link href="/webhooks" className="text-xs font-bold text-primary hover:underline uppercase tracking-wider">
+                Log Kayıtlarını İncele
               </Link>
             </div>
           </div>
-          <div className="divide-y divide-aero-slate-100 dark:divide-aero-slate-700">
-            {recentActivities.map((activity) => (
-              <div 
-                key={activity.id} 
-                className="p-4 hover:bg-aero-slate-50 dark:hover:bg-aero-slate-700/50 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-4">
-                  <div className={cn('w-10 h-10 rounded-full flex items-center justify-center', activity.iconBg)}>
-                    <span className={cn('material-symbols-outlined text-xl', activity.iconColor)}>
-                      {activity.icon}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-aero-slate-900 dark:text-white">
-                      {activity.message}
-                    </p>
-                    <p className="text-xs text-aero-slate-500 mt-0.5">
-                      {activity.time}
-                    </p>
-                  </div>
-                  <span className="material-symbols-outlined text-aero-slate-400">
-                    chevron_right
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* Quick Actions - 1 column */}
-        <div className="card">
-          <div className="p-6 border-b border-aero-slate-200 dark:border-aero-slate-700">
-            <h2 className="text-lg font-semibold text-aero-slate-900 dark:text-white">
-              Hızlı Aksiyonlar
-            </h2>
+        {/* Right Column - 1/3 width */}
+        <div className="flex flex-col gap-8">
+          {/* Quick Actions */}
+          <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
+            <h3 className="font-bold text-lg text-[#0d121c] dark:text-white mb-6">Hızlı Aksiyonlar</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {quickActions.map((action, index) => (
+                <Link
+                  key={index}
+                  href={action.href}
+                  className="flex flex-col items-center justify-center p-4 rounded-xl bg-[#f5f6f8] dark:bg-gray-800 hover:bg-primary/5 hover:text-primary transition-all group border border-transparent hover:border-primary/20"
+                >
+                  <span className="material-symbols-outlined mb-2 group-hover:scale-110 transition-transform">{action.icon}</span>
+                  <span className="text-xs font-bold text-center">{action.label}</span>
+                </Link>
+              ))}
+            </div>
           </div>
-          <div className="p-6 grid grid-cols-2 gap-4">
-            {quickActions.map((action, index) => (
-              <Link
-                key={index}
-                href={action.href}
-                className="flex flex-col items-center justify-center p-4 rounded-xl border border-aero-slate-200 dark:border-aero-slate-700 hover:border-aero-blue-300 dark:hover:border-aero-blue-700 hover:shadow-md transition-all group"
-              >
-                <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center mb-3', action.color)}>
-                  <span className="material-symbols-outlined text-white text-2xl">
-                    {action.icon}
-                  </span>
-                </div>
-                <span className="text-sm font-medium text-aero-slate-700 dark:text-aero-slate-300 text-center group-hover:text-aero-blue-500 transition-colors">
-                  {action.label}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      {/* Pipeline Summary */}
-      <div className="card">
-        <div className="p-6 border-b border-aero-slate-200 dark:border-aero-slate-700">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-aero-slate-900 dark:text-white">
-              Pipeline Özeti
-            </h2>
-            <Link 
-              href="/deals" 
-              className="text-sm text-aero-blue-500 hover:text-aero-blue-600 font-medium"
-            >
-              Tüm Anlaşmalar
-            </Link>
-          </div>
-        </div>
-        <div className="p-6">
-          <div className="flex items-center gap-4 mb-4">
-            {[
-              { label: 'Aday', count: 8, value: '₺40,000', color: 'bg-aero-slate-400' },
-              { label: 'Teklif', count: 5, value: '₺35,000', color: 'bg-aero-blue-500' },
-              { label: 'Görüşme', count: 3, value: '₺25,000', color: 'bg-aero-amber-500' },
-              { label: 'Kazanıldı', count: 6, value: '₺45,000', color: 'bg-aero-green-500' },
-            ].map((stage, index) => (
-              <div key={index} className="flex-1 text-center">
-                <div className={cn('h-2 rounded-full mb-2', stage.color)} />
-                <p className="text-xs text-aero-slate-500">{stage.label}</p>
-                <p className="text-sm font-semibold text-aero-slate-900 dark:text-white">{stage.count}</p>
-                <p className="text-xs text-aero-slate-400">{stage.value}</p>
+          {/* System Health */}
+          <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-bold text-lg text-[#0d121c] dark:text-white">Sistem Sağlığı</h3>
+              <span className="material-symbols-outlined text-[#48679d] dark:text-gray-400 text-sm">info</span>
+            </div>
+            <div className="space-y-5">
+              <div>
+                <div className="flex justify-between text-xs font-bold mb-2">
+                  <span className="text-[#48679d] dark:text-gray-400">Webhook Başarı Oranı</span>
+                  <span className="text-green-500">99.8%</span>
+                </div>
+                <div className="w-full bg-gray-100 dark:bg-gray-800 h-2 rounded-full overflow-hidden">
+                  <div className="bg-green-500 h-full" style={{ width: '99.8%' }}></div>
+                </div>
               </div>
-            ))}
+              <div>
+                <div className="flex justify-between text-xs font-bold mb-2">
+                  <span className="text-[#48679d] dark:text-gray-400">Ortalama Yanıt Süresi</span>
+                  <span className="text-blue-500">124ms</span>
+                </div>
+                <div className="w-full bg-gray-100 dark:bg-gray-800 h-2 rounded-full overflow-hidden">
+                  <div className="bg-blue-500 h-full" style={{ width: '45%' }}></div>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-[#e7ebf4] dark:border-gray-800">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs font-semibold text-[#48679d] dark:text-gray-400">Son 24 Saat İstek</p>
+                  <p className="text-sm font-bold text-[#0d121c] dark:text-white">14,204</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-[#48679d] dark:text-gray-400">Hatalı İstekler</p>
+                  <p className="text-sm font-bold text-red-500">28</p>
+                </div>
+              </div>
+              <button className="w-full py-2.5 rounded-lg border border-primary/20 text-primary text-xs font-bold hover:bg-primary/5 transition-colors">
+                Sağlık Raporu Al
+              </button>
+            </div>
+          </div>
+
+          {/* Goal Progress Card */}
+          <div className="bg-gradient-to-br from-primary to-blue-700 rounded-xl p-6 text-white shadow-xl shadow-primary/20">
+            <h4 className="text-sm font-semibold opacity-90 mb-2">Hedef Gerçekleşme</h4>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-3xl font-bold">78%</span>
+              <span className="material-symbols-outlined text-4xl opacity-50">auto_graph</span>
+            </div>
+            <div className="w-full bg-white/20 rounded-full h-2 mb-2">
+              <div className="bg-white h-2 rounded-full" style={{ width: '78%' }}></div>
+            </div>
+            <p className="text-[10px] opacity-80 uppercase tracking-wider font-bold">Kalan: ₺25,000</p>
           </div>
         </div>
       </div>

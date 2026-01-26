@@ -1,34 +1,33 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { useState, useMemo } from 'react'
 
 // Types
 interface Contact {
   id: string
   name: string
+  initials: string
+  initialsColor: string
   email: string
   phone: string
   company: string
-  title: string
-  totalDeals: number
   totalValue: number
-  lastActivity: string
-  avatar?: string
+  isNew?: boolean
+  isInactive?: boolean
 }
 
-// Mock data - will be replaced with Supabase data
+// Mock data - tasarıma uygun
 const initialContacts: Contact[] = [
-  { id: '1', name: 'Ahmet Yılmaz', email: 'ahmet@abcteknoloji.com', phone: '+90 532 123 4567', company: 'ABC Teknoloji', title: 'CEO', totalDeals: 3, totalValue: 75000, lastActivity: '2 saat önce' },
-  { id: '2', name: 'Mehmet Demir', email: 'mehmet@xyzholding.com', phone: '+90 533 234 5678', company: 'XYZ Holding', title: 'Satın Alma Müdürü', totalDeals: 2, totalValue: 50000, lastActivity: '1 gün önce' },
-  { id: '3', name: 'Ayşe Kara', email: 'ayse@defretail.com', phone: '+90 534 345 6789', company: 'DEF Retail', title: 'Pazarlama Direktörü', totalDeals: 1, totalValue: 28000, lastActivity: '3 saat önce' },
-  { id: '4', name: 'Fatma Şahin', email: 'fatma@ghidanismanlik.com', phone: '+90 535 456 7890', company: 'GHI Danışmanlık', title: 'Genel Müdür', totalDeals: 2, totalValue: 25000, lastActivity: '5 saat önce' },
-  { id: '5', name: 'Ali Öztürk', email: 'ali@jklstartup.com', phone: '+90 536 567 8901', company: 'JKL Startup', title: 'CTO', totalDeals: 1, totalValue: 75000, lastActivity: '1 saat önce' },
-  { id: '6', name: 'Zeynep Yıldız', email: 'zeynep@mnoajans.com', phone: '+90 537 678 9012', company: 'MNO Ajans', title: 'Kurucu Ortak', totalDeals: 4, totalValue: 35000, lastActivity: '2 gün önce' },
-  { id: '7', name: 'Can Aksoy', email: 'can@pqrmedia.com', phone: '+90 538 789 0123', company: 'PQR Media', title: 'İçerik Müdürü', totalDeals: 1, totalValue: 5000, lastActivity: '1 hafta önce' },
-  { id: '8', name: 'Emre Yılmaz', email: 'emre@stutech.com', phone: '+90 539 890 1234', company: 'STU Tech', title: 'IT Direktörü', totalDeals: 2, totalValue: 45000, lastActivity: '3 gün önce' },
+  { id: '1', name: 'Ahmet Yılmaz', initials: 'AY', initialsColor: 'bg-blue-100 dark:bg-blue-900 text-primary', email: 'ahmet@aerotech.com', phone: '+90 532 123 45 67', company: 'Aero Tech', totalValue: 45000, isNew: true },
+  { id: '2', name: 'Elif Demir', initials: 'ED', initialsColor: 'bg-pink-100 dark:bg-pink-900 text-pink-600', email: 'elif@demir.io', phone: '+90 541 987 65 43', company: 'Demir Corp', totalValue: 12500 },
+  { id: '3', name: 'Caner Öz', initials: 'CÖ', initialsColor: 'bg-green-100 dark:bg-green-900 text-green-600', email: 'caner@oz.net', phone: '+90 555 111 22 33', company: 'Öz Yazılım', totalValue: 8200, isInactive: true },
+  { id: '4', name: 'Selin Ak', initials: 'SA', initialsColor: 'bg-orange-100 dark:bg-orange-900 text-orange-600', email: 'selin@akgida.com', phone: '+90 530 444 55 66', company: 'Ak Gıda', totalValue: 150000 },
+  { id: '5', name: 'Burak Erol', initials: 'BE', initialsColor: 'bg-purple-100 dark:bg-purple-900 text-purple-600', email: 'burak@erol.co', phone: '+90 533 222 11 00', company: 'Erol Lojistik', totalValue: 32400, isNew: true },
+  { id: '6', name: 'Zeynep Kaya', initials: 'ZK', initialsColor: 'bg-teal-100 dark:bg-teal-900 text-teal-600', email: 'zeynep@kaya.com', phone: '+90 544 333 22 11', company: 'Kaya Holding', totalValue: 85000 },
+  { id: '7', name: 'Murat Çelik', initials: 'MÇ', initialsColor: 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600', email: 'murat@celik.net', phone: '+90 555 666 77 88', company: 'Çelik Sanayi', totalValue: 5000, isInactive: true },
 ]
+
+type FilterType = 'all' | 'new' | 'highValue' | 'inactive'
 
 // Format currency
 function formatCurrency(value: number) {
@@ -42,26 +41,24 @@ function formatCurrency(value: number) {
 
 export default function ContactsPage() {
   const [contacts] = useState<Contact[]>(initialContacts)
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
-  const [searchQuery, setSearchQuery] = useState('')
   const [selectedContacts, setSelectedContacts] = useState<string[]>([])
-  const [sortBy, setSortBy] = useState<'name' | 'company' | 'value'>('name')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [rowsPerPage, setRowsPerPage] = useState(25)
 
-  // Filter and sort contacts
-  const filteredContacts = contacts
-    .filter(contact => 
-      contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contact.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contact.company.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .sort((a, b) => {
-      let comparison = 0
-      if (sortBy === 'name') comparison = a.name.localeCompare(b.name)
-      else if (sortBy === 'company') comparison = a.company.localeCompare(b.company)
-      else if (sortBy === 'value') comparison = a.totalValue - b.totalValue
-      return sortOrder === 'asc' ? comparison : -comparison
-    })
+  // Filter contacts based on active filter
+  const filteredContacts = useMemo(() => {
+    switch (activeFilter) {
+      case 'new':
+        return contacts.filter(c => c.isNew)
+      case 'highValue':
+        return contacts.filter(c => c.totalValue >= 50000)
+      case 'inactive':
+        return contacts.filter(c => c.isInactive)
+      default:
+        return contacts
+    }
+  }, [contacts, activeFilter])
 
   // Toggle selection
   const toggleSelection = (id: string) => {
@@ -81,331 +78,270 @@ export default function ContactsPage() {
     }
   }
 
-  // Copy email to clipboard
-  const copyEmail = (email: string) => {
-    navigator.clipboard.writeText(email)
-    // TODO: Show toast notification
+  // Copy to clipboard
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
   }
 
-  // Handle sort
-  const handleSort = (column: 'name' | 'company' | 'value') => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortBy(column)
-      setSortOrder('asc')
+  // Clear filter
+  const clearFilter = () => {
+    setActiveFilter('all')
+  }
+
+  // Get filter button classes
+  const getFilterButtonClasses = (filter: FilterType) => {
+    if (activeFilter === filter) {
+      return 'flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-semibold border border-primary/20'
     }
+    return 'flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 text-[#48679d] dark:text-gray-400 rounded-full text-sm font-medium border border-[#ced8e9] dark:border-gray-700 hover:border-primary/50 transition-colors'
   }
 
-  // Get initials
-  const getInitials = (name: string) => 
-    name.split(' ').map(n => n[0]).join('').toUpperCase()
+  const totalContacts = filteredContacts.length
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-aero-slate-900 dark:text-white">Kişiler</h1>
-          <p className="text-sm text-aero-slate-500 mt-1">
-            Toplam {filteredContacts.length} kişi
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {/* Search */}
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-lg text-aero-slate-400">
-              search
-            </span>
-            <input
-              type="text"
-              placeholder="Kişi ara..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input pl-10 w-60"
-            />
+    <div className="-m-8">
+      <main className="max-w-[1440px] mx-auto px-6 py-8">
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-[#0d121c] dark:text-white">Kişiler Rehberi</h1>
+            <p className="text-[#48679d] dark:text-gray-400 mt-1">Satış bağlantılarınızı ve potansiyel müşterilerinizi verimli bir şekilde yönetin.</p>
           </div>
-
-          {/* Filter Button */}
-          <button className="btn-secondary btn-md">
-            <span className="material-symbols-outlined text-lg mr-1">filter_list</span>
-            Filtre
-          </button>
-          
-          {/* View Toggle */}
-          <div className="flex items-center bg-aero-slate-100 dark:bg-aero-slate-700 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('list')}
-              className={cn(
-                'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                viewMode === 'list'
-                  ? 'bg-white dark:bg-aero-slate-600 text-aero-slate-900 dark:text-white shadow-sm'
-                  : 'text-aero-slate-500 dark:text-aero-slate-400'
-              )}
-            >
-              <span className="material-symbols-outlined text-lg">view_list</span>
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={cn(
-                'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                viewMode === 'grid'
-                  ? 'bg-white dark:bg-aero-slate-600 text-aero-slate-900 dark:text-white shadow-sm'
-                  : 'text-aero-slate-500 dark:text-aero-slate-400'
-              )}
-            >
-              <span className="material-symbols-outlined text-lg">grid_view</span>
-            </button>
-          </div>
-
-          {/* New Contact Button */}
-          <Link
-            href="/contacts/new"
-            className="btn-primary btn-md"
-          >
-            <span className="material-symbols-outlined text-lg mr-1">person_add</span>
-            Yeni Kişi
-          </Link>
-        </div>
-      </div>
-
-      {/* Bulk Actions */}
-      {selectedContacts.length > 0 && (
-        <div className="bg-aero-blue-50 dark:bg-aero-blue-900/20 border border-aero-blue-200 dark:border-aero-blue-800 rounded-lg p-4 flex items-center justify-between">
-          <span className="text-sm text-aero-blue-700 dark:text-aero-blue-300">
-            {selectedContacts.length} kişi seçildi
-          </span>
-          <div className="flex items-center gap-2">
-            <button className="btn-secondary btn-sm">
-              <span className="material-symbols-outlined text-lg mr-1">download</span>
+          <div className="flex items-center gap-3">
+            <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-[#ced8e9] dark:border-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors">
+              <span className="material-symbols-outlined text-lg">file_download</span>
               Dışa Aktar
             </button>
-            <button className="btn-secondary btn-sm">
-              <span className="material-symbols-outlined text-lg mr-1">label</span>
-              Etiketle
-            </button>
-            <button className="btn-danger btn-sm">
-              <span className="material-symbols-outlined text-lg mr-1">delete</span>
-              Sil
+            <button className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-primary/20">
+              <span className="material-symbols-outlined text-lg">person_add</span>
+              Yeni Kişi
             </button>
           </div>
         </div>
-      )}
 
-      {/* List View */}
-      {viewMode === 'list' && (
-        <div className="card overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-aero-slate-50 dark:bg-aero-slate-800">
-              <tr>
-                <th className="px-6 py-3 w-12">
-                  <input
-                    type="checkbox"
-                    checked={selectedContacts.length === filteredContacts.length && filteredContacts.length > 0}
-                    onChange={toggleAllSelection}
-                    className="w-4 h-4 rounded border-aero-slate-300 text-aero-blue-500 focus:ring-aero-blue-500"
-                  />
-                </th>
-                <th 
-                  className="text-left px-6 py-3 text-xs font-semibold text-aero-slate-500 uppercase cursor-pointer hover:text-aero-slate-700"
-                  onClick={() => handleSort('name')}
-                >
-                  <span className="flex items-center gap-1">
-                    Kişi
-                    {sortBy === 'name' && (
-                      <span className="material-symbols-outlined text-sm">
-                        {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
-                      </span>
-                    )}
-                  </span>
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-aero-slate-500 uppercase">E-posta</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-aero-slate-500 uppercase">Telefon</th>
-                <th 
-                  className="text-left px-6 py-3 text-xs font-semibold text-aero-slate-500 uppercase cursor-pointer hover:text-aero-slate-700"
-                  onClick={() => handleSort('company')}
-                >
-                  <span className="flex items-center gap-1">
-                    Şirket
-                    {sortBy === 'company' && (
-                      <span className="material-symbols-outlined text-sm">
-                        {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
-                      </span>
-                    )}
-                  </span>
-                </th>
-                <th 
-                  className="text-right px-6 py-3 text-xs font-semibold text-aero-slate-500 uppercase cursor-pointer hover:text-aero-slate-700"
-                  onClick={() => handleSort('value')}
-                >
-                  <span className="flex items-center justify-end gap-1">
-                    Toplam Değer
-                    {sortBy === 'value' && (
-                      <span className="material-symbols-outlined text-sm">
-                        {sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'}
-                      </span>
-                    )}
-                  </span>
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-aero-slate-500 uppercase">Son Aktivite</th>
-                <th className="px-6 py-3 w-12"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-aero-slate-200 dark:divide-aero-slate-700">
-              {filteredContacts.map((contact) => (
-                <tr 
-                  key={contact.id} 
-                  className={cn(
-                    'hover:bg-aero-slate-50 dark:hover:bg-aero-slate-800/50 transition-colors',
-                    selectedContacts.includes(contact.id) && 'bg-aero-blue-50/50 dark:bg-aero-blue-900/10'
-                  )}
-                >
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedContacts.includes(contact.id)}
-                      onChange={() => toggleSelection(contact.id)}
-                      className="w-4 h-4 rounded border-aero-slate-300 text-aero-blue-500 focus:ring-aero-blue-500"
+        {/* Filters & Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
+            <button 
+              onClick={() => setActiveFilter('all')}
+              className={getFilterButtonClasses('all')}
+            >
+              Tüm Kişiler
+              {activeFilter === 'all' && (
+                <span onClick={(e) => { e.stopPropagation(); clearFilter(); }} className="material-symbols-outlined text-sm cursor-pointer hover:text-primary/70">close</span>
+              )}
+            </button>
+            <button 
+              onClick={() => setActiveFilter('new')}
+              className={getFilterButtonClasses('new')}
+            >
+              Yeni Eklenenler
+              {activeFilter === 'new' ? (
+                <span onClick={(e) => { e.stopPropagation(); clearFilter(); }} className="material-symbols-outlined text-sm cursor-pointer hover:text-primary/70">close</span>
+              ) : (
+                <span className="material-symbols-outlined text-sm">expand_more</span>
+              )}
+            </button>
+            <button 
+              onClick={() => setActiveFilter('highValue')}
+              className={getFilterButtonClasses('highValue')}
+            >
+              Yüksek Değerli
+              {activeFilter === 'highValue' ? (
+                <span onClick={(e) => { e.stopPropagation(); clearFilter(); }} className="material-symbols-outlined text-sm cursor-pointer hover:text-primary/70">close</span>
+              ) : (
+                <span className="material-symbols-outlined text-sm">expand_more</span>
+              )}
+            </button>
+            <button 
+              onClick={() => setActiveFilter('inactive')}
+              className={getFilterButtonClasses('inactive')}
+            >
+              Hareketsiz
+              {activeFilter === 'inactive' ? (
+                <span onClick={(e) => { e.stopPropagation(); clearFilter(); }} className="material-symbols-outlined text-sm cursor-pointer hover:text-primary/70">close</span>
+              ) : (
+                <span className="material-symbols-outlined text-sm">expand_more</span>
+              )}
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+              <span className="material-symbols-outlined">filter_list</span>
+            </button>
+            <button className="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+              <span className="material-symbols-outlined">view_column</span>
+            </button>
+            <button className="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+              <span className="material-symbols-outlined">settings</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Data Table Container */}
+        <div className="bg-white dark:bg-[#101722] border border-[#ced8e9] dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-[#ced8e9] dark:border-gray-800">
+                  <th className="px-6 py-4 w-10">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedContacts.length === filteredContacts.length && filteredContacts.length > 0}
+                      onChange={toggleAllSelection}
+                      className="rounded border-gray-300 dark:border-gray-700 text-primary focus:ring-primary"
                     />
-                  </td>
-                  <td className="px-6 py-4">
-                    <Link href={`/contacts/${contact.id}`} className="flex items-center gap-3 group">
-                      <div className="w-10 h-10 rounded-full bg-aero-blue-100 dark:bg-aero-blue-900/30 flex items-center justify-center text-aero-blue-600 dark:text-aero-blue-400 font-medium text-sm">
-                        {getInitials(contact.name)}
-                      </div>
-                      <div>
-                        <p className="font-medium text-aero-slate-900 dark:text-white group-hover:text-aero-blue-500 transition-colors">
-                          {contact.name}
-                        </p>
-                        <p className="text-xs text-aero-slate-500">{contact.title}</p>
-                      </div>
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button 
-                      onClick={() => copyEmail(contact.email)}
-                      className="flex items-center gap-1 text-sm text-aero-slate-600 dark:text-aero-slate-400 hover:text-aero-blue-500 transition-colors group"
-                    >
-                      {contact.email}
-                      <span className="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                        content_copy
-                      </span>
-                    </button>
-                  </td>
-                  <td className="px-6 py-4">
-                    <a 
-                      href={`tel:${contact.phone}`}
-                      className="text-sm text-aero-slate-600 dark:text-aero-slate-400 hover:text-aero-blue-500 transition-colors"
-                    >
-                      {contact.phone}
-                    </a>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-aero-slate-700 dark:text-aero-slate-300">{contact.company}</span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="font-semibold text-aero-slate-900 dark:text-white">
-                      {formatCurrency(contact.totalValue)}
-                    </span>
-                    <span className="text-xs text-aero-slate-500 ml-1">
-                      ({contact.totalDeals} anlaşma)
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-aero-slate-500">
-                    {contact.lastActivity}
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="p-2 rounded-lg hover:bg-aero-slate-100 dark:hover:bg-aero-slate-700 transition-colors">
-                      <span className="material-symbols-outlined text-aero-slate-400">more_vert</span>
-                    </button>
-                  </td>
+                  </th>
+                  <th className="px-4 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider">İSİM</th>
+                  <th className="px-4 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider">E-POSTA</th>
+                  <th className="px-4 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider">TELEFON</th>
+                  <th className="px-4 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider">ŞİRKET</th>
+                  <th className="px-4 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider">TOPLAM DEĞER</th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider text-right">İŞLEMLER</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[#ced8e9] dark:divide-gray-800">
+                {filteredContacts.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600 mb-3 block">person_off</span>
+                      <p className="text-[#48679d] dark:text-gray-400">Bu filtreye uygun kişi bulunamadı.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredContacts.map((contact) => (
+                    <tr key={contact.id} className="hover:bg-primary/5 transition-colors group">
+                      <td className="px-6 py-4 h-16">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedContacts.includes(contact.id)}
+                          onChange={() => toggleSelection(contact.id)}
+                          className="rounded border-gray-300 dark:border-gray-700 text-primary focus:ring-primary"
+                        />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`size-9 rounded-lg ${contact.initialsColor} flex items-center justify-center font-bold`}>
+                            {contact.initials}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-[#0d121c] dark:text-white">{contact.name}</span>
+                            {contact.isNew && (
+                              <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded">YENİ</span>
+                            )}
+                            {contact.isInactive && (
+                              <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded">HAREKETSİZ</span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+                          <span>{contact.email}</span>
+                          <button 
+                            onClick={() => copyToClipboard(contact.email)}
+                            className="opacity-0 group-hover:opacity-100 text-primary transition-opacity"
+                          >
+                            <span className="material-symbols-outlined text-base">content_copy</span>
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+                          <span>{contact.phone}</span>
+                          <button className="opacity-0 group-hover:opacity-100 text-primary transition-opacity">
+                            <span className="material-symbols-outlined text-base">call</span>
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-full">{contact.company}</span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`font-bold text-sm ${contact.totalValue >= 50000 ? 'text-green-600' : 'text-[#0d121c] dark:text-white'}`}>
+                          {formatCurrency(contact.totalValue)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button className="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-lg text-[#48679d]">
+                          <span className="material-symbols-outlined">more_vert</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-          {/* Pagination */}
-          <div className="p-4 border-t border-aero-slate-200 dark:border-aero-slate-700 flex items-center justify-between">
-            <p className="text-sm text-aero-slate-500">
-              1-{filteredContacts.length} / {filteredContacts.length} kişi
-            </p>
+          {/* Pagination Footer */}
+          <div className="px-6 py-4 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-[#ced8e9] dark:border-gray-800">
+            <span className="text-sm text-[#48679d] dark:text-gray-400">
+              <span className="font-semibold text-[#0d121c] dark:text-white">1-{Math.min(rowsPerPage, totalContacts)}</span> of <span className="font-semibold text-[#0d121c] dark:text-white">{totalContacts}</span> kişi
+            </span>
             <div className="flex items-center gap-2">
-              <button disabled className="btn-secondary btn-sm opacity-50 cursor-not-allowed">
-                <span className="material-symbols-outlined text-lg">chevron_left</span>
+              <button 
+                disabled={currentPage === 1}
+                className="p-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg hover:bg-white dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+              >
+                <span className="material-symbols-outlined">chevron_left</span>
               </button>
-              <button disabled className="btn-secondary btn-sm opacity-50 cursor-not-allowed">
-                <span className="material-symbols-outlined text-lg">chevron_right</span>
+              <div className="flex items-center gap-1">
+                <button className="size-9 flex items-center justify-center rounded-lg bg-primary text-white font-bold text-sm">1</button>
+                {totalContacts > rowsPerPage && (
+                  <>
+                    <button className="size-9 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-gray-800 text-sm font-medium">2</button>
+                    <button className="size-9 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-gray-800 text-sm font-medium">3</button>
+                    <span className="px-2 text-gray-400">...</span>
+                    <button className="size-9 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-gray-800 text-sm font-medium">7</button>
+                  </>
+                )}
+              </div>
+              <button className="p-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors">
+                <span className="material-symbols-outlined">chevron_right</span>
               </button>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+              <span>Satır sayısı:</span>
+              <select 
+                value={rowsPerPage}
+                onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                className="bg-transparent border-none focus:ring-0 text-sm font-semibold py-0 pr-8"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
             </div>
           </div>
         </div>
-      )}
+      </main>
 
-      {/* Grid View */}
-      {viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredContacts.map((contact) => (
-            <Link
-              key={contact.id}
-              href={`/contacts/${contact.id}`}
-              className="card p-6 hover:shadow-lg transition-shadow group"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-14 h-14 rounded-full bg-aero-blue-100 dark:bg-aero-blue-900/30 flex items-center justify-center text-aero-blue-600 dark:text-aero-blue-400 font-semibold text-lg">
-                  {getInitials(contact.name)}
-                </div>
-                <button 
-                  onClick={(e) => { e.preventDefault(); }}
-                  className="p-1.5 rounded-lg hover:bg-aero-slate-100 dark:hover:bg-aero-slate-700 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-aero-slate-400">more_vert</span>
-                </button>
-              </div>
-
-              <h3 className="font-semibold text-aero-slate-900 dark:text-white group-hover:text-aero-blue-500 transition-colors">
-                {contact.name}
-              </h3>
-              <p className="text-sm text-aero-slate-500 mb-1">{contact.title}</p>
-              <p className="text-sm text-aero-slate-600 dark:text-aero-slate-400 font-medium">{contact.company}</p>
-
-              <div className="mt-4 pt-4 border-t border-aero-slate-100 dark:border-aero-slate-700 space-y-2">
-                <div className="flex items-center gap-2 text-sm text-aero-slate-500">
-                  <span className="material-symbols-outlined text-lg">mail</span>
-                  <span className="truncate">{contact.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-aero-slate-500">
-                  <span className="material-symbols-outlined text-lg">phone</span>
-                  <span>{contact.phone}</span>
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-center justify-between text-sm">
-                <span className="text-aero-slate-500">{contact.totalDeals} anlaşma</span>
-                <span className="font-semibold text-aero-blue-500">{formatCurrency(contact.totalValue)}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-
-      {/* Empty State */}
-      {filteredContacts.length === 0 && (
-        <div className="card p-12 text-center">
-          <span className="material-symbols-outlined text-6xl text-aero-slate-300 dark:text-aero-slate-600 mb-4">
-            contacts
-          </span>
-          <h3 className="text-lg font-semibold text-aero-slate-900 dark:text-white mb-2">
-            Kişi Bulunamadı
-          </h3>
-          <p className="text-aero-slate-500 mb-6">
-            {searchQuery 
-              ? 'Arama kriterlerinize uygun kişi bulunamadı.'
-              : 'Henüz kişi eklenmemiş. İlk kişinizi ekleyin.'}
-          </p>
-          <Link href="/contacts/new" className="btn-primary btn-md">
-            <span className="material-symbols-outlined text-lg mr-1">person_add</span>
-            Yeni Kişi Ekle
-          </Link>
+      {/* Selection Bar (Floating) */}
+      {selectedContacts.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-900 shadow-2xl rounded-xl border border-primary/20 px-6 py-4 flex items-center gap-6 z-50">
+          <span className="text-sm font-bold text-primary">{selectedContacts.length} Kişi Seçildi</span>
+          <div className="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+          <div className="flex items-center gap-3">
+            <button className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm font-medium">
+              <span className="material-symbols-outlined text-lg">edit</span>
+              Düzenle
+            </button>
+            <button className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm font-medium">
+              <span className="material-symbols-outlined text-lg">mail</span>
+              E-posta Gönder
+            </button>
+            <button className="flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 text-red-600 rounded-lg text-sm font-medium">
+              <span className="material-symbols-outlined text-lg">delete</span>
+              Sil
+            </button>
+          </div>
+          <button 
+            onClick={() => setSelectedContacts([])}
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
         </div>
       )}
     </div>
