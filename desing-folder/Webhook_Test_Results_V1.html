@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#377df6",
+                        "slate-bg": "#F8FAFC",
+                        "text-primary": "#0F172A",
+                        "text-secondary": "#64748B",
+                        "success": "#10b981",
+                        "code-bg": "#F1F5F9"
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "8px",
+                        "lg": "8px",
+                        "xl": "12px",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #F8FAFC;
+            color: #0F172A;
+        }
+    </style>
+</head>
+<body class="font-display min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<div class="px-4 md:px-10 lg:px-40 flex flex-1 justify-center py-5">
+<div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 px-4 md:px-10 py-3 bg-white rounded-t-xl">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-primary">
+<div class="size-6">
+<svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-text-primary text-lg font-bold leading-tight tracking-[-0.015em]">AERO CRM</h2>
+</div>
+<div class="hidden md:flex items-center gap-9">
+<a class="text-text-secondary text-sm font-medium leading-normal hover:text-text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-text-secondary text-sm font-medium leading-normal hover:text-text-primary transition-colors" href="#">Proposals</a>
+<a class="text-primary text-sm font-bold leading-normal" href="#">Webhooks</a>
+<a class="text-text-secondary text-sm font-medium leading-normal hover:text-text-primary transition-colors" href="#">Settings</a>
+</div>
+</div>
+<div class="flex flex-1 justify-end gap-4">
+<label class="hidden sm:flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-slate-400 flex border-none bg-slate-50 items-center justify-center pl-4 rounded-l-lg" data-icon="search">
+<span class="material-symbols-outlined text-xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-primary focus:outline-0 focus:ring-0 border-none bg-slate-50 h-full placeholder:text-slate-400 px-4 rounded-l-none pl-2 text-sm font-normal leading-normal" placeholder="Search" value=""/>
+</div>
+</label>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-slate-200" data-alt="User avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDudGDid5eP9n09Ac0yGfljc6rhC3E4pAGwrJL0QlXr7jBzMy0vu9-mf3-6GGwA5Jh9JCllpLHbfmN9caIMS2nf5qJYgS5AuXXm7R25gACDVqbxDEWA-bozODq54MqQa1ff2-LgSC9ZEg-znK_07RsAn4oSdLf_Vb2EeBb0UpmGV1GltckZXqWzaYPOyW8Qni6KBFSOvW1kYms8CZF9yfx2rJIOqQz10XbqXG3ht5FMT0syflr7AA6Sc1f_FDy4EYiBMf0wvPlS7Q");'></div>
+</div>
+</header>
+<main class="bg-white shadow-sm border-x border-slate-200">
+<div class="flex flex-wrap items-center justify-between gap-3 p-8">
+<div class="flex items-center gap-3">
+<h1 class="text-text-primary tracking-tight text-[28px] md:text-[32px] font-bold leading-tight">Webhook Test Sonucu</h1>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 bg-success/10 border border-success/20 rounded-lg">
+<span class="flex h-2 w-2 rounded-full bg-success"></span>
+<span class="text-success text-xs font-bold uppercase tracking-wider">HTTP 200 OK</span>
+</div>
+</div>
+<div class="px-8">
+<div class="flex border-b border-slate-100 gap-8">
+<a class="flex flex-col items-center justify-center border-b-2 border-primary text-primary pb-3 pt-2" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">İstek (Request)</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-2 border-transparent text-text-secondary pb-3 pt-2 hover:text-text-primary transition-colors" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Yanıt (Response)</p>
+</a>
+</div>
+</div>
+<div class="grid grid-cols-1 gap-8 p-8">
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between px-1">
+<h3 class="text-text-primary text-base font-bold leading-tight tracking-[-0.015em]">İstek Gövdesi (Payload)</h3>
+<button class="text-text-secondary hover:text-primary transition-colors flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+                                    Kopyala
+                                </button>
+</div>
+<div class="bg-code-bg rounded-xl border border-slate-200 overflow-hidden">
+<div class="p-6 font-mono text-[13px] leading-relaxed">
+<div class="flex gap-6">
+<div class="text-slate-400 select-none text-right min-w-[20px]">
+                                            1<br/>2<br/>3<br/>4<br/>5<br/>6
+                                        </div>
+<div class="overflow-x-auto">
+<span class="text-purple-600 font-semibold">{</span><br/>
+                                              <span class="text-blue-600 font-semibold">"event"</span>: <span class="text-emerald-600">"proposal_viewed"</span>,<br/>
+                                              <span class="text-blue-600 font-semibold">"timestamp"</span>: <span class="text-emerald-600">"2023-10-27T10:00:00Z"</span>,<br/>
+                                              <span class="text-blue-600 font-semibold">"proposal_id"</span>: <span class="text-emerald-600">"AERO-99"</span>,<br/>
+                                              <span class="text-blue-600 font-semibold">"client"</span>: <span class="text-emerald-600">"Acme Corp"</span><br/>
+<span class="text-purple-600 font-semibold">}</span>
+</div>
+</div>
+</div>
+<div class="bg-slate-200/50 px-6 py-2.5 border-t border-slate-200 flex justify-between items-center">
+<span class="text-text-secondary text-xs font-semibold">application/json</span>
+<span class="text-text-secondary text-xs">Size: 154 B</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between px-1">
+<h3 class="text-text-primary text-base font-bold leading-tight tracking-[-0.015em]">Sunucu Yanıtı</h3>
+<button class="text-text-secondary hover:text-primary transition-colors flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+                                    Kopyala
+                                </button>
+</div>
+<div class="bg-code-bg rounded-xl border border-slate-200 overflow-hidden">
+<div class="p-6 font-mono text-[13px] leading-relaxed text-text-primary">
+<p class="font-bold text-emerald-600">HTTP/1.1 200 OK</p>
+<p class="text-text-secondary">Content-Type: <span class="text-text-primary">application/json</span></p>
+<p class="text-text-secondary">Date: <span class="text-text-primary">Fri, 27 Oct 2023 10:00:01 GMT</span></p>
+<p class="mt-4 text-slate-500 font-medium italic">{ "success": true, "message": "Webhook received successfully" }</p>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-xl">
+<button class="flex min-w-[120px] items-center justify-center gap-2 rounded-lg h-10 px-4 border border-slate-300 bg-white text-text-primary text-sm font-bold transition-all hover:bg-slate-50 hover:border-slate-400">
+<span class="material-symbols-outlined text-lg">refresh</span>
+                            Yeniden Dene
+                        </button>
+<button class="flex min-w-[120px] items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold transition-all hover:brightness-110 shadow-sm shadow-primary/20">
+                            Kapat
+                        </button>
+</div>
+</main>
+</div>
+</div>
+</div>
+</div>
+<div class="fixed inset-0 -z-10 pointer-events-none opacity-40">
+<div class="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/5 blur-[100px] rounded-full"></div>
+<div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-primary/10 blur-[120px] rounded-full"></div>
+</div>
+
+</body></html>

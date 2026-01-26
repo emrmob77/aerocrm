@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AERO CRM Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#377df6",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#0d121c] dark:text-white antialiased">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-64 flex flex-col border-r border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#161e2b] overflow-y-auto">
+<div class="p-6">
+<div class="flex items-center gap-3">
+<div class="bg-primary size-10 rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined">rocket_launch</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-[#0d121c] dark:text-white text-lg font-bold leading-none">AERO CRM</h1>
+<p class="text-[#48679d] dark:text-gray-400 text-xs font-medium">Satış Yönetimi</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary font-semibold transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="text-sm">CRM</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm">Kişiler</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">handshake</span>
+<span class="text-sm">Satışlar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-sm">Raporlar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm">Teklifler</span>
+</a>
+</nav>
+<div class="p-4 border-t border-[#e7ebf4] dark:border-gray-800">
+<button class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-lg py-3 font-bold text-sm transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>Yeni Kayıt</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-hidden bg-background-light dark:bg-background-dark">
+<!-- Header Section -->
+<header class="flex items-center justify-between px-8 py-4 bg-white dark:bg-[#161e2b] border-b border-[#e7ebf4] dark:border-gray-800">
+<!-- Breadcrumbs -->
+<div class="flex items-center gap-2 text-sm">
+<a class="text-[#48679d] dark:text-gray-400 hover:text-primary transition-colors" href="#">Ana Sayfa</a>
+<span class="text-[#48679d] dark:text-gray-600">/</span>
+<span class="text-[#0d121c] dark:text-white font-semibold">Dashboard</span>
+</div>
+<!-- Global Search -->
+<div class="flex-1 max-w-lg mx-8">
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-[#48679d] dark:text-gray-400">search</span>
+</div>
+<input class="block w-full pl-10 pr-12 py-2 border-none bg-background-light dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary/50 text-sm placeholder:text-[#48679d] transition-all" placeholder="Müşteri, teklif veya rapor ara..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<kbd class="hidden sm:inline-block px-1.5 py-0.5 text-xs font-semibold text-gray-400 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">⌘K</kbd>
+</div>
+</div>
+</div>
+<!-- User Profile & Notifications -->
+<div class="flex items-center gap-4">
+<button class="relative p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-red-500"></span>
+</button>
+<button class="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="text-right hidden sm:block">
+<p class="text-sm font-bold text-[#0d121c] dark:text-white">Ahmet Yılmaz</p>
+<p class="text-xs text-[#48679d] dark:text-gray-400">Satış Müdürü</p>
+</div>
+<div class="size-10 rounded-full border-2 border-primary p-0.5">
+<img alt="User avatar of Ahmet Yılmaz" class="w-full h-full rounded-full object-cover" data-alt="Modern professional male avatar smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAg0WeFeB1zk5CfQPjQv8TJQ6nrrsiznhPjxODVT5EIxtAYbsA3bbGPD72YcsMjC6Wnjo_QG_EeiLmGJxNv9_d_aXOPm2U0oNfMze5JdfUw8gEHcMEy3xDTevbmW4O4J3zryFuNXBUujT4NtDXLDgGY07TpI58mZ3xji55uBItVN0xJBg_DmmtX7yoO04DrFFvIKPOHknudF2yVQLzhU4F-PfXdEFhPqt5nJR6EauxUYNEeJTcbdRh8bOz-jG2re7Iu7JRSKk-eQ"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Dashboard Body -->
+<div class="flex-1 overflow-y-auto p-8 space-y-8">
+<!-- Welcome -->
+<div class="flex flex-col gap-1">
+<h2 class="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">Günaydın, Ahmet!</h2>
+<p class="text-[#48679d] dark:text-gray-400">İşte bugünkü satış performansına dair genel bakış.</p>
+</div>
+<!-- Metrics Row -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Metric Card 1 -->
+<div class="bg-white dark:bg-[#161e2b] p-6 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<div class="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 rounded-lg">
+<span class="material-symbols-outlined">assignment</span>
+</div>
+<span class="text-xs font-semibold text-gray-400">Aktif</span>
+</div>
+<h3 class="text-sm font-medium text-[#48679d] dark:text-gray-400">Açık Teklifler</h3>
+<div class="flex items-baseline gap-2 mt-1">
+<p class="text-2xl font-bold text-[#0d121c] dark:text-white">12</p>
+<span class="text-xs text-green-500 font-bold">+2 yeni</span>
+</div>
+</div>
+<!-- Metric Card 2 -->
+<div class="bg-white dark:bg-[#161e2b] p-6 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<div class="p-2 bg-green-50 dark:bg-green-900/30 text-green-600 rounded-lg">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<span class="text-xs font-semibold text-green-500">+8.4%</span>
+</div>
+<h3 class="text-sm font-medium text-[#48679d] dark:text-gray-400">Bu Ay Kazanılan</h3>
+<div class="flex items-baseline gap-2 mt-1">
+<p class="text-2xl font-bold text-[#0d121c] dark:text-white">₺45.000</p>
+</div>
+</div>
+<!-- Metric Card 3 -->
+<div class="bg-white dark:bg-[#161e2b] p-6 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<div class="p-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 rounded-lg">
+<span class="material-symbols-outlined">trending_up</span>
+</div>
+<span class="text-xs font-semibold text-green-500">+2%</span>
+</div>
+<h3 class="text-sm font-medium text-[#48679d] dark:text-gray-400">Dönüşüm Oranı</h3>
+<div class="flex items-baseline gap-2 mt-1">
+<p class="text-2xl font-bold text-[#0d121c] dark:text-white">34%</p>
+</div>
+</div>
+<!-- Metric Card 4 -->
+<div class="bg-white dark:bg-[#161e2b] p-6 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
+<div class="flex items-center justify-between mb-4">
+<div class="p-2 bg-orange-50 dark:bg-orange-900/30 text-orange-600 rounded-lg">
+<span class="material-symbols-outlined">account_tree</span>
+</div>
+<span class="text-xs font-semibold text-gray-400">Toplam</span>
+</div>
+<h3 class="text-sm font-medium text-[#48679d] dark:text-gray-400">Pipeline Değeri</h3>
+<div class="flex items-baseline gap-2 mt-1">
+<p class="text-2xl font-bold text-[#0d121c] dark:text-white">₺120.000</p>
+</div>
+</div>
+</div>
+<!-- Two Columns Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Left Column: Activity Feed -->
+<div class="lg:col-span-2 flex flex-col gap-6">
+<div class="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm overflow-hidden">
+<div class="p-6 border-b border-[#e7ebf4] dark:border-gray-800 flex justify-between items-center">
+<h3 class="font-bold text-lg text-[#0d121c] dark:text-white">Son Aktivite</h3>
+<button class="text-sm text-primary font-semibold hover:underline">Tümünü Gör</button>
+</div>
+<div class="p-6">
+<ul class="space-y-6">
+<li class="flex gap-4">
+<div class="relative">
+<div class="size-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-primary z-10 relative">
+<span class="material-symbols-outlined text-sm">mail</span>
+</div>
+<div class="absolute top-10 left-1/2 -translate-x-1/2 w-0.5 h-full bg-gray-100 dark:bg-gray-800 -z-0"></div>
+</div>
+<div class="flex-1 pb-4">
+<div class="flex justify-between">
+<p class="text-sm font-bold text-[#0d121c] dark:text-white">Teklif gönderildi - Global Teknoloji A.Ş.</p>
+<span class="text-xs text-[#48679d] dark:text-gray-400">10 dk önce</span>
+</div>
+<p class="text-sm text-[#48679d] dark:text-gray-400 mt-1">Bulut hizmetleri paketi için yeni revizyon iletildi.</p>
+</div>
+</li>
+<li class="flex gap-4">
+<div class="relative">
+<div class="size-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-600 z-10 relative">
+<span class="material-symbols-outlined text-sm">check_circle</span>
+</div>
+<div class="absolute top-10 left-1/2 -translate-x-1/2 w-0.5 h-full bg-gray-100 dark:bg-gray-800 -z-0"></div>
+</div>
+<div class="flex-1 pb-4">
+<div class="flex justify-between">
+<p class="text-sm font-bold text-[#0d121c] dark:text-white">Anlaşma kapatıldı - TeknoPark Ltd.</p>
+<span class="text-xs text-[#48679d] dark:text-gray-400">2 saat önce</span>
+</div>
+<p class="text-sm text-[#48679d] dark:text-gray-400 mt-1">₺15.000 değerindeki proje onayı alındı.</p>
+</div>
+</li>
+<li class="flex gap-4">
+<div class="relative">
+<div class="size-10 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600 z-10 relative">
+<span class="material-symbols-outlined text-sm">event</span>
+</div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<p class="text-sm font-bold text-[#0d121c] dark:text-white">Toplantı planlandı - Arkas Lojistik</p>
+<span class="text-xs text-[#48679d] dark:text-gray-400">4 saat önce</span>
+</div>
+<p class="text-sm text-[#48679d] dark:text-gray-400 mt-1">Yarın saat 14:00'da sunum randevusu oluşturuldu.</p>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Right Column: Quick Actions -->
+<div class="flex flex-col gap-6">
+<div class="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
+<h3 class="font-bold text-lg text-[#0d121c] dark:text-white mb-6">Hızlı Aksiyonlar</h3>
+<div class="grid grid-cols-2 gap-4">
+<button class="flex flex-col items-center justify-center p-4 rounded-xl bg-background-light dark:bg-gray-800 hover:bg-primary/5 hover:text-primary transition-all group border border-transparent hover:border-primary/20">
+<span class="material-symbols-outlined mb-2 group-hover:scale-110 transition-transform">add_task</span>
+<span class="text-xs font-bold text-center">Yeni Anlaşma</span>
+</button>
+<button class="flex flex-col items-center justify-center p-4 rounded-xl bg-background-light dark:bg-gray-800 hover:bg-primary/5 hover:text-primary transition-all group border border-transparent hover:border-primary/20">
+<span class="material-symbols-outlined mb-2 group-hover:scale-110 transition-transform">note_add</span>
+<span class="text-xs font-bold text-center">Teklif Oluştur</span>
+</button>
+<button class="flex flex-col items-center justify-center p-4 rounded-xl bg-background-light dark:bg-gray-800 hover:bg-primary/5 hover:text-primary transition-all group border border-transparent hover:border-primary/20">
+<span class="material-symbols-outlined mb-2 group-hover:scale-110 transition-transform">person_add</span>
+<span class="text-xs font-bold text-center">Müşteri Ekle</span>
+</button>
+<button class="flex flex-col items-center justify-center p-4 rounded-xl bg-background-light dark:bg-gray-800 hover:bg-primary/5 hover:text-primary transition-all group border border-transparent hover:border-primary/20">
+<span class="material-symbols-outlined mb-2 group-hover:scale-110 transition-transform">analytics</span>
+<span class="text-xs font-bold text-center">Rapor Al</span>
+</button>
+</div>
+</div>
+<!-- Mini Performance Chart/Card -->
+<div class="bg-gradient-to-br from-primary to-blue-700 rounded-xl p-6 text-white shadow-xl shadow-primary/20">
+<h4 class="text-sm font-semibold opacity-90 mb-2">Hedef Gerçekleşme</h4>
+<div class="flex items-center justify-between mb-4">
+<span class="text-3xl font-bold">78%</span>
+<span class="material-symbols-outlined text-4xl opacity-50">auto_graph</span>
+</div>
+<div class="w-full bg-white/20 rounded-full h-2 mb-2">
+<div class="bg-white h-2 rounded-full" style="width: 78%"></div>
+</div>
+<p class="text-[10px] opacity-80 uppercase tracking-wider font-bold">Kalan: ₺25,000</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

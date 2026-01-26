@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AERO CRM - Kanban Board</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#377df6",
+                        "background-light": "#f8f9fc",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .kanban-column {
+            min-width: 320px;
+            max-width: 320px;
+        }
+        .collapsed-column {
+            min-width: 60px;
+            max-width: 60px;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0d121c] dark:text-white min-h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#e7ebf4] dark:border-slate-800 bg-white dark:bg-slate-900 px-6 lg:px-10 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-primary">
+<div class="size-8">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-[#0d121c] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">AERO CRM</h2>
+</div>
+<label class="hidden md:flex flex-col min-w-64 !h-10">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full overflow-hidden border border-slate-200 dark:border-slate-700">
+<div class="text-[#48679d] flex bg-slate-50 dark:bg-slate-800 items-center justify-center pl-4 pr-1">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 border-none bg-slate-50 dark:bg-slate-800 text-[#0d121c] dark:text-white focus:outline-0 focus:ring-0 h-full placeholder:text-[#48679d] px-2 text-sm font-normal" placeholder="Anlaşma veya müşteri ara..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<nav class="hidden xl:flex items-center gap-6">
+<a class="text-slate-600 dark:text-slate-300 text-sm font-semibold hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-primary text-sm font-semibold border-b-2 border-primary pb-1" href="#">Anlaşmalar</a>
+<a class="text-slate-600 dark:text-slate-300 text-sm font-semibold hover:text-primary transition-colors" href="#">Teklifler</a>
+<a class="text-slate-600 dark:text-slate-300 text-sm font-semibold hover:text-primary transition-colors" href="#">Müşteriler</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="bg-primary hover:bg-primary/90 text-white flex items-center gap-2 rounded-lg px-4 h-10 text-sm font-bold transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>Yeni Anlaşma</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 border border-slate-200" data-alt="User profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDUrAXElyrWMmHzDsgBjRXNHXpDP19VQmkgxSgDgIS8HYGV_ZgFPsOHe_EqNhihOyQkT99S2EbXC1CG01v-nJaNvVbfwIZtzFHG-_of4qOF708P3mxEPr4OiH54hVAHzBOpjPAAYSKYVE4iYhdprGRnTaXg5gdlYpHKHisFiePSxXjHYLgxn4DhMHV2DNMG9XGUhJJYkvDiWl9A4LH3hsSF3aI163rB67s8PsUSuX0-Vl0GYFxFKLInFRbryVJ15z5PKUqh_BNgNQ");'></div>
+</div>
+</div>
+</header>
+<main class="flex-1 flex flex-col w-full overflow-hidden">
+<!-- Page Header & Filter Section -->
+<div class="px-6 lg:px-10 py-6 space-y-4">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<h1 class="text-[#0d121c] dark:text-white text-3xl font-black tracking-tight">Anlaşmalar</h1>
+<div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+<button class="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-700 rounded-md shadow-sm text-sm font-bold text-primary">
+<span class="material-symbols-outlined text-[18px]">view_kanban</span>
+                        Board
+                    </button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+<span class="material-symbols-outlined text-[18px]">list</span>
+                        Liste
+                    </button>
+</div>
+</div>
+<!-- Chips / Filters -->
+<div class="flex gap-3 flex-wrap items-center">
+<button class="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 px-3 hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-[18px] text-slate-500">person</span>
+<span class="text-slate-700 dark:text-slate-300 text-sm font-medium leading-normal">Tüm Sorumlular</span>
+<span class="material-symbols-outlined text-[18px] text-slate-400">expand_more</span>
+</button>
+<button class="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 px-3 hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-[18px] text-slate-500">calendar_today</span>
+<span class="text-slate-700 dark:text-slate-300 text-sm font-medium leading-normal">Bu Ay</span>
+<span class="material-symbols-outlined text-[18px] text-slate-400">expand_more</span>
+</button>
+<button class="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 px-3 hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-[18px] text-slate-500">sort</span>
+<span class="text-slate-700 dark:text-slate-300 text-sm font-medium leading-normal">Sıralama: En Yeni</span>
+<span class="material-symbols-outlined text-[18px] text-slate-400">expand_more</span>
+</button>
+<div class="h-6 w-[1px] bg-slate-300 dark:bg-slate-700 mx-1"></div>
+<button class="flex items-center gap-2 rounded-lg bg-primary/10 text-primary h-9 px-3 hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+<span class="text-sm font-bold">Filtreler</span>
+</button>
+</div>
+</div>
+<!-- Kanban Board Area -->
+<div class="flex-1 overflow-x-auto px-6 lg:px-10 pb-10 custom-scrollbar">
+<div class="flex gap-6 h-full min-h-[600px]">
+<!-- Column 1: Aday -->
+<div class="kanban-column flex flex-col gap-4">
+<div class="flex items-center justify-between px-2 py-1">
+<div class="flex items-center gap-2">
+<span class="font-bold text-slate-700 dark:text-slate-200">Aday</span>
+<span class="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full text-[11px] font-bold text-slate-600 dark:text-slate-300">4</span>
+</div>
+<span class="text-sm font-semibold text-slate-500">₺120.000</span>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Card 1 -->
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] uppercase tracking-wider font-bold text-slate-400">Aero Tech</span>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary text-[20px]">more_horiz</span>
+</div>
+<h3 class="font-bold text-slate-800 dark:text-slate-100 mb-3 leading-snug">SaaS Kurumsal Üyeliği Paketi</h3>
+<div class="flex justify-between items-end">
+<div class="space-y-2">
+<div class="text-primary font-extrabold text-lg">₺45.000</div>
+<div class="flex items-center gap-1.5 text-slate-400 text-xs">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                                        2 gün önce
+                                    </div>
+</div>
+<div class="size-8 rounded-full bg-slate-100 border-2 border-white ring-1 ring-slate-100" data-alt="Account manager profile photo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDdeVX65uWg6bKSOW0sM1a-_vRTq_H_HVnvuj5p1KJzNw8227kVyr43AqA10CXVSpCzEmmhD6qgmcjWEULkUAVQZ3CRCDH1jMm7Cc5MmnW1wNxrcR8VjrTYXs6WCm8zqg6Bl1LSxWs6s3YSx8z5LzKLuZZnxapLuVEOK9JkoOnV-1PbEiuGHlhGdFHrjSrbzx5b2mZtEVNGU-LIm3qY7M7r5_3ktqNsJEbp3Me1EN-VZJkVX2tEMXvah8GjAoEYFkbxe6bsyGDW3g"); background-size: cover;'></div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] uppercase tracking-wider font-bold text-slate-400">Yıldız Holding</span>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary text-[20px]">more_horiz</span>
+</div>
+<h3 class="font-bold text-slate-800 dark:text-slate-100 mb-3 leading-snug">Lisans Yenileme &amp; Destek</h3>
+<div class="flex justify-between items-end">
+<div class="space-y-2">
+<div class="text-primary font-extrabold text-lg">₺15.000</div>
+<div class="flex items-center gap-1.5 text-amber-500 text-xs font-semibold">
+<span class="material-symbols-outlined text-[14px]">priority_high</span>
+                                        Bugün
+                                    </div>
+</div>
+<div class="size-8 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 border-2 border-white ring-1 ring-slate-100">MA</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 2: Teklif Gönderildi -->
+<div class="kanban-column flex flex-col gap-4">
+<div class="flex items-center justify-between px-2 py-1 border-b-2 border-primary/20 pb-2">
+<div class="flex items-center gap-2">
+<span class="font-bold text-slate-700 dark:text-slate-200">Teklif Gönderildi</span>
+<span class="px-2 py-0.5 bg-primary/10 rounded-full text-[11px] font-bold text-primary">2</span>
+</div>
+<span class="text-sm font-semibold text-slate-500">₺85.000</span>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Card 1 -->
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group border-l-4 border-l-primary">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] uppercase tracking-wider font-bold text-slate-400">Global Lojistik</span>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary text-[20px]">more_horiz</span>
+</div>
+<h3 class="font-bold text-slate-800 dark:text-slate-100 mb-2 leading-snug">Yıllık Bakım Anlaşması</h3>
+<div class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold mb-3">
+<span class="material-symbols-outlined text-[14px]">description</span>
+                                TEKLİF GÖNDERİLDİ
+                            </div>
+<div class="flex justify-between items-end">
+<div class="space-y-1">
+<div class="text-primary font-extrabold text-lg">₺25.000</div>
+<div class="text-slate-400 text-xs">Bekliyor • 3 gün</div>
+</div>
+<div class="size-8 rounded-full bg-slate-100 border-2 border-white ring-1 ring-slate-100" data-alt="Contact avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCLkmguiEjx1qMZ6Q1juCc2WyUiz-XRk11M2v51ryf6SpcNl-0z83u5RsfzxKXuNCQ3FBd5LDz-S6FGIPuJEQm5Z2s1yERZ1tj3ieITS2ohXV0Gx-75BgYWpleFZLrELzQy67pMmR0iSUFiF9MwPGyH0c2DAjceWs7ulXOEWwWZYPAcSTTZEICSPDBxwxiFEQNjABe_zF7lASI_BfqKzBVwAvNFbNYaIYdNisRnc9Z8LxueXbJzxvmq0aYsZK2kEWv1yKJtW56TlQ"); background-size: cover;'></div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group border-l-4 border-l-primary">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] uppercase tracking-wider font-bold text-slate-400">Tekno Market</span>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary text-[20px]">more_horiz</span>
+</div>
+<h3 class="font-bold text-slate-800 dark:text-slate-100 mb-2 leading-snug">Donanım Alımı Revizesi</h3>
+<div class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold mb-3">
+<span class="material-symbols-outlined text-[14px]">description</span>
+                                TEKLİF GÖNDERİLDİ
+                            </div>
+<div class="flex justify-between items-end">
+<div class="space-y-1">
+<div class="text-primary font-extrabold text-lg">₺60.000</div>
+<div class="text-slate-400 text-xs">Dün güncellendi</div>
+</div>
+<div class="size-8 rounded-full bg-purple-100 flex items-center justify-center text-[10px] font-bold text-purple-600 border-2 border-white ring-1 ring-slate-100">TK</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 3: Görüşme -->
+<div class="kanban-column flex flex-col gap-4">
+<div class="flex items-center justify-between px-2 py-1">
+<div class="flex items-center gap-2">
+<span class="font-bold text-slate-700 dark:text-slate-200">Görüşme</span>
+<span class="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full text-[11px] font-bold text-slate-600 dark:text-slate-300">3</span>
+</div>
+<span class="text-sm font-semibold text-slate-500">₺210.000</span>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Card 1 -->
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] uppercase tracking-wider font-bold text-slate-400">Mega İnşaat</span>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary text-[20px]">more_horiz</span>
+</div>
+<h3 class="font-bold text-slate-800 dark:text-slate-100 mb-2 leading-snug">Kurumsal Dijital Çözümler</h3>
+<div class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-blue-50 text-blue-600 text-[10px] font-bold mb-3">
+<span class="material-symbols-outlined text-[14px]">forum</span>
+                                TOPLANTI BEKLENİYOR
+                            </div>
+<div class="flex justify-between items-end">
+<div class="space-y-1">
+<div class="text-primary font-extrabold text-lg">₺150.000</div>
+<div class="text-slate-400 text-xs">Son görüşme: Pazartesi</div>
+</div>
+<div class="size-8 rounded-full bg-slate-100 border-2 border-white ring-1 ring-slate-100" data-alt="Client manager" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCMHSDDeNIHV4jVW1OKzi2W4GuaoZoV3tVpOUzlkn9Ia48iyDsxdYyWf3KAilvwNSDDzlR_OjGkR-wd2fRANF-K1eCtRgEfLjeAr9dPjo3TxqIpTtz6cBy8U6kQsdgQQ8LwVAKB6OIgOamCBfPtpEOqVuxtp3kCko-fsoWQNJmx1bkLhbndW0sdzkcZY9YpiaaAq4ho1eMmQvLlYH8zphiq5txIfG3TfeylhuZbTTAti_ySlulC4PCa0YyHmM3-aSH_LgCJGxuPrA"); background-size: cover;'></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 4: Kazanıldı -->
+<div class="kanban-column flex flex-col gap-4">
+<div class="flex items-center justify-between px-2 py-1">
+<div class="flex items-center gap-2">
+<span class="font-bold text-emerald-600 dark:text-emerald-400">Kazanıldı</span>
+<span class="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-full text-[11px] font-bold text-emerald-600 dark:text-emerald-400">1</span>
+</div>
+<span class="text-sm font-semibold text-slate-500">₺45.000</span>
+</div>
+<div class="flex flex-col gap-3">
+<div class="bg-emerald-50/50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden">
+<div class="absolute -right-2 -top-2 text-emerald-200/50 dark:text-emerald-900/20 pointer-events-none">
+<span class="material-symbols-outlined text-[80px]">check_circle</span>
+</div>
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] uppercase tracking-wider font-bold text-emerald-600">E-Ticaret A.Ş.</span>
+<span class="material-symbols-outlined text-emerald-300 group-hover:text-emerald-500 text-[20px]">verified</span>
+</div>
+<h3 class="font-bold text-slate-800 dark:text-slate-100 mb-2 leading-snug">Yıllık Danışmanlık</h3>
+<div class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold mb-3">
+                                TAMAMLANDI
+                            </div>
+<div class="flex justify-between items-end">
+<div class="space-y-1">
+<div class="text-emerald-600 font-extrabold text-lg">₺45.000</div>
+<div class="text-slate-400 text-xs">Bugün kapatıldı</div>
+</div>
+<div class="size-8 rounded-full bg-slate-100 border-2 border-white ring-1 ring-slate-100" data-alt="Staff photo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCy9P1KhbaA0vTrs1kI2hQnDXsK_qY4weoC7KkwbcR2vn6AofAugJxVE9kTw2QcGXkHAODA-jSTW7pdCRfxEczjnML5QrsWPdXHdcNUVXSmn5-H9aMf3DDKsjf3ufN4jmq-tpqSJ7ROfQK1_RhjKjnSWWyWTshZGrLfFcLL4_RpovaOTx-bbO5FdqsR-LMyWs8FEcVcnU8wzRwA5cIFlnmEfydWLOPRsfcwcP-G_CSOHios4WQA2L11_RJCrIgN9VE7bhj3QtzxAg"); background-size: cover;'></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column 5: Kaybedildi (Collapsed) -->
+<div class="collapsed-column bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col items-center py-6 gap-6 group hover:bg-slate-100 transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">unfold_more</span>
+<div class="flex items-center flex-col gap-1 h-full">
+<p class="[writing-mode:vertical-lr] font-bold text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300 uppercase tracking-widest text-sm">Kaybedildi</p>
+<span class="mt-4 px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full text-[11px] font-bold text-slate-500">0</span>
+</div>
+<span class="material-symbols-outlined text-slate-400">add_circle</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Simple footer with active users or info -->
+<footer class="h-12 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 flex items-center justify-between text-xs text-slate-400 font-medium">
+<div class="flex items-center gap-4">
+<div class="flex -space-x-2">
+<div class="size-6 rounded-full border border-white dark:border-slate-800 bg-slate-200" data-alt="User avatar 1" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA7hXdsbw8enqTeX9GPEuZJ1UQWMmnMR33-fFC0Ba8MbrRVHDd1iqAlUT2_iILy2ytS0TNGibz921NPjzcvab6SENjU-7Ipkez2kXAsfH36GrlSTDXsglLaR4c24RtPYLn-2jVO4HhyIYapM-3J-Oocmtamtoor_5qx1vdNCKi-OrqYCnmt3LZ09zxs5aJApRW4jmqtisiM5z5QNHu7vSqBhDt4hPHsX6d5rQ2Y7dSBcqHxsFcSTw7AbjYZTZkNzPG88w-C6m2k9Q"); background-size: cover;'></div>
+<div class="size-6 rounded-full border border-white dark:border-slate-800 bg-slate-200" data-alt="User avatar 2" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCM_UCc8vD9ypGNx2yery_arEcNMw_QLmjQS243Hexhde1ubcgN6xZ0LhUPtD__ZXFwyTz_N_kKZbum3CaQeoNjY8i4gSseW6_9DR1TN_fnnn0xPZus9U-knQFnesyBWIa7T9HSHoIqgnBhj-rxOpTGnWPBub2UCLUYoTLxJkhIh21AKVyWM1D8tnRNKrMexTrt7FyXO81VIQWlMqZOv-ZrMNkUtPVUWcxYS7R7PXNjqVgXMMNtFQXEjW6WoAFw9pZPU_o9Eb49mw"); background-size: cover;'></div>
+<div class="size-6 rounded-full border border-white dark:border-slate-800 bg-slate-200 flex items-center justify-center text-[8px] bg-slate-300 text-slate-600">+3</div>
+</div>
+<span>5 aktif takım üyesi çevrimiçi</span>
+</div>
+<div class="flex items-center gap-4">
+<span>Toplam Pipeline Değeri: <strong class="text-slate-600 dark:text-slate-300">₺460.000</strong></span>
+<div class="h-4 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
+<span>Güncelleme: 2 dakika önce</span>
+</div>
+</footer>
+</body></html>

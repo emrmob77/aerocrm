@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AERO CRM - Contacts List</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Noto+Sans:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#377df6",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        tr:hover .hover-action {
+            opacity: 1;
+        }
+        .hover-action {
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen text-[#0d121c] dark:text-white transition-colors duration-200">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 bg-white dark:bg-background-dark border-b border-[#e7ebf4] dark:border-gray-800 px-6 py-3">
+<div class="max-w-[1440px] mx-auto flex items-center justify-between gap-8">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined !text-xl">rocket_launch</span>
+</div>
+<h2 class="text-lg font-bold tracking-tight">AERO CRM</h2>
+</div>
+<!-- Search Bar -->
+<div class="hidden md:flex items-center bg-[#e7ebf4] dark:bg-gray-800 rounded-lg px-3 py-1.5 w-80">
+<span class="material-symbols-outlined text-[#48679d] dark:text-gray-400 !text-xl">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-[#48679d] dark:placeholder:text-gray-500" placeholder="Kişi veya şirket ara..." type="text"/>
+</div>
+</div>
+<nav class="hidden lg:flex items-center gap-8">
+<a class="text-sm font-semibold text-primary" href="#">Dashboard</a>
+<a class="text-sm font-medium text-[#48679d] hover:text-primary dark:text-gray-400" href="#">Contacts</a>
+<a class="text-sm font-medium text-[#48679d] hover:text-primary dark:text-gray-400" href="#">Proposals</a>
+<a class="text-sm font-medium text-[#48679d] hover:text-primary dark:text-gray-400" href="#">Sales</a>
+<a class="text-sm font-medium text-[#48679d] hover:text-primary dark:text-gray-400" href="#">Reports</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="size-9 rounded-full bg-cover bg-center border-2 border-primary/20" data-alt="User profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDGfw7uSppe1if1nOuM5ebTqI6FPJHp317YH2DpLyRRQmzOGtCLBxOohVdYGMgdyDwCX2h5SEtwM6u3yszN_O7pLWgMhTyJuupIF5BkH-nuf-KpmAHe-qcNKJhh5aMQTZ-qKWGWjbcuNqywqgwFFeUCWNz2vsqVTrjOiJFs1rjwVfWK3Is3O0gyJbvq1siN3E9InolU-XLhMrAiH5qj_3U8d3rxbo28rnTOybEfe0mjFppDecf-_Ye3omEimwlFkpOS9qD-cCC51A");'></div>
+</div>
+</div>
+</header>
+<main class="max-w-[1440px] mx-auto px-6 py-8">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+<div>
+<h1 class="text-3xl font-extrabold tracking-tight">Kişiler Rehberi</h1>
+<p class="text-[#48679d] dark:text-gray-400 mt-1">Satış bağlantılarınızı ve potansiyel müşterilerinizi verimli bir şekilde yönetin.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-[#ced8e9] dark:border-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors">
+<span class="material-symbols-outlined !text-lg">file_download</span>
+                    Dışa Aktar
+                </button>
+<button class="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined !text-lg">person_add</span>
+                    Yeni Kişi
+                </button>
+</div>
+</div>
+<!-- Filters & Toolbar -->
+<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+<div class="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-semibold border border-primary/20">
+                    Tüm Kişiler
+                    <span class="material-symbols-outlined !text-sm">close</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 text-[#48679d] dark:text-gray-400 rounded-full text-sm font-medium border border-[#ced8e9] dark:border-gray-700 hover:border-primary/50 transition-colors">
+                    Yeni Eklenenler
+                    <span class="material-symbols-outlined !text-sm">expand_more</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 text-[#48679d] dark:text-gray-400 rounded-full text-sm font-medium border border-[#ced8e9] dark:border-gray-700 hover:border-primary/50 transition-colors">
+                    Yüksek Değerli
+                    <span class="material-symbols-outlined !text-sm">expand_more</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 text-[#48679d] dark:text-gray-400 rounded-full text-sm font-medium border border-[#ced8e9] dark:border-gray-700 hover:border-primary/50 transition-colors">
+                    Hareketsiz
+                    <span class="material-symbols-outlined !text-sm">expand_more</span>
+</button>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+<button class="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+<span class="material-symbols-outlined">view_column</span>
+</button>
+<button class="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</div>
+<!-- Data Table Container -->
+<div class="bg-white dark:bg-background-dark border border-[#ced8e9] dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-gray-50/50 dark:bg-gray-900/50 border-b border-[#ced8e9] dark:border-gray-800">
+<th class="px-6 py-4 w-10">
+<input class="rounded border-gray-300 dark:border-gray-700 text-primary focus:ring-primary" type="checkbox"/>
+</th>
+<th class="px-4 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider">İSİM</th>
+<th class="px-4 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider">E-POSTA</th>
+<th class="px-4 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider">TELEFON</th>
+<th class="px-4 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider">ŞİRKET</th>
+<th class="px-4 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider">TOPLAM DEĞER</th>
+<th class="px-6 py-4 text-xs font-bold text-[#48679d] uppercase tracking-wider text-right">İŞLEMLER</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#ced8e9] dark:divide-gray-800">
+<!-- Row 1 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4 h-16">
+<input class="rounded border-gray-300 dark:border-gray-700 text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center font-bold text-primary">AY</div>
+<span class="font-semibold text-sm">Ahmet Yılmaz</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+<span>ahmet@aerotech.com</span>
+<button class="hover-action text-primary transition-opacity">
+<span class="material-symbols-outlined !text-base">content_copy</span>
+</button>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+<span>+90 532 123 45 67</span>
+<button class="hover-action text-primary transition-opacity">
+<span class="material-symbols-outlined !text-base">call</span>
+</button>
+</div>
+</td>
+<td class="px-4 py-4">
+<span class="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-full">Aero Tech</span>
+</td>
+<td class="px-4 py-4 font-bold text-sm">₺45.000</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-lg text-[#48679d]">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4 h-16">
+<input class="rounded border-gray-300 dark:border-gray-700 text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-lg bg-pink-100 dark:bg-pink-900 flex items-center justify-center font-bold text-pink-600">ED</div>
+<span class="font-semibold text-sm">Elif Demir</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+<span>elif@demir.io</span>
+<button class="hover-action text-primary transition-opacity">
+<span class="material-symbols-outlined !text-base">content_copy</span>
+</button>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+<span>+90 541 987 65 43</span>
+<button class="hover-action text-primary transition-opacity">
+<span class="material-symbols-outlined !text-base">call</span>
+</button>
+</div>
+</td>
+<td class="px-4 py-4">
+<span class="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-full">Demir Corp</span>
+</td>
+<td class="px-4 py-4 font-bold text-sm">₺12.500</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-lg text-[#48679d]">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4 h-16">
+<input class="rounded border-gray-300 dark:border-gray-700 text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-lg bg-green-100 dark:bg-green-900 flex items-center justify-center font-bold text-green-600">CÖ</div>
+<span class="font-semibold text-sm">Caner Öz</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+<span>caner@oz.net</span>
+<button class="hover-action text-primary transition-opacity">
+<span class="material-symbols-outlined !text-base">content_copy</span>
+</button>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+<span>+90 555 111 22 33</span>
+<button class="hover-action text-primary transition-opacity">
+<span class="material-symbols-outlined !text-base">call</span>
+</button>
+</div>
+</td>
+<td class="px-4 py-4">
+<span class="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-full">Öz Yazılım</span>
+</td>
+<td class="px-4 py-4 font-bold text-sm">₺8.200</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-lg text-[#48679d]">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4 h-16">
+<input class="rounded border-gray-300 dark:border-gray-700 text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-lg bg-orange-100 dark:bg-orange-900 flex items-center justify-center font-bold text-orange-600">SA</div>
+<span class="font-semibold text-sm">Selin Ak</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+<span>selin@akgida.com</span>
+<button class="hover-action text-primary transition-opacity">
+<span class="material-symbols-outlined !text-base">content_copy</span>
+</button>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+<span>+90 530 444 55 66</span>
+<button class="hover-action text-primary transition-opacity">
+<span class="material-symbols-outlined !text-base">call</span>
+</button>
+</div>
+</td>
+<td class="px-4 py-4">
+<span class="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-full">Ak Gıda</span>
+</td>
+<td class="px-4 py-4 font-bold text-sm">₺150.000</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-lg text-[#48679d]">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4 h-16">
+<input class="rounded border-gray-300 dark:border-gray-700 text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-lg bg-purple-100 dark:bg-purple-900 flex items-center justify-center font-bold text-purple-600">BE</div>
+<span class="font-semibold text-sm">Burak Erol</span>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+<span>burak@erol.co</span>
+<button class="hover-action text-primary transition-opacity">
+<span class="material-symbols-outlined !text-base">content_copy</span>
+</button>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+<span>+90 533 222 11 00</span>
+<button class="hover-action text-primary transition-opacity">
+<span class="material-symbols-outlined !text-base">call</span>
+</button>
+</div>
+</td>
+<td class="px-4 py-4">
+<span class="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-full">Erol Lojistik</span>
+</td>
+<td class="px-4 py-4 font-bold text-sm">₺32.400</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-lg text-[#48679d]">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="px-6 py-4 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-[#ced8e9] dark:border-gray-800">
+<span class="text-sm text-[#48679d] dark:text-gray-400">
+<span class="font-semibold text-[#0d121c] dark:text-white">1-25</span> of <span class="font-semibold text-[#0d121c] dark:text-white">156</span> kişi
+                </span>
+<div class="flex items-center gap-2">
+<button class="p-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg hover:bg-white dark:hover:bg-gray-800 disabled:opacity-50 transition-colors" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<div class="flex items-center gap-1">
+<button class="size-9 flex items-center justify-center rounded-lg bg-primary text-white font-bold text-sm">1</button>
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-gray-800 text-sm font-medium">2</button>
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-gray-800 text-sm font-medium">3</button>
+<span class="px-2 text-gray-400">...</span>
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-white dark:hover:bg-gray-800 text-sm font-medium">7</button>
+</div>
+<button class="p-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg hover:bg-white dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<div class="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
+<span>Satır sayısı:</span>
+<select class="bg-transparent border-none focus:ring-0 text-sm font-semibold py-0 pr-8">
+<option>25</option>
+<option>50</option>
+<option>100</option>
+</select>
+</div>
+</div>
+</div>
+</main>
+<!-- Selection Bar (Floating - hidden by default, visible when items selected) -->
+<div class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-900 shadow-2xl rounded-xl border border-primary/20 px-6 py-4 items-center gap-6 animate-in slide-in-from-bottom-4 duration-300">
+<span class="text-sm font-bold text-primary">3 Kişi Seçildi</span>
+<div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm font-medium">
+<span class="material-symbols-outlined !text-lg">edit</span>
+                Düzenle
+            </button>
+<button class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm font-medium">
+<span class="material-symbols-outlined !text-lg">mail</span>
+                E-posta Gönder
+            </button>
+<button class="flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 text-red-600 rounded-lg text-sm font-medium">
+<span class="material-symbols-outlined !text-lg">delete</span>
+                Sil
+            </button>
+</div>
+<button class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
+<span class="material-symbols-outlined !text-lg">close</span>
+</button>
+</div>
+</body></html>

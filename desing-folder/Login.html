@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Noto+Sans:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#377df6",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased">
+<div class="flex min-h-screen">
+<!-- Left Side: Hero Section -->
+<div class="hidden lg:flex lg:w-1/2 relative flex-col items-center justify-center p-12 bg-gradient-to-br from-primary to-[#1e40af] overflow-hidden">
+<!-- Decorative Background Element -->
+<div class="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+<div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 bg-black/10 rounded-full blur-3xl"></div>
+<div class="relative z-10 w-full max-w-lg">
+<div class="mb-12">
+<h1 class="text-white text-7xl font-extrabold tracking-tighter mb-4">AERO</h1>
+<p class="text-white/90 text-2xl font-medium">Satış, Hızla Uçar.</p>
+</div>
+<!-- Floating Testimonial Card -->
+<div class="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-xl shadow-2xl">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-12 h-12 rounded-full bg-cover bg-center border-2 border-white/50" data-alt="Professional profile photo of a sales manager" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDyteaLS8K4E99bEJGShUrkqvI8NlICL8oXo9UXkPpXwC6_uTJ_vV1PZjCexaBjlmLIvhwy2H5IgIE7GRcIFG9kJM3UeSzPVwFL7joTzz83BGODv_XAX4EFeH5_YeZmKpPTVkWzyUfJpQVH7ktStZWf7TPrw-ov2S4edH-k7Bw_tCUPo-lWUIIfHhyqrKDu3Enp8Y2tRyuIrTrOU_l1SeqyfnD6RH3fzwiCW2ZKFvE-0owPdpe3ltYTJko9uwJBfP0XbCeUNn3ylw');"></div>
+<div>
+<p class="text-white font-bold">Ahmet Y.</p>
+<p class="text-white/70 text-sm">Satış Müdürü</p>
+</div>
+</div>
+<p class="text-white text-lg italic leading-relaxed">
+                        "Aero ile teklif hazırlama süremiz %50 azaldı. Artık sadece satışa odaklanabiliyoruz."
+                    </p>
+</div>
+<!-- Graphic Element -->
+<div class="mt-16 opacity-40">
+<div class="h-1 w-32 bg-white rounded-full mb-2"></div>
+<div class="h-1 w-48 bg-white rounded-full opacity-60 mb-2"></div>
+<div class="h-1 w-24 bg-white rounded-full opacity-30"></div>
+</div>
+</div>
+</div>
+<!-- Right Side: Login Form -->
+<div class="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background-light dark:bg-background-dark">
+<div class="w-full max-w-[440px]">
+<!-- Mobile Logo -->
+<div class="lg:hidden mb-8 text-center">
+<h1 class="text-primary text-4xl font-black tracking-tighter">AERO</h1>
+</div>
+<!-- Header Content -->
+<div class="mb-10 text-center lg:text-left">
+<h2 class="text-[#0d121c] dark:text-white text-3xl font-bold leading-tight mb-2">Tekrar Hoş Geldiniz</h2>
+<p class="text-[#48679d] dark:text-gray-400">Devam etmek için lütfen giriş yapın.</p>
+</div>
+<form class="space-y-5">
+<!-- Email Field -->
+<div class="flex flex-col gap-2">
+<label class="text-[#0d121c] dark:text-gray-200 text-base font-medium leading-normal">E-posta</label>
+<div class="flex w-full items-stretch rounded-lg shadow-sm">
+<input class="form-input flex w-full min-w-0 flex-1 rounded-l-lg text-[#0d121c] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] h-14 placeholder:text-[#48679d]/50 p-[15px] border-r-0 pr-2 text-base font-normal leading-normal transition-colors" placeholder="e-posta@adresiniz.com" type="email"/>
+<div class="text-[#48679d] flex border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] items-center justify-center pr-[15px] rounded-r-lg border-l-0">
+<span class="material-symbols-outlined">mail</span>
+</div>
+</div>
+</div>
+<!-- Password Field -->
+<div class="flex flex-col gap-2">
+<label class="text-[#0d121c] dark:text-gray-200 text-base font-medium leading-normal">Şifre</label>
+<div class="flex w-full items-stretch rounded-lg shadow-sm">
+<input class="form-input flex w-full min-w-0 flex-1 rounded-l-lg text-[#0d121c] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] h-14 placeholder:text-[#48679d]/50 p-[15px] border-r-0 pr-2 text-base font-normal leading-normal transition-colors" placeholder="••••••••" type="password"/>
+<div class="text-[#48679d] flex border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] items-center justify-center pr-[15px] rounded-r-lg border-l-0">
+<span class="material-symbols-outlined">lock</span>
+</div>
+</div>
+</div>
+<!-- Form Controls -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-2 group cursor-pointer">
+<div class="relative flex items-center">
+<input class="h-5 w-5 rounded border-[#ced8e9] dark:border-gray-700 border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer" id="remember" type="checkbox"/>
+</div>
+<label class="text-[#0d121c] dark:text-gray-300 text-sm font-medium cursor-pointer" for="remember">Beni Hatırla</label>
+</div>
+<button class="text-primary hover:text-primary/80 text-sm font-semibold transition-colors" type="button">
+                            Şifremi Unuttum
+                        </button>
+</div>
+<!-- Primary Action -->
+<button class="w-full flex h-14 items-center justify-center rounded-lg bg-primary text-white text-base font-bold tracking-wide hover:bg-primary/90 transition-all shadow-lg shadow-primary/20" type="submit">
+<span class="truncate">Giriş Yap</span>
+</button>
+<!-- Divider -->
+<div class="relative py-4 flex items-center">
+<div class="flex-grow border-t border-[#ced8e9] dark:border-gray-700"></div>
+<span class="flex-shrink mx-4 text-[#48679d] dark:text-gray-500 text-sm font-medium">veya</span>
+<div class="flex-grow border-t border-[#ced8e9] dark:border-gray-700"></div>
+</div>
+<!-- Social Login -->
+<button class="w-full flex h-14 items-center justify-center gap-3 rounded-lg border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] text-[#0d121c] dark:text-white text-base font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all" type="button">
+<svg class="w-5 h-5" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+<span>Google ile Devam Et</span>
+</button>
+</form>
+<!-- Footer Registration -->
+<div class="mt-10 text-center">
+<p class="text-[#48679d] dark:text-gray-400 font-medium">
+                        Hesabınız yok mu? 
+                        <a class="text-primary font-bold hover:underline ml-1" href="#">Kayıt Ol</a>
+</p>
+</div>
+<!-- Footer Links -->
+<div class="mt-20 flex justify-center gap-6 text-xs text-[#48679d]/60 dark:text-gray-500 font-medium">
+<a class="hover:text-primary transition-colors" href="#">Kullanım Koşulları</a>
+<a class="hover:text-primary transition-colors" href="#">Gizlilik Politikası</a>
+<a class="hover:text-primary transition-colors" href="#">Yardım Merkezi</a>
+</div>
+</div>
+</div>
+</div>
+</body></html>

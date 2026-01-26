@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#377df6",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101722",
+                        "success": "#22c55e",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444"
+                    },
+                    fontFamily: {
+                        "display": ["Manrope"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.75rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .pulse-animation {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased min-h-screen flex items-center justify-center p-6">
+<!-- Webhook Health Widget Container (Dashboard Grid Item Simulation) -->
+<div class="w-full max-w-sm bg-white dark:bg-[#1a222e] rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+<!-- Header -->
+<div class="px-5 pt-5 pb-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-success text-xl pulse-animation" style="font-variation-settings: 'FILL' 1">sensors</span>
+<h3 class="text-slate-900 dark:text-slate-100 text-base font-bold tracking-tight">Webhook Sağlığı</h3>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">Canlı</span>
+</div>
+<!-- KPI Hero Section -->
+<div class="px-5 pb-4">
+<div class="flex items-baseline gap-1">
+<span class="text-4xl font-extrabold text-success tracking-tight">99.8%</span>
+<span class="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1">Başarı Oranı</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Son 24 saatlik sistem performansı</p>
+</div>
+<!-- Sparkline Chart Section -->
+<div class="px-5 pb-6">
+<div class="h-16 w-full relative group">
+<!-- SVG Chart showing success (Blue) and failure (Red) trends -->
+<svg class="w-full h-full preserve-3d" preserveaspectratio="none" viewbox="0 0 400 100">
+<!-- Success Line (Blue) -->
+<path d="M0 80 Q 40 70, 80 75 T 160 60 T 240 65 T 320 50 T 400 45" fill="none" stroke="#377df6" stroke-linecap="round" stroke-width="3"></path>
+<!-- Failure Line (Red - stays low) -->
+<path d="M0 95 Q 40 98, 80 94 T 160 96 T 240 92 T 320 97 T 400 95" fill="none" stroke="#ef4444" stroke-dasharray="4 2" stroke-opacity="0.6" stroke-width="2"></path>
+</svg>
+<div class="flex justify-between mt-2">
+<span class="text-[10px] text-slate-400 font-medium">24s önce</span>
+<span class="text-[10px] text-slate-400 font-medium">Şimdi</span>
+</div>
+</div>
+</div>
+<!-- Recent Events List -->
+<div class="border-t border-slate-100 dark:border-slate-800">
+<div class="px-5 py-3 bg-slate-50/50 dark:bg-slate-800/30">
+<p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Son Etkinlikler</p>
+</div>
+<div class="divide-y divide-slate-50 dark:divide-slate-800">
+<!-- Item 1: Success -->
+<div class="flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-3">
+<div class="size-2 rounded-full bg-success"></div>
+<div>
+<p class="text-sm font-semibold text-slate-700 dark:text-slate-200">proposal.signed</p>
+<p class="text-[11px] text-slate-400">2 dakika önce</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">chevron_right</span>
+</div>
+<!-- Item 2: Retry -->
+<div class="flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-3">
+<div class="size-2 rounded-full bg-warning"></div>
+<div>
+<p class="text-sm font-semibold text-slate-700 dark:text-slate-200">contact.updated</p>
+<p class="text-[11px] text-slate-400">5 dakika önce</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">chevron_right</span>
+</div>
+<!-- Item 3: Success -->
+<div class="flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-3">
+<div class="size-2 rounded-full bg-success"></div>
+<div>
+<p class="text-sm font-semibold text-slate-700 dark:text-slate-200">deal.closed</p>
+<p class="text-[11px] text-slate-400">12 dakika önce</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Footer Action -->
+<a class="block w-full text-center py-4 text-sm font-bold text-primary hover:bg-primary/5 transition-colors border-t border-slate-100 dark:border-slate-800" href="#">
+            Tüm Günlükleri Gör
+        </a>
+</div>
+</body></html>

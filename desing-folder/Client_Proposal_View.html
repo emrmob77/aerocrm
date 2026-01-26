@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AERO CRM - Müşteri Teklifi</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#377df6",
+              "success": "#22c55e",
+              "background-light": "#f5f6f8",
+              "background-dark": "#101722",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .signature-canvas {
+            background-image: repeating-linear-gradient(0deg, #e5e7eb, #e5e7eb 1px, transparent 1px, transparent 20px);
+            background-size: 100% 21px;
+        }
+        .glass-header {
+            backdrop-filter: blur(8px);
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+        .dark .glass-header {
+            background-color: rgba(16, 23, 34, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#1a1a1a] dark:text-gray-100 transition-colors duration-300">
+<!-- Urgency Banner -->
+<div class="w-full bg-primary/10 dark:bg-primary/20 border-b border-primary/20 sticky top-0 z-50 glass-header">
+<div class="max-w-[960px] mx-auto px-4 py-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">timer</span>
+<p class="text-sm font-medium text-primary">Bu teklif için özel indirim süresi doluyor:</p>
+</div>
+<div class="flex gap-3 items-center">
+<div class="flex flex-col items-center">
+<span class="text-primary font-bold text-sm">02</span>
+<span class="text-[10px] uppercase opacity-60">Saat</span>
+</div>
+<span class="text-primary font-bold">:</span>
+<div class="flex flex-col items-center">
+<span class="text-primary font-bold text-sm">45</span>
+<span class="text-[10px] uppercase opacity-60">Dak</span>
+</div>
+<span class="text-primary font-bold">:</span>
+<div class="flex flex-col items-center">
+<span class="text-primary font-bold text-sm">12</span>
+<span class="text-[10px] uppercase opacity-60">San</span>
+</div>
+</div>
+</div>
+</div>
+<div class="layout-container flex h-full grow flex-col">
+<div class="flex flex-1 justify-center py-5">
+<div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+<!-- Hero Section -->
+<div class="@container mb-8">
+<div class="@[480px]:px-4">
+<div class="bg-cover bg-center flex flex-col justify-end overflow-hidden bg-gray-200 @[480px]:rounded-xl min-h-[320px] shadow-lg relative" data-alt="Modern office building reflecting light from windows" style='background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 50%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuBEodPaY2jMVfgN7BnpzLReAti5zPBRICLd0CLdT7ZqjH0_Ij4jjntVWA6qFqBZG5945z6OFzon7KTCea-qkajMff0pDnBU63vCErAHQo_VHVYnqaSME-vIA22Ai4Vi5QDfpYjPy98R4fGQkE6l0ox-YhCufFmKgVOkCntV7iOukxXMmPaLt_yPaPngPFRjTrCVk-bf9KzcZJNY-lX6YyUNzrDNlx7KUxvYAD0mbNqcFbjAKto8gTj-RkzEFx5kM-aqyVmdJ8xtig");'>
+<div class="flex flex-col p-6 md:p-10">
+<span class="bg-primary text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded w-fit mb-3">Resmi Teklif</span>
+<h1 class="text-white tracking-tight text-3xl md:text-4xl font-extrabold leading-tight">ABC Şirketi Web Sitesi Teklifi</h1>
+<p class="text-gray-300 mt-2 text-sm md:text-base">Proje Kodu: #PRP-2024-0892 | Hazırlayan: AERO CRM Proje Ekibi</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Summary Section -->
+<div class="px-4 mb-10">
+<h2 class="text-primary text-sm font-bold uppercase tracking-widest mb-2">01. Proje Özeti</h2>
+<h1 class="text-[#0d121c] dark:text-white tracking-tight text-[32px] font-bold leading-tight pb-3">Hedefler ve Vizyon</h1>
+<p class="text-[#4e5a71] dark:text-gray-400 text-lg font-normal leading-relaxed">
+                        AERO CRM olarak, ABC Şirketi için modern, kullanıcı dostu ve dönüşüm odaklı bir web sitesi geliştirmeyi hedefliyoruz. Bu teklif, markanızın dijital dünyadaki görünürlüğünü artırmak, kullanıcı deneyimini optimize etmek ve satış kanallarınızı güçlendirmek amacıyla hazırlanmıştır. Projemiz; tam duyarlı (responsive) tasarım, SEO altyapısı ve yüksek performanslı sunucu yapılandırmasını kapsamaktadır.
+                    </p>
+</div>
+<!-- Pricing Section -->
+<div class="px-4 mb-12">
+<div class="bg-white dark:bg-background-dark border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
+<div class="p-6 border-b border-gray-100 dark:border-gray-800">
+<h2 class="text-[#0d121c] dark:text-white text-xl font-bold">Fiyatlandırma</h2>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-gray-500 uppercase">
+<th class="px-6 py-4">Hizmet Açıklaması</th>
+<th class="px-6 py-4 text-center">Adet/Birim</th>
+<th class="px-6 py-4 text-right">Birim Fiyat</th>
+<th class="px-6 py-4 text-right">Toplam</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-gray-100 dark:border-gray-800">
+<td class="px-6 py-4 font-medium">Özel Tasarım ve UI/UX Geliştirme</td>
+<td class="px-6 py-4 text-center">1</td>
+<td class="px-6 py-4 text-right">₺24.500</td>
+<td class="px-6 py-4 text-right">₺24.500</td>
+</tr>
+<tr class="border-b border-gray-100 dark:border-gray-800">
+<td class="px-6 py-4 font-medium">Front-end &amp; Back-end Entegrasyonu</td>
+<td class="px-6 py-4 text-center">1</td>
+<td class="px-6 py-4 text-right">₺35.000</td>
+<td class="px-6 py-4 text-right">₺35.000</td>
+</tr>
+<tr class="border-b border-gray-100 dark:border-gray-800">
+<td class="px-6 py-4 font-medium">SEO ve İçerik Yönetim Paneli</td>
+<td class="px-6 py-4 text-center">1</td>
+<td class="px-6 py-4 text-right">₺12.000</td>
+<td class="px-6 py-4 text-right">₺12.000</td>
+</tr>
+</tbody>
+<tfoot>
+<tr class="bg-gray-50 dark:bg-gray-900/50">
+<td class="px-6 py-6 text-right font-bold text-gray-500" colspan="3">Ara Toplam</td>
+<td class="px-6 py-6 text-right font-bold">₺71.500</td>
+</tr>
+<tr class="bg-primary/5">
+<td class="px-6 py-6 text-right font-extrabold text-primary text-lg" colspan="3">Genel Toplam (KDV Dahil)</td>
+<td class="px-6 py-6 text-right font-extrabold text-primary text-xl tracking-tight">₺85.800</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+</div>
+<!-- Timeline Section -->
+<div class="px-4 mb-16">
+<h2 class="text-[#0d121c] dark:text-white text-xl font-bold mb-6">Proje Takvimi</h2>
+<div class="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-300 before:to-transparent">
+<!-- Item 1 -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+<div class="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-primary text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
+<span class="material-symbols-outlined text-sm">palette</span>
+</div>
+<div class="w-[calc(100%-4rem)] md:w-[45%] p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+<div class="flex items-center justify-between space-x-2 mb-1">
+<div class="font-bold text-gray-900 dark:text-white">Aşama 1: Tasarım</div>
+<time class="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded">2 Hafta</time>
+</div>
+<div class="text-sm text-gray-500">UI/UX wireframe hazırlığı ve onay süreçleri.</div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
+<div class="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-gray-200 text-gray-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
+<span class="material-symbols-outlined text-sm">code</span>
+</div>
+<div class="w-[calc(100%-4rem)] md:w-[45%] p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+<div class="flex items-center justify-between space-x-2 mb-1">
+<div class="font-bold text-gray-900 dark:text-white">Aşama 2: Geliştirme</div>
+<time class="text-xs font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">4 Hafta</time>
+</div>
+<div class="text-sm text-gray-500">Yazılım kodlama ve CMS entegrasyonu.</div>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
+<div class="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-gray-200 text-gray-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
+<span class="material-symbols-outlined text-sm">rocket_launch</span>
+</div>
+<div class="w-[calc(100%-4rem)] md:w-[45%] p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+<div class="flex items-center justify-between space-x-2 mb-1">
+<div class="font-bold text-gray-900 dark:text-white">Aşama 3: Yayına Alım</div>
+<time class="text-xs font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">1 Hafta</time>
+</div>
+<div class="text-sm text-gray-500">Testler, hata ayıklama ve domain yönlendirme.</div>
+</div>
+</div>
+</div>
+</div>
+<!-- E-Signature Section -->
+<div class="px-4 pb-24">
+<div class="bg-white dark:bg-gray-900 border-2 border-primary/20 rounded-2xl p-8 shadow-xl">
+<div class="flex flex-col md:flex-row md:items-start gap-8">
+<div class="flex-1">
+<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Onay ve İmza</h3>
+<p class="text-gray-500 text-sm mb-6 leading-relaxed">
+                                    Bu teklifi kabul ederek yukarıda belirtilen kapsam, fiyatlandırma ve zaman çizelgesini onaylamış olursunuz. İmzanız dijital olarak kaydedilecek ve sözleşme sürecini başlatacaktır.
+                                </p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+<div>
+<label class="block text-xs font-bold uppercase text-gray-400 mb-1">Ad Soyad</label>
+<input class="w-full bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 focus:ring-primary focus:border-primary text-sm" placeholder="Tam adınızı giriniz" type="text"/>
+</div>
+<div>
+<label class="block text-xs font-bold uppercase text-gray-400 mb-1">Tarih</label>
+<input class="w-full bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-500 cursor-not-allowed" disabled="" type="text" value="24.05.2024"/>
+</div>
+</div>
+<div class="bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4">
+<label class="block text-xs font-bold uppercase text-gray-400 mb-2 flex justify-between">
+<span>Dijital İmza Alanı</span>
+<span class="text-primary hover:underline cursor-pointer normal-case">Temizle</span>
+</label>
+<div class="h-40 w-full signature-canvas rounded flex items-center justify-center relative cursor-crosshair">
+<!-- Placeholder signature line -->
+<div class="absolute bottom-10 left-10 right-10 h-px bg-gray-300"></div>
+<p class="text-gray-300 text-xs italic z-0">Mousenuz ile buraya imza atın</p>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-gray-100 dark:border-gray-800 pt-8">
+<div class="flex items-center gap-2 text-xs text-gray-400">
+<span class="material-symbols-outlined text-lg">verified_user</span>
+<span>Güvenli bağlantı üzerinden IP adresiniz ile imzalanmaktadır.</span>
+</div>
+<button class="w-full md:w-auto bg-success hover:bg-success/90 text-white font-bold py-4 px-10 rounded-xl shadow-lg shadow-success/20 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">draw</span>
+                                Kabul Et ve İmzala
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Bottom Bar (Mobile/Table View) -->
+<div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 md:hidden flex items-center justify-between z-50">
+<div>
+<p class="text-[10px] uppercase font-bold text-gray-400">Toplam Teklif</p>
+<p class="text-lg font-extrabold text-[#0d121c] dark:text-white">₺85.800</p>
+</div>
+<button class="bg-success text-white font-bold py-3 px-6 rounded-lg text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">check_circle</span>
+            İmzala
+        </button>
+</div>
+</body></html>

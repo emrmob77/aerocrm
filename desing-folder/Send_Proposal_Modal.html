@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#377df6",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: "Plus Jakarta Sans", sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex items-center justify-center p-4">
+<!-- Modal Container -->
+<div class="relative w-full max-w-[720px] bg-white dark:bg-[#1a222e] rounded-xl shadow-2xl overflow-hidden flex flex-col border border-gray-200 dark:border-gray-800">
+<!-- Header Section -->
+<div class="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+<h1 class="text-[#0d121c] dark:text-white text-2xl font-bold leading-tight">Teklifi Gönder</h1>
+<button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="overflow-y-auto max-h-[80vh]">
+<!-- Method Selection (SegmentedButtons) -->
+<div class="px-6 py-4 bg-gray-50/50 dark:bg-gray-900/20">
+<p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 px-1">Gönderim Yöntemi</p>
+<div class="flex h-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1.5">
+<label class="flex cursor-pointer h-full grow items-center justify-center gap-2 rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-gray-700 has-[:checked]:shadow-sm has-[:checked]:text-primary text-gray-500 dark:text-gray-400 text-sm font-semibold transition-all">
+<span class="material-symbols-outlined text-[20px]">mail</span>
+<span class="truncate">Email</span>
+<input checked="" class="invisible w-0" name="delivery_method" type="radio" value="Email"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center gap-2 rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-gray-700 has-[:checked]:shadow-sm has-[:checked]:text-primary text-gray-500 dark:text-gray-400 text-sm font-semibold transition-all">
+<span class="material-symbols-outlined text-[20px]">chat</span>
+<span class="truncate">WhatsApp</span>
+<input class="invisible w-0" name="delivery_method" type="radio" value="WhatsApp"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center gap-2 rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-gray-700 has-[:checked]:shadow-sm has-[:checked]:text-primary text-gray-500 dark:text-gray-400 text-sm font-semibold transition-all">
+<span class="material-symbols-outlined text-[20px]">sms</span>
+<span class="truncate">SMS</span>
+<input class="invisible w-0" name="delivery_method" type="radio" value="SMS"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center gap-2 rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-gray-700 has-[:checked]:shadow-sm has-[:checked]:text-primary text-gray-500 dark:text-gray-400 text-sm font-semibold transition-all">
+<span class="material-symbols-outlined text-[20px]">link</span>
+<span class="truncate">Link</span>
+<input class="invisible w-0" name="delivery_method" type="radio" value="Link"/>
+</label>
+</div>
+</div>
+<!-- Form Content -->
+<div class="p-6 space-y-6">
+<!-- Recipient & Subject -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<label class="flex flex-col flex-1">
+<p class="text-[#0d121c] dark:text-gray-200 text-sm font-semibold leading-normal pb-2">Alıcı</p>
+<input class="form-input flex w-full rounded-lg text-[#0d121c] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-12 placeholder:text-gray-400 p-3 text-sm font-normal" value="merve.yilmaz@techcorp.com"/>
+</label>
+<label class="flex flex-col flex-1">
+<p class="text-[#0d121c] dark:text-gray-200 text-sm font-semibold leading-normal pb-2">Konu</p>
+<input class="form-input flex w-full rounded-lg text-[#0d121c] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-12 placeholder:text-gray-400 p-3 text-sm font-normal" value="AERO CRM Hizmet Teklifi - #2024-08"/>
+</label>
+</div>
+<!-- Message Composer -->
+<div class="flex flex-col gap-2">
+<p class="text-[#0d121c] dark:text-gray-200 text-sm font-semibold leading-normal">Mesaj</p>
+<div class="flex flex-col border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800">
+<!-- Toolbar -->
+<div class="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+<div class="flex items-center gap-1">
+<button class="p-1.5 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+<span class="material-symbols-outlined text-[20px]">format_bold</span>
+</button>
+<button class="p-1.5 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+<span class="material-symbols-outlined text-[20px]">format_italic</span>
+</button>
+<button class="p-1.5 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+<span class="material-symbols-outlined text-[20px]">link</span>
+</button>
+<div class="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1"></div>
+<button class="p-1.5 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+<span class="material-symbols-outlined text-[20px]">attach_file</span>
+</button>
+</div>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                Değişken Ekle
+                            </button>
+</div>
+<!-- Textarea -->
+<textarea class="w-full min-h-[160px] p-4 text-sm text-[#0d121c] dark:text-white bg-transparent border-0 focus:ring-0 resize-none placeholder:text-gray-400" placeholder="Mesajınızı buraya yazın...">Merhaba {{Müşteri Adı}},
+
+Sizin için hazırladığımız özel çözüm teklifi ekte ve aşağıdaki bağlantıda yer almaktadır. 
+
+Teklif Detayları: {{Teklif_Linki}}
+
+Herhangi bir sorunuz olursa yanıtlamaktan memnuniyet duyarım.
+
+İyi çalışmalar,</textarea>
+</div>
+</div>
+<!-- Options -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-gray-900 dark:text-white">Geçerlilik süresi ekle</span>
+<span class="text-xs text-gray-500">Teklif belirli bir tarihten sonra kapanır.</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<select class="form-select w-full rounded-lg border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white text-sm focus:ring-primary/20 focus:border-primary h-10">
+<option>7 Gün (24 Mayıs 2024)</option>
+<option selected="">15 Gün (1 Haziran 2024)</option>
+<option>30 Gün (16 Haziran 2024)</option>
+<option>Özel Tarih Seç...</option>
+</select>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between h-full py-1">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-gray-900 dark:text-white">PDF kopyasını ekle</span>
+<span class="text-xs text-gray-500">Teklifin bir kopyası PDF olarak eklenir.</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg">
+<span class="material-symbols-outlined text-primary text-[20px]">picture_as_pdf</span>
+<span class="text-xs font-medium text-primary">teklif_2024_08.pdf (1.2 MB)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<div class="flex items-center justify-end gap-3 p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40">
+<button class="px-5 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+                Önizle
+            </button>
+<button class="px-8 py-2.5 bg-primary hover:bg-primary/90 text-white text-sm font-bold rounded-lg transition-all shadow-md flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">send</span>
+                Gönder
+            </button>
+</div>
+</div>
+</body></html>

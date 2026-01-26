@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AERO CRM - Spyglass Analytics</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#377df6",
+                        "background-light": "#f8f9fc",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0d121c] dark:text-white transition-colors duration-300">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<!-- Header -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7ebf4] dark:border-b-[#2a3441] px-10 py-3 bg-white dark:bg-background-dark">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-primary">
+<div class="size-6">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-[#0d121c] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">AERO CRM</h2>
+</div>
+<div class="flex items-center gap-9">
+<a class="text-[#0d121c] dark:text-[#a1b0cb] text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-primary text-sm font-bold leading-normal" href="#">Proposals</a>
+<a class="text-[#0d121c] dark:text-[#a1b0cb] text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Contacts</a>
+<a class="text-[#0d121c] dark:text-[#a1b0cb] text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Analytics</a>
+<a class="text-[#0d121c] dark:text-[#a1b0cb] text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Settings</a>
+</div>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<label class="flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#48679d] flex border-none bg-[#e7ebf4] dark:bg-[#1e293b] items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined text-xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d121c] dark:text-white focus:outline-0 focus:ring-0 border-none bg-[#e7ebf4] dark:bg-[#1e293b] focus:border-none h-full placeholder:text-[#48679d] px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" placeholder="Search proposals..." value=""/>
+</div>
+</label>
+<div class="flex gap-2">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#e7ebf4] dark:bg-[#1e293b] text-[#0d121c] dark:text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#e7ebf4] dark:bg-[#1e293b] text-[#0d121c] dark:text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary" data-alt="User profile avatar showing professional portrait" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDAd5KsVNSG-mFdepi77Ot-A0smN3-wrFZhHhTv--bDpX6stLWPIIAF3gLE9hHRaE1mmszOqak2dRuZAmdxgKEEwI4f8IDVL96r-vJHPZ3UDAfIrCmcE6EuPdLzWjQczbMotfxCcuq1sq4vtIXKJqZMJqa32_dGA-cyS25ioUHtK_Y-Zajo5Bv2sf7IXwI7v2Cy39kTNrwQfuvA5sfAVxojG9N0P7Us2DCYeP1SNZSKEBUzVbpC4QGpdRAuVK3cp9rK4YSBm2cZ2w");'></div>
+</div>
+</header>
+<main class="flex flex-col flex-1 px-10 py-8 max-w-[1440px] mx-auto w-full">
+<!-- Page Title Section -->
+<div class="flex flex-wrap justify-between gap-3 mb-8">
+<div class="flex min-w-72 flex-col gap-1">
+<p class="text-[#0d121c] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Spyglass Analytics</p>
+<p class="text-[#48679d] dark:text-[#a1b0cb] text-base font-normal leading-normal">Proposal performance and engagement insights for Q3 2024</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-white dark:bg-[#1e293b] border border-[#ced8e9] dark:border-[#2a3441] text-[#0d121c] dark:text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="material-symbols-outlined text-lg mr-2">calendar_today</span>
+<span class="truncate">Son 30 Gün</span>
+</button>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-lg mr-2">ios_share</span>
+<span class="truncate">Export Report</span>
+</button>
+</div>
+</div>
+<!-- Stats Grid -->
+<div class="flex flex-wrap gap-4 mb-8">
+<div class="flex min-w-[200px] flex-1 flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark border border-[#ced8e9] dark:border-[#2a3441] shadow-sm">
+<div class="flex justify-between items-start">
+<p class="text-[#48679d] dark:text-[#a1b0cb] text-sm font-medium leading-normal uppercase tracking-wider">Gönderilen</p>
+<span class="material-symbols-outlined text-primary">send</span>
+</div>
+<p class="text-[#0d121c] dark:text-white tracking-light text-3xl font-bold leading-tight">24</p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[#07883b] text-sm">trending_up</span>
+<p class="text-[#07883b] text-sm font-semibold leading-normal">+12% vs last month</p>
+</div>
+</div>
+<div class="flex min-w-[200px] flex-1 flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark border border-[#ced8e9] dark:border-[#2a3441] shadow-sm">
+<div class="flex justify-between items-start">
+<p class="text-[#48679d] dark:text-[#a1b0cb] text-sm font-medium leading-normal uppercase tracking-wider">Görüntülenen</p>
+<span class="material-symbols-outlined text-primary">visibility</span>
+</div>
+<p class="text-[#0d121c] dark:text-white tracking-light text-3xl font-bold leading-tight">18</p>
+<p class="text-primary text-sm font-semibold leading-normal">75% Conversion Rate</p>
+</div>
+<div class="flex min-w-[200px] flex-1 flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark border border-[#ced8e9] dark:border-[#2a3441] shadow-sm">
+<div class="flex justify-between items-start">
+<p class="text-[#48679d] dark:text-[#a1b0cb] text-sm font-medium leading-normal uppercase tracking-wider">İmzalanan</p>
+<span class="material-symbols-outlined text-[#07883b]">verified</span>
+</div>
+<p class="text-[#0d121c] dark:text-white tracking-light text-3xl font-bold leading-tight">8</p>
+<p class="text-primary text-sm font-semibold leading-normal">33% Close Rate</p>
+</div>
+<div class="flex min-w-[200px] flex-1 flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark border border-[#ced8e9] dark:border-[#2a3441] shadow-sm">
+<div class="flex justify-between items-start">
+<p class="text-[#48679d] dark:text-[#a1b0cb] text-sm font-medium leading-normal uppercase tracking-wider">Ortalama Süre</p>
+<span class="material-symbols-outlined text-[#e73908]">timer</span>
+</div>
+<p class="text-[#0d121c] dark:text-white tracking-light text-3xl font-bold leading-tight">4:32</p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[#e73908] text-sm">trending_down</span>
+<p class="text-[#e73908] text-sm font-semibold leading-normal">-0:15 slower review</p>
+</div>
+</div>
+</div>
+<!-- Funnel Section -->
+<div class="mb-8 bg-white dark:bg-background-dark rounded-xl border border-[#ced8e9] dark:border-[#2a3441] shadow-sm overflow-hidden">
+<h2 class="text-[#0d121c] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] px-6 pt-6 pb-4">Conversion Funnel</h2>
+<div class="pb-8">
+<div class="flex items-center px-6 gap-2">
+<div class="flex-1 relative">
+<div class="h-16 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                                    Gönderildi (24)
+                                    <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rotate-45"></div>
+</div>
+<p class="text-center text-xs mt-2 text-[#48679d] font-bold">100%</p>
+</div>
+<div class="flex items-center justify-center px-4">
+<span class="material-symbols-outlined text-[#ced8e9]">arrow_forward_ios</span>
+</div>
+<div class="flex-[0.75] relative">
+<div class="h-16 bg-primary/80 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                                    Görüntülendi (18)
+                                    <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-primary/80 rotate-45"></div>
+</div>
+<p class="text-center text-xs mt-2 text-[#48679d] font-bold">75%</p>
+</div>
+<div class="flex items-center justify-center px-4">
+<span class="material-symbols-outlined text-[#ced8e9]">arrow_forward_ios</span>
+</div>
+<div class="flex-[0.33] relative">
+<div class="h-16 bg-primary/60 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                                    İmzalandı (8)
+                                </div>
+<p class="text-center text-xs mt-2 text-[#48679d] font-bold">33%</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Grid: Blocks & Activities -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Block Interaction Map -->
+<div class="lg:col-span-2 flex flex-col bg-white dark:bg-background-dark border border-[#ced8e9] dark:border-[#2a3441] rounded-xl shadow-sm p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-[#0d121c] dark:text-white text-lg font-bold">Blok Etkileşim Haritası</h3>
+<span class="text-xs font-bold text-[#48679d] uppercase">Ortalama Saniye / Blok</span>
+</div>
+<div class="flex flex-col gap-6">
+<div class="flex items-center gap-4">
+<p class="w-32 text-sm font-medium text-[#48679d] dark:text-[#a1b0cb] truncate">Giriş</p>
+<div class="flex-1 h-8 bg-[#f0f3f9] dark:bg-[#1e293b] rounded-full overflow-hidden">
+<div class="h-full bg-primary/40 w-[45%] rounded-full flex items-center justify-end px-3">
+<span class="text-[10px] font-bold text-[#0d121c] dark:text-white">42s</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<p class="w-32 text-sm font-medium text-[#48679d] dark:text-[#a1b0cb] truncate">Teklif Detayı</p>
+<div class="flex-1 h-8 bg-[#f0f3f9] dark:bg-[#1e293b] rounded-full overflow-hidden">
+<div class="h-full bg-primary/70 w-[75%] rounded-full flex items-center justify-end px-3">
+<span class="text-[10px] font-bold text-white">124s</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<p class="w-32 text-sm font-medium text-[#48679d] dark:text-[#a1b0cb] truncate">Fiyatlandırma</p>
+<div class="flex-1 h-8 bg-[#f0f3f9] dark:bg-[#1e293b] rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[90%] rounded-full flex items-center justify-end px-3">
+<span class="text-[10px] font-bold text-white">186s</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<p class="w-32 text-sm font-medium text-[#48679d] dark:text-[#a1b0cb] truncate">Sözleşme Şartları</p>
+<div class="flex-1 h-8 bg-[#f0f3f9] dark:bg-[#1e293b] rounded-full overflow-hidden">
+<div class="h-full bg-primary/50 w-[60%] rounded-full flex items-center justify-end px-3">
+<span class="text-[10px] font-bold text-[#0d121c] dark:text-white">94s</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Activity -->
+<div class="flex flex-col bg-white dark:bg-background-dark border border-[#ced8e9] dark:border-[#2a3441] rounded-xl shadow-sm p-6">
+<h3 class="text-[#0d121c] dark:text-white text-lg font-bold mb-6">Son Aktiviteler</h3>
+<div class="flex flex-col gap-6">
+<div class="flex gap-4">
+<div class="size-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-lg">visibility</span>
+</div>
+<div class="flex flex-col">
+<p class="text-sm font-bold text-[#0d121c] dark:text-white">John Doe teklifi görüntüledi</p>
+<p class="text-xs text-[#48679d] dark:text-[#a1b0cb]">Fiyatlandırma bloğunda 45 saniye geçirdi.</p>
+<span class="text-[10px] font-medium text-[#a1b0cb] mt-1">2 dakika önce</span>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="size-8 rounded-full bg-[#07883b]/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[#07883b] text-lg">edit_document</span>
+</div>
+<div class="flex flex-col">
+<p class="text-sm font-bold text-[#0d121c] dark:text-white">Global Tech Inc. imzayı tamamladı</p>
+<p class="text-xs text-[#48679d] dark:text-[#a1b0cb]">Teklif #442231 başarıyla kapatıldı.</p>
+<span class="text-[10px] font-medium text-[#a1b0cb] mt-1">15 dakika önce</span>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="size-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-lg">download</span>
+</div>
+<div class="flex flex-col">
+<p class="text-sm font-bold text-[#0d121c] dark:text-white">Sarah Smith PDF indirdi</p>
+<p class="text-xs text-[#48679d] dark:text-[#a1b0cb]">Marketing Proposal v2</p>
+<span class="text-[10px] font-medium text-[#a1b0cb] mt-1">1 saat önce</span>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="size-8 rounded-full bg-[#e73908]/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[#e73908] text-lg">forum</span>
+</div>
+<div class="flex flex-col">
+<p class="text-sm font-bold text-[#0d121c] dark:text-white">Yeni yorum eklendi</p>
+<p class="text-xs text-[#48679d] dark:text-[#a1b0cb]">"Teslimat süresi hakkında bir sorum var..."</p>
+<span class="text-[10px] font-medium text-[#a1b0cb] mt-1">3 saat önce</span>
+</div>
+</div>
+</div>
+<button class="mt-auto pt-6 text-primary text-xs font-bold uppercase tracking-widest text-center hover:underline">Tümünü Gör</button>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

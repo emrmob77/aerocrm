@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+
+<html class="light" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AERO CRM - Entegrasyonlar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#377df6",
+                        "background-light": "#f8f9fc",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Manrope', sans-serif;
+        }
+        .integration-card {
+            width: 210px;
+            height: 140px;
+            transition: all 0.2s ease;
+        }
+        .integration-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#0d121c] dark:text-white min-h-screen">
+<!-- TopNavBar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#e7ebf4] dark:border-slate-800 bg-white dark:bg-slate-900 px-10 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-primary">
+<div class="size-6">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-[#0d121c] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">AERO CRM</h2>
+</div>
+<nav class="flex items-center gap-9">
+<a class="text-[#48679d] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-[#48679d] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Müşteriler</a>
+<a class="text-[#48679d] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Teklifler</a>
+<a class="text-primary text-sm font-bold border-b-2 border-primary leading-normal" href="#">Entegrasyonlar</a>
+<a class="text-[#48679d] dark:text-slate-400 text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Ayarlar</a>
+</nav>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary/20" data-alt="User avatar of a sales professional" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA-3elUiwV9cFjwHMLJYUztosrutZmdEdVqfQGh399ySy4lCoYopu1TweEiQEOq83gLXvtZv9shz-3Id6wFH98wBSDbw89x5Ut1W6Eba6wvJ0og3fhEj5-Ev6aOSKo25GW467WI_zVqAHB6f0SOKDsh9bAFht3tMwbOgzL0s9ZrDOhMo0dDijctliSG5anjgYcev0t7bft2rLbsmpE00jRyRA7JLpjr9mjJm47Bxmy_p0R3WKOXezkBpi7SDYfSXV1p0Di-9cehNw");'></div>
+</div>
+</header>
+<main class="max-w-[1200px] mx-auto px-10 py-8">
+<!-- PageHeading -->
+<div class="flex flex-wrap justify-between gap-3 mb-6">
+<div class="flex min-w-72 flex-col gap-1">
+<p class="text-[#0d121c] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Entegrasyonlar</p>
+<p class="text-[#48679d] dark:text-slate-400 text-base font-normal leading-normal">Favori araçlarınızı AERO'ya bağlayın</p>
+</div>
+</div>
+<!-- SearchBar & Tabs -->
+<div class="flex flex-col gap-4 mb-8">
+<div class="w-full max-w-xl">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full border border-[#ced8e9] dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 transition-all">
+<div class="text-[#48679d] flex items-center justify-center pl-4">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:ring-0 text-[#0d121c] dark:text-white placeholder:text-[#48679d] px-4 text-base font-normal" placeholder="Entegrasyonlarda ara..." value=""/>
+</div>
+</label>
+</div>
+<!-- Tabs -->
+<div class="border-b border-[#ced8e9] dark:border-slate-800 flex gap-8">
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-primary text-[#0d121c] dark:text-white pb-3" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Tümü</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#48679d] dark:text-slate-400 pb-3 hover:text-primary transition-colors" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Bağlı</p>
+</a>
+<a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#48679d] dark:text-slate-400 pb-3 hover:text-primary transition-colors" href="#">
+<p class="text-sm font-bold leading-normal tracking-[0.015em]">Önerilen</p>
+</a>
+</div>
+</div>
+<!-- Section: İletişim -->
+<section class="mb-10">
+<div class="flex items-center gap-2 px-1 mb-4">
+<h2 class="text-[#0d121c] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">İletişim</h2>
+<div class="h-px flex-grow bg-[#e7ebf4] dark:bg-slate-800 ml-4"></div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+<!-- Gmail Card (Connected) -->
+<div class="integration-card bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between relative group">
+<div class="flex justify-between items-start">
+<div class="size-10 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-red-500">mail</span>
+</div>
+<button class="text-[#48679d] hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+</div>
+<div>
+<h3 class="font-bold text-sm text-[#0d121c] dark:text-white">Gmail</h3>
+<p class="text-xs text-[#48679d] dark:text-slate-400 line-clamp-1">E-postalarınızı senkronize edin</p>
+</div>
+<div class="flex items-center gap-1.5 mt-2">
+<div class="size-2 rounded-full bg-green-500"></div>
+<span class="text-[11px] font-bold text-green-600 uppercase tracking-wider">Bağlı</span>
+</div>
+</div>
+<!-- Slack Card -->
+<div class="integration-card bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+<div class="size-10 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-purple-600">forum</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-[#0d121c] dark:text-white">Slack</h3>
+<p class="text-xs text-[#48679d] dark:text-slate-400 line-clamp-1">Bildirimleri kanallara iletin</p>
+</div>
+<button class="mt-2 w-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold py-1.5 rounded-lg">Bağlan</button>
+</div>
+<!-- WhatsApp Card -->
+<div class="integration-card bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+<div class="size-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-green-600">chat</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-[#0d121c] dark:text-white">WhatsApp Business</h3>
+<p class="text-xs text-[#48679d] dark:text-slate-400 line-clamp-1">Müşterilerle anında yazışın</p>
+</div>
+<button class="mt-2 w-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold py-1.5 rounded-lg">Bağlan</button>
+</div>
+<!-- Zoom Card -->
+<div class="integration-card bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+<div class="size-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-500">videocam</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-[#0d121c] dark:text-white">Zoom</h3>
+<p class="text-xs text-[#48679d] dark:text-slate-400 line-clamp-1">Toplantıları CRM'den planlayın</p>
+</div>
+<button class="mt-2 w-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold py-1.5 rounded-lg">Bağlan</button>
+</div>
+</div>
+</section>
+<!-- Section: Ödeme -->
+<section class="mb-10">
+<div class="flex items-center gap-2 px-1 mb-4">
+<h2 class="text-[#0d121c] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">Ödeme</h2>
+<div class="h-px flex-grow bg-[#e7ebf4] dark:bg-slate-800 ml-4"></div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+<!-- Stripe -->
+<div class="integration-card bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+<div class="size-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-indigo-600">payments</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-[#0d121c] dark:text-white">Stripe</h3>
+<p class="text-xs text-[#48679d] dark:text-slate-400 line-clamp-1">Ödemelerinizi otomatize edin</p>
+</div>
+<button class="mt-2 w-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold py-1.5 rounded-lg">Bağlan</button>
+</div>
+<!-- PayPal -->
+<div class="integration-card bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+<div class="size-10 rounded-lg bg-sky-50 dark:bg-sky-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-sky-700">account_balance_wallet</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-[#0d121c] dark:text-white">PayPal</h3>
+<p class="text-xs text-[#48679d] dark:text-slate-400 line-clamp-1">Global ödemeler alın</p>
+</div>
+<button class="mt-2 w-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold py-1.5 rounded-lg">Bağlan</button>
+</div>
+<!-- iyzico -->
+<div class="integration-card bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+<div class="size-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-800">credit_card</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-[#0d121c] dark:text-white">iyzico</h3>
+<p class="text-xs text-[#48679d] dark:text-slate-400 line-clamp-1">Türkiye içi ödeme çözümü</p>
+</div>
+<button class="mt-2 w-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold py-1.5 rounded-lg">Bağlan</button>
+</div>
+</div>
+</section>
+<!-- Section: Depolama -->
+<section class="mb-10">
+<div class="flex items-center gap-2 px-1 mb-4">
+<h2 class="text-[#0d121c] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">Depolama</h2>
+<div class="h-px flex-grow bg-[#e7ebf4] dark:bg-slate-800 ml-4"></div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+<!-- Google Drive (Connected) -->
+<div class="integration-card bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between relative">
+<div class="flex justify-between items-start">
+<div class="size-10 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-yellow-600">cloud</span>
+</div>
+<button class="text-[#48679d] hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+</div>
+<div>
+<h3 class="font-bold text-sm text-[#0d121c] dark:text-white">Google Drive</h3>
+<p class="text-xs text-[#48679d] dark:text-slate-400 line-clamp-1">Dosyaları doğrudan ekleyin</p>
+</div>
+<div class="flex items-center gap-1.5 mt-2">
+<div class="size-2 rounded-full bg-green-500"></div>
+<span class="text-[11px] font-bold text-green-600 uppercase tracking-wider">Bağlı</span>
+</div>
+</div>
+<!-- Dropbox -->
+<div class="integration-card bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+<div class="size-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-600">folder_shared</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-[#0d121c] dark:text-white">Dropbox</h3>
+<p class="text-xs text-[#48679d] dark:text-slate-400 line-clamp-1">Bulut depolama entegrasyonu</p>
+</div>
+<button class="mt-2 w-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold py-1.5 rounded-lg">Bağlan</button>
+</div>
+</div>
+</section>
+<!-- Section: Otomasyon -->
+<section class="mb-20">
+<div class="flex items-center gap-2 px-1 mb-4">
+<h2 class="text-[#0d121c] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">Otomasyon</h2>
+<div class="h-px flex-grow bg-[#e7ebf4] dark:bg-slate-800 ml-4"></div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+<!-- Zapier -->
+<div class="integration-card bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+<div class="size-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-orange-600">bolt</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-[#0d121c] dark:text-white">Zapier</h3>
+<p class="text-xs text-[#48679d] dark:text-slate-400 line-clamp-1">5000+ uygulama ile bağlayın</p>
+</div>
+<button class="mt-2 w-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold py-1.5 rounded-lg">Bağlan</button>
+</div>
+<!-- Webhook -->
+<div class="integration-card bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+<div class="size-10 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+<span class="material-symbols-outlined text-gray-600 dark:text-gray-300">api</span>
+</div>
+<div>
+<h3 class="font-bold text-sm text-[#0d121c] dark:text-white">Webhook</h3>
+<p class="text-xs text-[#48679d] dark:text-slate-400 line-clamp-1">Özel API entegrasyonu</p>
+</div>
+<button class="mt-2 w-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold py-1.5 rounded-lg">Bağlan</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer for context -->
+<footer class="bg-white dark:bg-slate-900 border-t border-[#e7ebf4] dark:border-slate-800 py-10">
+<div class="max-w-[1200px] mx-auto px-10 flex justify-between items-center">
+<div class="flex items-center gap-2 opacity-60">
+<span class="material-symbols-outlined">auto_awesome</span>
+<span class="text-sm font-medium">AERO CRM v2.4</span>
+</div>
+<div class="flex gap-6 text-[#48679d] dark:text-slate-400 text-sm">
+<a class="hover:text-primary" href="#">Destek</a>
+<a class="hover:text-primary" href="#">API Dökümantasyonu</a>
+<a class="hover:text-primary" href="#">Gizlilik Politikası</a>
+</div>
+</div>
+</footer>
+</body></html>
