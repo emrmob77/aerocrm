@@ -19,11 +19,13 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - Property-based testing için fast-check kurulumu
   - _Gereksinimler: Test stratejisi_
 
-- [ ] 2. Supabase Veritabanı Şeması Oluşturma
-  - PostgreSQL tablolarını oluştur (users, teams, contacts, deals, proposals, vb.)
-  - İndeksleri ve foreign key'leri tanımla
-  - Row Level Security (RLS) politikalarını ayarla
-  - Materialized view'ları oluştur (dashboard metrikleri için)
+- [x] 2. Supabase Veritabanı Şeması Oluşturma ✅
+  - PostgreSQL tablolarını oluştur (users, teams, contacts, deals, proposals, vb.) ✅
+  - İndeksleri ve foreign key'leri tanımla ✅
+  - Row Level Security (RLS) politikalarını ayarla ✅
+  - Materialized view'ları oluştur (dashboard metrikleri için) ✅
+  - Database fonksiyonları ve trigger'ları oluştur ✅
+  - Realtime etkinleştir ✅
   - _Gereksinimler: Tüm veri modelleri_
 
 - [ ]* 2.1 Veritabanı performans optimizasyonu
