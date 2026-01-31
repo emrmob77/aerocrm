@@ -25,14 +25,18 @@ const navItems: NavItem[] = [
   { label: 'Ayarlar', href: '/settings', icon: 'settings' },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname()
 
   return (
-    <aside className="w-64 flex-shrink-0 flex flex-col border-r border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#161e2b] overflow-y-auto">
+    <aside className="w-64 h-full flex-shrink-0 flex flex-col border-r border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#161e2b] overflow-y-auto">
       {/* Logo */}
-      <div className="p-6">
-        <Link href="/dashboard" className="flex items-center gap-3">
+      <div className="p-6 flex items-center justify-between">
+        <Link href="/dashboard" className="flex items-center gap-3" onClick={onClose}>
           <div className="bg-primary size-10 rounded-lg flex items-center justify-center text-white">
             <span className="material-symbols-outlined">rocket_launch</span>
           </div>
@@ -41,6 +45,13 @@ export function Sidebar() {
             <p className="text-[#48679d] dark:text-gray-400 text-xs font-medium">Satış Yönetimi</p>
           </div>
         </Link>
+        {/* Mobile Close Button */}
+        <button
+          onClick={onClose}
+          className="lg:hidden p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+        >
+          <span className="material-symbols-outlined">close</span>
+        </button>
       </div>
 
       {/* Navigation */}
@@ -51,6 +62,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
                 isActive
@@ -69,6 +81,7 @@ export function Sidebar() {
       <div className="p-4 border-t border-[#e7ebf4] dark:border-gray-800">
         <Link
           href="/deals/new"
+          onClick={onClose}
           className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-lg py-3 font-bold text-sm transition-all shadow-lg shadow-primary/20"
         >
           <span className="material-symbols-outlined text-sm">add</span>
