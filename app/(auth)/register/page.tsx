@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/lib/auth'
 
 type Plan = 'solo' | 'pro'
 
@@ -28,6 +29,7 @@ const plans = [
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { signUp, signInWithGoogle, isAuthenticated, loading: authLoading } = useAuth()
   const [selectedPlan, setSelectedPlan] = useState<Plan>('pro')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -35,6 +37,14 @@ export default function RegisterPage() {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.push('/dashboard')
+    }
+  }, [isAuthenticated, authLoading, router])
 
   const getPasswordStrength = () => {
     if (password.length === 0) return { level: 0, text: '', color: '' }
@@ -57,12 +67,72 @@ export default function RegisterPage() {
       return
     }
 
+    if (password.length < 6) {
+      setError('Şifre en az 6 karakter olmalıdır')
+      return
+    }
+
     setIsLoading(true)
 
-    // Simulated registration - will be replaced with Supabase auth
-    setTimeout(() => {
-      router.push('/dashboard')
-    }, 1500)
+    const { error: signUpError } = await signUp(email, password, fullName, selectedPlan)
+
+    if (signUpError) {
+      setError(signUpError.message === 'User already registered'
+        ? 'Bu e-posta adresi zaten kayıtlı'
+        : signUpError.message)
+      setIsLoading(false)
+    } else {
+      setSuccess(true)
+      setIsLoading(false)
+    }
+  }
+
+  const handleGoogleSignUp = async () => {
+    setError('')
+    const { error: googleError } = await signInWithGoogle()
+    if (googleError) {
+      setError('Google ile kayıt olurken bir hata oluştu')
+    }
+  }
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <svg className="animate-spin h-8 w-8 text-aero-blue-500" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <p className="text-aero-slate-500">Yükleniyor...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show success message
+  if (success) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-8">
+        <div className="w-full max-w-md text-center">
+          <div className="w-16 h-16 rounded-full bg-aero-green-100 dark:bg-aero-green-900/30 flex items-center justify-center mx-auto mb-6">
+            <span className="material-symbols-outlined text-3xl text-aero-green-500">check_circle</span>
+          </div>
+          <h2 className="text-2xl font-bold text-aero-slate-900 dark:text-white mb-3">
+            Hesabınız Oluşturuldu!
+          </h2>
+          <p className="text-aero-slate-500 dark:text-aero-slate-400 mb-6">
+            E-posta adresinize bir doğrulama linki gönderdik. Lütfen e-postanızı kontrol edin ve hesabınızı doğrulayın.
+          </p>
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center px-6 py-3 bg-aero-blue-500 text-white font-medium rounded-lg hover:bg-aero-blue-600 transition-colors"
+          >
+            Giriş Sayfasına Git
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -296,6 +366,7 @@ export default function RegisterPage() {
           {/* Social Login */}
           <button
             type="button"
+            onClick={handleGoogleSignUp}
             className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-aero-slate-300 dark:border-aero-slate-600 rounded-lg text-aero-slate-700 dark:text-aero-slate-300 hover:bg-aero-slate-50 dark:hover:bg-aero-slate-800 transition-colors"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
