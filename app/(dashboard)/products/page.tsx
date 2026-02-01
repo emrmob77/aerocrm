@@ -1,10 +1,28 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
+import { useSupabase, useUser } from '@/hooks'
 
-// Kategoriler
-const categories = [
-  { id: 'all', name: 'Tümü', icon: 'apps' },
+type Product = {
+  id: string
+  name: string
+  description: string
+  price: number
+  currency: string
+  category: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+type CategoryOption = {
+  id: string
+  name: string
+  icon: string
+}
+
+const baseCategories: CategoryOption[] = [
   { id: 'software', name: 'Yazılım', icon: 'code' },
   { id: 'service', name: 'Hizmet', icon: 'support_agent' },
   { id: 'consulting', name: 'Danışmanlık', icon: 'psychology' },
@@ -13,205 +31,168 @@ const categories = [
   { id: 'training', name: 'Eğitim', icon: 'school' },
 ]
 
-// Fiyat tipleri
-type PriceType = 'one_time' | 'monthly' | 'yearly'
-
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  priceType: PriceType
-  category: string
-  isActive: boolean
-  isTemplate: boolean
-  image?: string
-  createdAt: string
-  usageCount: number
-}
-
-// Örnek ürünler
-const initialProducts: Product[] = [
-  {
-    id: '1',
-    name: 'CRM Pro Lisansı',
-    description: 'Tam özellikli CRM yazılım lisansı. Sınırsız kullanıcı, bulut depolama ve API erişimi dahil.',
-    price: 2500,
-    priceType: 'monthly',
-    category: 'software',
-    isActive: true,
-    isTemplate: true,
-    createdAt: '2025-01-15',
-    usageCount: 45,
-  },
-  {
-    id: '2',
-    name: 'Web Sitesi Geliştirme',
-    description: 'Kurumsal web sitesi tasarımı ve geliştirmesi. Responsive tasarım, SEO optimizasyonu dahil.',
-    price: 35000,
-    priceType: 'one_time',
-    category: 'software',
-    isActive: true,
-    isTemplate: true,
-    createdAt: '2025-01-10',
-    usageCount: 28,
-  },
-  {
-    id: '3',
-    name: 'SEO Danışmanlığı',
-    description: 'Aylık SEO analizi, keyword araştırması ve optimizasyon önerileri.',
-    price: 5000,
-    priceType: 'monthly',
-    category: 'marketing',
-    isActive: true,
-    isTemplate: true,
-    createdAt: '2025-01-08',
-    usageCount: 67,
-  },
-  {
-    id: '4',
-    name: 'Sosyal Medya Yönetimi',
-    description: 'Haftalık içerik planlaması, gönderi tasarımı ve topluluk yönetimi.',
-    price: 8000,
-    priceType: 'monthly',
-    category: 'marketing',
-    isActive: true,
-    isTemplate: false,
-    createdAt: '2025-01-05',
-    usageCount: 34,
-  },
-  {
-    id: '5',
-    name: 'UI/UX Tasarım Paketi',
-    description: 'Kullanıcı arayüzü tasarımı, prototip oluşturma ve kullanıcı deneyimi analizi.',
-    price: 25000,
-    priceType: 'one_time',
-    category: 'design',
-    isActive: true,
-    isTemplate: true,
-    createdAt: '2025-01-03',
-    usageCount: 19,
-  },
-  {
-    id: '6',
-    name: 'Kurumsal Eğitim Programı',
-    description: 'Özelleştirilmiş kurumsal eğitim. Yazılım kullanımı, süreç optimizasyonu konularında.',
-    price: 15000,
-    priceType: 'one_time',
-    category: 'training',
-    isActive: true,
-    isTemplate: true,
-    createdAt: '2025-01-01',
-    usageCount: 12,
-  },
-  {
-    id: '7',
-    name: 'İş Analizi ve Danışmanlık',
-    description: 'Süreç analizi, iş modellemesi ve dijital dönüşüm danışmanlığı.',
-    price: 12000,
-    priceType: 'one_time',
-    category: 'consulting',
-    isActive: true,
-    isTemplate: false,
-    createdAt: '2024-12-28',
-    usageCount: 8,
-  },
-  {
-    id: '8',
-    name: 'Teknik Destek Paketi',
-    description: '7/24 teknik destek hizmeti. Öncelikli yanıt ve uzaktan erişim dahil.',
-    price: 3500,
-    priceType: 'monthly',
-    category: 'service',
-    isActive: false,
-    isTemplate: false,
-    createdAt: '2024-12-20',
-    usageCount: 23,
-  },
-  {
-    id: '9',
-    name: 'API Entegrasyon Hizmeti',
-    description: 'Özel API geliştirme ve mevcut sistemlerle entegrasyon.',
-    price: 45000,
-    priceType: 'one_time',
-    category: 'software',
-    isActive: true,
-    isTemplate: true,
-    createdAt: '2024-12-15',
-    usageCount: 15,
-  },
-  {
-    id: '10',
-    name: 'Yıllık Bakım Sözleşmesi',
-    description: 'Yazılım güncellemeleri, güvenlik yamaları ve performans optimizasyonu.',
-    price: 24000,
-    priceType: 'yearly',
-    category: 'service',
-    isActive: true,
-    isTemplate: true,
-    createdAt: '2024-12-10',
-    usageCount: 31,
-  },
+const currencyOptions = [
+  { code: 'TRY', label: '₺ TRY' },
+  { code: 'USD', label: '$ USD' },
+  { code: 'EUR', label: '€ EUR' },
+  { code: 'GBP', label: '£ GBP' },
 ]
 
-const priceTypeLabels: Record<PriceType, string> = {
-  one_time: 'Tek Seferlik',
-  monthly: 'Aylık',
-  yearly: 'Yıllık',
+const categoryMap = baseCategories.reduce<Record<string, CategoryOption>>((acc, category) => {
+  acc[category.id] = category
+  return acc
+}, {})
+
+const formatCategoryLabel = (value: string) =>
+  value
+    .replace(/[-_]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(' ')
+
+const getCategoryMeta = (value?: string | null): CategoryOption => {
+  if (!value) {
+    return { id: 'uncategorized', name: 'Kategori yok', icon: 'sell' }
+  }
+  if (categoryMap[value]) {
+    return categoryMap[value]
+  }
+  return { id: value, name: formatCategoryLabel(value), icon: 'sell' }
 }
 
-const priceTypeColors: Record<PriceType, string> = {
-  one_time: 'bg-blue-100 text-blue-700',
-  monthly: 'bg-green-100 text-green-700',
-  yearly: 'bg-purple-100 text-purple-700',
+const formatCurrency = (value: number, currency = 'TRY') => {
+  try {
+    return new Intl.NumberFormat('tr-TR', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value)
+  } catch {
+    return new Intl.NumberFormat('tr-TR', {
+      style: 'currency',
+      currency: 'TRY',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
 }
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>(initialProducts)
+  const supabase = useSupabase()
+  const { user, authUser, loading: authLoading } = useUser()
+
+  const [products, setProducts] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [showOnlyTemplates, setShowOnlyTemplates] = useState(false)
   const [showOnlyActive, setShowOnlyActive] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
-  // Form state
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
-    priceType: 'one_time' as PriceType,
-    category: 'software',
+    currency: 'TRY',
+    category: '',
     isActive: true,
-    isTemplate: false,
   })
 
-  // Filtrelenmiş ürünler
-  const filteredProducts = useMemo(() => {
-    return products.filter(product => {
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          product.description.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesTemplate = !showOnlyTemplates || product.isTemplate
-      const matchesActive = !showOnlyActive || product.isActive
-      return matchesCategory && matchesSearch && matchesTemplate && matchesActive
-    })
-  }, [products, selectedCategory, searchQuery, showOnlyTemplates, showOnlyActive])
-
-  // İstatistikler
-  const stats = useMemo(() => {
-    return {
-      total: products.length,
-      active: products.filter(p => p.isActive).length,
-      templates: products.filter(p => p.isTemplate).length,
-      totalUsage: products.reduce((sum, p) => sum + p.usageCount, 0),
+  const loadProducts = async () => {
+    if (!user?.team_id) {
+      setProducts([])
+      setIsLoading(false)
+      return
     }
+
+    setIsLoading(true)
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, description, price, currency, category, active, created_at, updated_at')
+      .eq('team_id', user.team_id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      toast.error(error.message || 'Ürünler getirilemedi.')
+      setIsLoading(false)
+      return
+    }
+
+    const mapped = (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description ?? '',
+      price: row.price ?? 0,
+      currency: row.currency ?? 'TRY',
+      category: row.category ?? null,
+      isActive: row.active ?? true,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }))
+
+    setProducts(mapped)
+    setIsLoading(false)
+  }
+
+  useEffect(() => {
+    if (authLoading) return
+    if (!authUser) {
+      setProducts([])
+      setIsLoading(false)
+      return
+    }
+
+    loadProducts()
+  }, [authLoading, authUser, user?.team_id, supabase])
+
+  const categories = useMemo(() => {
+    const unique = new Set<string>()
+    products.forEach((product) => {
+      unique.add(product.category ?? 'uncategorized')
+    })
+
+    const list = Array.from(unique).map((categoryId) =>
+      categoryId === 'uncategorized' ? getCategoryMeta(null) : getCategoryMeta(categoryId)
+    )
+
+    list.sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+    return [{ id: 'all', name: 'Tümü', icon: 'apps' }, ...list]
   }, [products])
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 0 }).format(value)
-  }
+  useEffect(() => {
+    if (selectedCategory === 'all') return
+    if (!categories.some((category) => category.id === selectedCategory)) {
+      setSelectedCategory('all')
+    }
+  }, [categories, selectedCategory])
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const categoryKey = product.category ?? 'uncategorized'
+      const matchesCategory = selectedCategory === 'all' || categoryKey === selectedCategory
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesActive = !showOnlyActive || product.isActive
+      return matchesCategory && matchesSearch && matchesActive
+    })
+  }, [products, selectedCategory, searchQuery, showOnlyActive])
+
+  const stats = useMemo(() => {
+    const categoryCount = new Set(products.map((product) => product.category ?? 'uncategorized')).size
+    const currencyCount = new Set(products.map((product) => product.currency ?? 'TRY')).size
+    return {
+      total: products.length,
+      active: products.filter((product) => product.isActive).length,
+      categories: categoryCount,
+      currencies: currencyCount,
+    }
+  }, [products])
 
   const openAddModal = () => {
     setEditingProduct(null)
@@ -219,10 +200,9 @@ export default function ProductsPage() {
       name: '',
       description: '',
       price: '',
-      priceType: 'one_time',
-      category: 'software',
+      currency: 'TRY',
+      category: '',
       isActive: true,
-      isTemplate: false,
     })
     setIsModalOpen(true)
   }
@@ -233,61 +213,169 @@ export default function ProductsPage() {
       name: product.name,
       description: product.description,
       price: product.price.toString(),
-      priceType: product.priceType,
-      category: product.category,
+      currency: product.currency ?? 'TRY',
+      category: product.category ?? '',
       isActive: product.isActive,
-      isTemplate: product.isTemplate,
     })
     setIsModalOpen(true)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (editingProduct) {
-      // Güncelleme
-      setProducts(prev => prev.map(p => 
-        p.id === editingProduct.id 
-          ? { ...p, ...formData, price: parseFloat(formData.price) || 0 }
-          : p
-      ))
-    } else {
-      // Yeni ürün
-      const newProduct: Product = {
-        id: Date.now().toString(),
-        name: formData.name,
-        description: formData.description,
-        price: parseFloat(formData.price) || 0,
-        priceType: formData.priceType,
-        category: formData.category,
-        isActive: formData.isActive,
-        isTemplate: formData.isTemplate,
-        createdAt: new Date().toISOString().split('T')[0],
-        usageCount: 0,
-      }
-      setProducts(prev => [newProduct, ...prev])
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (isSaving) return
+
+    if (!user?.team_id) {
+      toast.error('Takım bilgisi bulunamadı.')
+      return
     }
+
+    const name = formData.name.trim()
+    if (!name) {
+      toast.error('Ürün adı zorunludur.')
+      return
+    }
+
+    const price = Number(formData.price)
+    if (!Number.isFinite(price)) {
+      toast.error('Geçerli bir fiyat girin.')
+      return
+    }
+
+    setIsSaving(true)
+
+    const payload = {
+      name,
+      description: formData.description.trim() || null,
+      price,
+      currency: formData.currency,
+      category: formData.category.trim() || null,
+      active: formData.isActive,
+    }
+
+    if (editingProduct) {
+      const { data, error } = await supabase
+        .from('products')
+        .update(payload)
+        .eq('id', editingProduct.id)
+        .eq('team_id', user.team_id)
+        .select('id, name, description, price, currency, category, active, created_at, updated_at')
+        .single()
+
+      if (error || !data) {
+        toast.error(error?.message || 'Ürün güncellenemedi.')
+        setIsSaving(false)
+        return
+      }
+
+      setProducts((prev) =>
+        prev.map((product) =>
+          product.id === data.id
+            ? {
+                id: data.id,
+                name: data.name,
+                description: data.description ?? '',
+                price: data.price ?? 0,
+                currency: data.currency ?? 'TRY',
+                category: data.category ?? null,
+                isActive: data.active ?? true,
+                createdAt: data.created_at,
+                updatedAt: data.updated_at,
+              }
+            : product
+        )
+      )
+      toast.success('Ürün güncellendi.')
+    } else {
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          ...payload,
+          team_id: user.team_id,
+        })
+        .select('id, name, description, price, currency, category, active, created_at, updated_at')
+        .single()
+
+      if (error || !data) {
+        toast.error(error?.message || 'Ürün oluşturulamadı.')
+        setIsSaving(false)
+        return
+      }
+
+      setProducts((prev) => [
+        {
+          id: data.id,
+          name: data.name,
+          description: data.description ?? '',
+          price: data.price ?? 0,
+          currency: data.currency ?? 'TRY',
+          category: data.category ?? null,
+          isActive: data.active ?? true,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        },
+        ...prev,
+      ])
+      toast.success('Ürün oluşturuldu.')
+    }
+
+    setIsSaving(false)
     setIsModalOpen(false)
   }
 
-  const toggleProductStatus = (productId: string) => {
-    setProducts(prev => prev.map(p => 
-      p.id === productId ? { ...p, isActive: !p.isActive } : p
-    ))
-  }
+  const toggleProductStatus = async (product: Product) => {
+    if (!user?.team_id) return
+    const nextActive = !product.isActive
 
-  const deleteProduct = (productId: string) => {
-    if (confirm('Bu ürünü silmek istediğinizden emin misiniz?')) {
-      setProducts(prev => prev.filter(p => p.id !== productId))
+    setProducts((prev) =>
+      prev.map((item) => (item.id === product.id ? { ...item, isActive: nextActive } : item))
+    )
+
+    const { error } = await supabase
+      .from('products')
+      .update({ active: nextActive })
+      .eq('id', product.id)
+      .eq('team_id', user.team_id)
+
+    if (error) {
+      setProducts((prev) =>
+        prev.map((item) => (item.id === product.id ? { ...item, isActive: product.isActive } : item))
+      )
+      toast.error(error.message || 'Durum güncellenemedi.')
     }
   }
 
-  const getCategoryInfo = (categoryId: string) => {
-    return categories.find(c => c.id === categoryId) || categories[0]
+  const deleteProduct = async (productId: string) => {
+    if (!user?.team_id) return
+    if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) return
+
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId)
+      .eq('team_id', user.team_id)
+
+    if (error) {
+      toast.error(error.message || 'Ürün silinemedi.')
+      return
+    }
+
+    setProducts((prev) => prev.filter((product) => product.id !== productId))
+    toast.success('Ürün silindi.')
+  }
+
+  if (!authLoading && (!authUser || !user?.team_id)) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">Ürün & Hizmetler</h1>
+        <div className="rounded-xl border border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#161e2b] p-6">
+          <p className="text-sm text-[#48679d]">Takım bilgisi bulunamadı.</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">Ürün & Hizmetler</h1>
@@ -302,7 +390,6 @@ export default function ProductsPage() {
         </button>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-4">
           <div className="flex items-center gap-3">
@@ -328,46 +415,43 @@ export default function ProductsPage() {
         </div>
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-              <span className="material-symbols-outlined text-purple-600 dark:text-purple-400">auto_awesome</span>
+            <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <span className="material-symbols-outlined text-amber-600 dark:text-amber-400">category</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#0d121c] dark:text-white">{stats.templates}</p>
-              <p className="text-xs text-[#48679d] dark:text-gray-400">Şablon</p>
+              <p className="text-2xl font-bold text-[#0d121c] dark:text-white">{stats.categories}</p>
+              <p className="text-xs text-[#48679d] dark:text-gray-400">Kategori</p>
             </div>
           </div>
         </div>
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <span className="material-symbols-outlined text-amber-600 dark:text-amber-400">bar_chart</span>
+            <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+              <span className="material-symbols-outlined text-purple-600 dark:text-purple-400">payments</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#0d121c] dark:text-white">{stats.totalUsage}</p>
-              <p className="text-xs text-[#48679d] dark:text-gray-400">Toplam Kullanım</p>
+              <p className="text-2xl font-bold text-[#0d121c] dark:text-white">{stats.currencies}</p>
+              <p className="text-xs text-[#48679d] dark:text-gray-400">Para Birimi</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filters and Search */}
       <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-4">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-          {/* Search */}
           <div className="relative flex-1">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
             <input
               type="text"
               placeholder="Ürün veya hizmet ara..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/50 focus:border-primary"
             />
           </div>
 
-          {/* Category Filter */}
           <div className="flex flex-wrap gap-2">
-            {categories.map(category => (
+            {categories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
@@ -384,22 +468,12 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* Additional Filters */}
         <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-[#e7ebf4] dark:border-gray-700">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              checked={showOnlyTemplates}
-              onChange={(e) => setShowOnlyTemplates(e.target.checked)}
-              className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
-            />
-            <span className="text-sm text-[#48679d] dark:text-gray-300">Sadece Şablonlar</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
               checked={showOnlyActive}
-              onChange={(e) => setShowOnlyActive(e.target.checked)}
+              onChange={(event) => setShowOnlyActive(event.target.checked)}
               className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
             />
             <span className="text-sm text-[#48679d] dark:text-gray-300">Sadece Aktifler</span>
@@ -407,7 +481,6 @@ export default function ProductsPage() {
 
           <div className="flex-1" />
 
-          {/* View Toggle */}
           <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
             <button
               onClick={() => setViewMode('grid')}
@@ -435,8 +508,13 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Products Grid/List */}
-      {filteredProducts.length === 0 ? (
+      {isLoading ? (
+        <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-12 text-center">
+          <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block">inventory_2</span>
+          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-2">Ürünler yükleniyor</h3>
+          <p className="text-[#48679d] dark:text-gray-400">Lütfen bekleyin.</p>
+        </div>
+      ) : filteredProducts.length === 0 ? (
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-12 text-center">
           <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block">inventory_2</span>
           <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-2">Ürün Bulunamadı</h3>
@@ -451,8 +529,8 @@ export default function ProductsPage() {
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map(product => {
-            const categoryInfo = getCategoryInfo(product.category)
+          {filteredProducts.map((product) => {
+            const categoryInfo = getCategoryMeta(product.category)
             return (
               <div
                 key={product.id}
@@ -460,7 +538,6 @@ export default function ProductsPage() {
                   !product.isActive ? 'opacity-60' : ''
                 }`}
               >
-                {/* Card Header */}
                 <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
@@ -469,41 +546,37 @@ export default function ProductsPage() {
                       </div>
                       <span className="text-xs font-medium text-[#48679d] dark:text-gray-400">{categoryInfo.name}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {product.isTemplate && (
-                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full">
-                          Şablon
-                        </span>
-                      )}
-                      {!product.isActive && (
-                        <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium rounded-full">
-                          Pasif
-                        </span>
-                      )}
-                    </div>
+                    {!product.isActive && (
+                      <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium rounded-full">
+                        Pasif
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {/* Card Body */}
                 <div className="p-4">
                   <h3 className="font-bold text-[#0d121c] dark:text-white mb-2 line-clamp-1">{product.name}</h3>
                   <p className="text-sm text-[#48679d] dark:text-gray-400 mb-4 line-clamp-2">{product.description}</p>
-                  
-                  <div className="flex items-center justify-between mb-4">
+
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xl font-extrabold text-primary">{formatCurrency(product.price)}</p>
-                      <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${priceTypeColors[product.priceType]}`}>
-                        {priceTypeLabels[product.priceType]}
+                      <p className="text-xl font-extrabold text-primary">{formatCurrency(product.price, product.currency)}</p>
+                      <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
+                        {product.currency}
                       </span>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-[#0d121c] dark:text-white">{product.usageCount}</p>
-                      <p className="text-xs text-[#48679d] dark:text-gray-400">kullanım</p>
+                      <p className="text-xs text-[#48679d] dark:text-gray-400">Güncellendi</p>
+                      <p className="text-sm font-bold text-[#0d121c] dark:text-white">
+                        {new Date(product.updatedAt).toLocaleDateString('tr-TR', {
+                          day: '2-digit',
+                          month: 'short',
+                        })}
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Card Footer */}
                 <div className="px-4 pb-4 flex items-center gap-2">
                   <button
                     onClick={() => openEditModal(product)}
@@ -513,7 +586,7 @@ export default function ProductsPage() {
                     Düzenle
                   </button>
                   <button
-                    onClick={() => toggleProductStatus(product.id)}
+                    onClick={() => toggleProductStatus(product)}
                     className={`p-2 rounded-lg transition-colors ${
                       product.isActive
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200'
@@ -538,7 +611,6 @@ export default function ProductsPage() {
           })}
         </div>
       ) : (
-        /* List View */
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 overflow-hidden">
           <table className="w-full">
             <thead>
@@ -546,17 +618,21 @@ export default function ProductsPage() {
                 <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Ürün/Hizmet</th>
                 <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Kategori</th>
                 <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Fiyat</th>
-                <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Tip</th>
-                <th className="text-center px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Kullanım</th>
+                <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Para Birimi</th>
                 <th className="text-center px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Durum</th>
                 <th className="text-right px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">İşlemler</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e7ebf4] dark:divide-gray-700">
-              {filteredProducts.map(product => {
-                const categoryInfo = getCategoryInfo(product.category)
+              {filteredProducts.map((product) => {
+                const categoryInfo = getCategoryMeta(product.category)
                 return (
-                  <tr key={product.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${!product.isActive ? 'opacity-60' : ''}`}>
+                  <tr
+                    key={product.id}
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
+                      !product.isActive ? 'opacity-60' : ''
+                    }`}
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -566,34 +642,28 @@ export default function ProductsPage() {
                           <p className="font-bold text-[#0d121c] dark:text-white truncate">{product.name}</p>
                           <p className="text-sm text-[#48679d] dark:text-gray-400 truncate max-w-xs">{product.description}</p>
                         </div>
-                        {product.isTemplate && (
-                          <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full flex-shrink-0">
-                            Şablon
-                          </span>
-                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm text-[#0d121c] dark:text-white">{categoryInfo.name}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="font-bold text-primary">{formatCurrency(product.price)}</span>
+                      <span className="font-bold text-primary">{formatCurrency(product.price, product.currency)}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${priceTypeColors[product.priceType]}`}>
-                        {priceTypeLabels[product.priceType]}
-                      </span>
+                      <span className="text-sm text-[#48679d] dark:text-gray-300">{product.currency}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="font-medium text-[#0d121c] dark:text-white">{product.usageCount}</span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                        product.isActive
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${product.isActive ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                          product.isActive
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${product.isActive ? 'bg-green-500' : 'bg-gray-400'}`}
+                        ></span>
                         {product.isActive ? 'Aktif' : 'Pasif'}
                       </span>
                     </td>
@@ -607,7 +677,7 @@ export default function ProductsPage() {
                           <span className="material-symbols-outlined text-lg">edit</span>
                         </button>
                         <button
-                          onClick={() => toggleProductStatus(product.id)}
+                          onClick={() => toggleProductStatus(product)}
                           className={`p-2 rounded-lg transition-colors ${
                             product.isActive
                               ? 'text-green-600 hover:bg-green-100'
@@ -636,11 +706,9 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-[#161e2b] rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="px-6 py-4 border-b border-[#e7ebf4] dark:border-gray-800 flex items-center justify-between">
               <h2 className="text-xl font-bold text-[#0d121c] dark:text-white">
                 {editingProduct ? 'Ürün/Hizmet Düzenle' : 'Yeni Ürün/Hizmet'}
@@ -653,9 +721,7 @@ export default function ProductsPage() {
               </button>
             </div>
 
-            {/* Modal Body */}
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              {/* Name */}
               <div>
                 <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
                   Ürün/Hizmet Adı <span className="text-red-500">*</span>
@@ -663,37 +729,33 @@ export default function ProductsPage() {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
                   placeholder="Örn: CRM Pro Lisansı"
                   required
                   className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/50 focus:border-primary"
                 />
               </div>
 
-              {/* Description */}
               <div>
-                <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
-                  Açıklama
-                </label>
+                <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">Açıklama</label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))}
                   placeholder="Ürün veya hizmet açıklaması..."
                   rows={3}
                   className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/50 focus:border-primary resize-none"
                 />
               </div>
 
-              {/* Price and Type */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
-                    Fiyat (₺) <span className="text-red-500">*</span>
+                    Fiyat <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
                     value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, price: event.target.value }))}
                     placeholder="0"
                     required
                     min="0"
@@ -701,72 +763,58 @@ export default function ProductsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
-                    Fiyat Tipi
-                  </label>
+                  <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">Para Birimi</label>
                   <select
-                    value={formData.priceType}
-                    onChange={(e) => setFormData(prev => ({ ...prev, priceType: e.target.value as PriceType }))}
+                    value={formData.currency}
+                    onChange={(event) => setFormData((prev) => ({ ...prev, currency: event.target.value }))}
                     className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary"
                   >
-                    <option value="one_time">Tek Seferlik</option>
-                    <option value="monthly">Aylık</option>
-                    <option value="yearly">Yıllık</option>
+                    {currencyOptions.map((currency) => (
+                      <option key={currency.code} value={currency.code}>
+                        {currency.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
-              {/* Category */}
               <div>
-                <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
-                  Kategori
-                </label>
-                <select
+                <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">Kategori</label>
+                <input
+                  list="category-options"
                   value={formData.category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                >
-                  {categories.filter(c => c.id !== 'all').map(category => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
-                </select>
+                  onChange={(event) => setFormData((prev) => ({ ...prev, category: event.target.value }))}
+                  placeholder="Örn: yazılım"
+                  className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                />
+                <datalist id="category-options">
+                  {categories
+                    .filter((category) => category.id !== 'all' && category.id !== 'uncategorized')
+                    .map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                </datalist>
+                <p className="text-xs text-[#48679d] mt-2">Mevcut bir kategori seçebilir veya yeni bir isim yazabilirsiniz.</p>
               </div>
 
-              {/* Toggles */}
-              <div className="flex flex-col gap-3">
-                <label className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-green-600">check_circle</span>
-                    <div>
-                      <p className="font-medium text-[#0d121c] dark:text-white">Aktif</p>
-                      <p className="text-xs text-[#48679d] dark:text-gray-400">Bu ürün/hizmet satışa açık</p>
-                    </div>
+              <label className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-green-600">check_circle</span>
+                  <div>
+                    <p className="font-medium text-[#0d121c] dark:text-white">Aktif</p>
+                    <p className="text-xs text-[#48679d] dark:text-gray-400">Bu ürün/hizmet satışa açık</p>
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                    className="w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary"
-                  />
-                </label>
-                <label className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-purple-600">auto_awesome</span>
-                    <div>
-                      <p className="font-medium text-[#0d121c] dark:text-white">Şablon Olarak Kullan</p>
-                      <p className="text-xs text-[#48679d] dark:text-gray-400">Tekliflerde hızlı seçim için şablon</p>
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={formData.isTemplate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isTemplate: e.target.checked }))}
-                    className="w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary"
-                  />
-                </label>
-              </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={(event) => setFormData((prev) => ({ ...prev, isActive: event.target.checked }))}
+                  className="w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary"
+                />
+              </label>
 
-              {/* Actions */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e7ebf4] dark:border-gray-800">
                 <button
                   type="button"
@@ -777,9 +825,10 @@ export default function ProductsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+                  disabled={isSaving}
+                  className="px-6 py-2.5 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 disabled:opacity-70"
                 >
-                  {editingProduct ? 'Güncelle' : 'Oluştur'}
+                  {isSaving ? 'Kaydediliyor' : editingProduct ? 'Güncelle' : 'Oluştur'}
                 </button>
               </div>
             </form>

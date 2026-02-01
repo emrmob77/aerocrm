@@ -16,6 +16,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, arrayMove, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useSupabase, useUser } from '@/hooks'
 
 const smartVariables = ['{{Müşteri_Adı}}', '{{Teklif_No}}', '{{Tarih}}', '{{Toplam_Tutar}}']
 
@@ -53,6 +54,8 @@ type PricingItem = {
   name: string
   qty: number
   price: number
+  currency?: string
+  productId?: string
 }
 
 type PricingData = {
@@ -64,6 +67,14 @@ type PricingData = {
     total: boolean
   }
   items: PricingItem[]
+}
+
+type ProductOption = {
+  id: string
+  name: string
+  price: number
+  currency: string
+  category: string | null
 }
 
 type SignatureData = {
@@ -431,8 +442,8 @@ const createBlock = (type: BlockType): ProposalBlock => {
           total: true,
         },
         items: [
-          { id: crypto.randomUUID(), name: 'Enterprise CRM Lisans', qty: 25, price: 1200 },
-          { id: crypto.randomUUID(), name: 'Onboarding & Eğitim', qty: 1, price: 5000 },
+          { id: crypto.randomUUID(), name: 'Enterprise CRM Lisans', qty: 25, price: 1200, currency: 'TRY' },
+          { id: crypto.randomUUID(), name: 'Onboarding & Eğitim', qty: 1, price: 5000, currency: 'TRY' },
         ],
       },
     }
@@ -549,8 +560,13 @@ const createBlock = (type: BlockType): ProposalBlock => {
   }
 }
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(value)
+const formatCurrency = (value: number, currency = 'TRY') => {
+  try {
+    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value)
+  } catch {
+    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(value)
+  }
+}
 
 const getEmbedUrl = (url: string) => {
   if (!url) return ''
@@ -579,6 +595,11 @@ const getEmbedUrl = (url: string) => {
 }
 
 export default function ProposalEditorPage() {
+  const supabase = useSupabase()
+  const { user, authUser, loading: userLoading } = useUser()
+  const [productOptions, setProductOptions] = useState<ProductOption[]>([])
+  const [productSearch, setProductSearch] = useState('')
+  const [productsLoading, setProductsLoading] = useState(false)
   const [documentTitle, setDocumentTitle] = useState('ABC Şirketi Teklifi')
   const [activePanel, setActivePanel] = useState<'content' | 'design'>('content')
   const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
@@ -609,6 +630,39 @@ export default function ProposalEditorPage() {
     []
   )
 
+  useEffect(() => {
+    if (userLoading) return
+    if (!authUser || !user?.team_id) {
+      setProductOptions([])
+      return
+    }
+
+    const loadProducts = async () => {
+      setProductsLoading(true)
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, price, currency, category, active')
+        .eq('team_id', user.team_id)
+        .eq('active', true)
+        .order('created_at', { ascending: false })
+
+      if (!error && data) {
+        setProductOptions(
+          data.map((product) => ({
+            id: product.id,
+            name: product.name,
+            price: product.price ?? 0,
+            currency: product.currency ?? 'TRY',
+            category: product.category ?? null,
+          }))
+        )
+      }
+      setProductsLoading(false)
+    }
+
+    loadProducts()
+  }, [authUser, user?.team_id, userLoading, supabase])
+
   const [proposalLink, setProposalLink] = useState(() => {
     const slug = crypto.randomUUID().split('-')[0]
     return `https://aero-crm.app/p/${slug}`
@@ -624,6 +678,15 @@ export default function ProposalEditorPage() {
     const entries = paletteItems.map((item) => [item.id, { label: item.label, icon: item.icon }])
     return new Map(entries)
   }, [])
+
+  const filteredProductOptions = useMemo(() => {
+    const query = productSearch.trim().toLowerCase()
+    if (!query) return productOptions
+    return productOptions.filter((product) => {
+      const category = product.category?.toLowerCase() ?? ''
+      return product.name.toLowerCase().includes(query) || category.includes(query)
+    })
+  }, [productOptions, productSearch])
 
   const applyTemplate = (template: TemplatePreset) => {
     setBlocks(template.build())
@@ -741,6 +804,104 @@ export default function ProposalEditorPage() {
             }
           : block
       )
+    )
+  }
+
+  const updatePricingItem = (blockId: string, itemId: string, updates: Partial<PricingItem>) => {
+    setBlocks((prev) =>
+      prev.map((block) => {
+        if (block.id !== blockId || block.type !== 'pricing') return block
+        return {
+          ...block,
+          data: {
+            ...block.data,
+            items: block.data.items.map((item) => (item.id === itemId ? { ...item, ...updates } : item)),
+          },
+        }
+      })
+    )
+  }
+
+  const addPricingItem = (blockId: string) => {
+    setBlocks((prev) =>
+      prev.map((block) => {
+        if (block.id !== blockId || block.type !== 'pricing') return block
+        return {
+          ...block,
+          data: {
+            ...block.data,
+            items: [
+              ...block.data.items,
+              { id: crypto.randomUUID(), name: 'Yeni Kalem', qty: 1, price: 0, currency: 'TRY' },
+            ],
+          },
+        }
+      })
+    )
+  }
+
+  const removePricingItem = (blockId: string, itemId: string) => {
+    setBlocks((prev) =>
+      prev.map((block) => {
+        if (block.id !== blockId || block.type !== 'pricing') return block
+        return {
+          ...block,
+          data: {
+            ...block.data,
+            items: block.data.items.filter((item) => item.id !== itemId),
+          },
+        }
+      })
+    )
+  }
+
+  const addProductToPricing = (blockId: string, product: ProductOption) => {
+    setBlocks((prev) =>
+      prev.map((block) => {
+        if (block.id !== blockId || block.type !== 'pricing') return block
+
+        const existing = block.data.items.find(
+          (item) => item.productId === product.id || item.name === product.name
+        )
+
+        if (existing) {
+          return {
+            ...block,
+            data: {
+              ...block.data,
+              items: block.data.items.map((item) =>
+                item.id === existing.id
+                  ? {
+                      ...item,
+                      qty: Math.max(1, item.qty + 1),
+                      price: product.price,
+                      currency: product.currency,
+                      productId: product.id,
+                    }
+                  : item
+              ),
+            },
+          }
+        }
+
+        return {
+          ...block,
+          data: {
+            ...block.data,
+            items: [
+              ...block.data.items,
+              {
+                id: crypto.randomUUID(),
+                name: product.name,
+                qty: 1,
+                price: product.price,
+                currency: product.currency,
+                productId: product.id,
+              },
+            ],
+          },
+        }
+      })
     )
   }
 
@@ -1459,7 +1620,7 @@ export default function ProposalEditorPage() {
                         onChange={(event) => updateBlockData(selectedBlock.id, { source: event.target.value })}
                         className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                       >
-                        <option value="crm">CRM (Anlaşma)</option>
+                        <option value="crm">Ürün Kataloğu</option>
                         <option value="manual">Manuel</option>
                       </select>
                     </div>
@@ -1480,6 +1641,100 @@ export default function ProposalEditorPage() {
                           <span className="capitalize text-[#0d121c] dark:text-white">{key}</span>
                         </label>
                       ))}
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] text-gray-500 block">Ürün Kataloğu</label>
+                      <div className="relative">
+                        <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[16px] text-gray-400">
+                          search
+                        </span>
+                        <input
+                          value={productSearch}
+                          onChange={(event) => setProductSearch(event.target.value)}
+                          placeholder="Ürün ara..."
+                          className="w-full pl-7 pr-2 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
+                        />
+                      </div>
+                      <div className="max-h-40 overflow-y-auto space-y-2 rounded border border-dashed border-gray-200 dark:border-gray-700 p-2">
+                        {productsLoading ? (
+                          <p className="text-[11px] text-gray-400">Ürünler yükleniyor...</p>
+                        ) : filteredProductOptions.length === 0 ? (
+                          <p className="text-[11px] text-gray-400">Ürün bulunamadı.</p>
+                        ) : (
+                          filteredProductOptions.map((product) => (
+                            <button
+                              key={product.id}
+                              onClick={() => addProductToPricing(selectedBlock.id, product)}
+                              className="w-full flex items-center justify-between gap-2 px-2 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary/40 hover:bg-primary/5 text-left text-xs"
+                            >
+                              <div>
+                                <p className="font-semibold text-[#0d121c] dark:text-white">{product.name}</p>
+                                {product.category && (
+                                  <p className="text-[10px] text-gray-400">{product.category}</p>
+                                )}
+                              </div>
+                              <span className="font-semibold text-primary">
+                                {formatCurrency(product.price, product.currency)}
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] text-gray-500 block">Kalemler</label>
+                      <div className="space-y-2">
+                        {selectedBlock.data.items.map((item) => (
+                          <div key={item.id} className="grid grid-cols-[1fr_64px_90px_auto] gap-2 items-center">
+                            <input
+                              value={item.name}
+                              onChange={(event) => updatePricingItem(selectedBlock.id, item.id, { name: event.target.value })}
+                              className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
+                            />
+                            <input
+                              type="number"
+                              min={1}
+                              value={item.qty}
+                              onChange={(event) => {
+                                const qtyValue = Number(event.target.value)
+                                updatePricingItem(selectedBlock.id, item.id, {
+                                  qty: Number.isFinite(qtyValue) ? Math.max(1, qtyValue) : 1,
+                                })
+                              }}
+                              className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-center"
+                            />
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min={0}
+                                value={item.price}
+                                onChange={(event) => {
+                                  const priceValue = Number(event.target.value)
+                                  updatePricingItem(selectedBlock.id, item.id, {
+                                    price: Number.isFinite(priceValue) ? priceValue : 0,
+                                  })
+                                }}
+                                className="w-full pr-10 pl-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-right"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
+                                {item.currency ?? 'TRY'}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => removePricingItem(selectedBlock.id, item.id)}
+                              className="text-xs text-red-500 hover:text-red-600"
+                            >
+                              Kaldır
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => addPricingItem(selectedBlock.id)}
+                        className="w-full py-2 rounded-lg border border-dashed border-gray-200 text-xs text-gray-500 hover:border-primary"
+                      >
+                        Yeni kalem ekle
+                      </button>
                     </div>
                   </div>
                 )}
@@ -2163,6 +2418,9 @@ function BlockContent({ block }: { block: ProposalBlock }) {
             <span className="material-symbols-outlined text-[color:var(--proposal-accent)]">shopping_cart</span>
             Yatırım Özeti
           </h3>
+          {(() => {
+            const subtotalCurrency = block.data.items.find((item) => item.currency)?.currency ?? 'TRY'
+            return (
           <table className="w-full text-sm text-left">
             <thead className="text-xs uppercase text-gray-500 border-b border-gray-200 dark:border-gray-800">
               <tr>
@@ -2182,10 +2440,10 @@ function BlockContent({ block }: { block: ProposalBlock }) {
                     )}
                     {block.data.columns.quantity && <td className="py-4 text-center">{item.qty}</td>}
                     {block.data.columns.unitPrice && (
-                      <td className="py-4 text-right">{formatCurrency(item.price)}</td>
+                      <td className="py-4 text-right">{formatCurrency(item.price, item.currency ?? subtotalCurrency)}</td>
                     )}
                     {block.data.columns.total && (
-                      <td className="py-4 text-right font-semibold">{formatCurrency(total)}</td>
+                      <td className="py-4 text-right font-semibold">{formatCurrency(total, item.currency ?? subtotalCurrency)}</td>
                     )}
                   </tr>
                 )
@@ -2195,11 +2453,13 @@ function BlockContent({ block }: { block: ProposalBlock }) {
                   Ara Toplam
                 </td>
                 <td className="py-4 text-right font-bold text-[color:var(--proposal-accent)] text-lg">
-                  {formatCurrency(block.data.items.reduce((sum, item) => sum + item.qty * item.price, 0))}
+                  {formatCurrency(block.data.items.reduce((sum, item) => sum + item.qty * item.price, 0), subtotalCurrency)}
                 </td>
               </tr>
             </tbody>
           </table>
+            )
+          })()}
         </div>
       )}
 
