@@ -2,12 +2,16 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
-import { formatCurrency, formatRelativeTime, getInitials } from '@/components/contacts'
+import { formatCurrency, formatRelativeTime, getInitials } from '@/components/contacts/contact-utils'
 import { normalizeStage, stageConfigs } from '@/components/deals'
 
 export const dynamic = 'force-dynamic'
 
 type ContactRow = Database['public']['Tables']['contacts']['Row']
+type ContactCore = Pick<
+  ContactRow,
+  'id' | 'full_name' | 'email' | 'phone' | 'company' | 'position' | 'address' | 'created_at' | 'updated_at' | 'user_id' | 'team_id'
+>
 type DealRow = Database['public']['Tables']['deals']['Row']
 
 const closedStages = new Set(['Kazanıldı', 'Kaybedildi', 'won', 'lost', 'closed_won', 'closed_lost'])
@@ -24,7 +28,7 @@ const getAvatarStyle = (seed: string) => {
   return avatarPalette[hash % avatarPalette.length]
 }
 
-const getLastActivity = (contact: ContactRow, deals: DealRow[]) => {
+const getLastActivity = (contact: ContactCore, deals: DealRow[]) => {
   let latest = contact.updated_at ?? contact.created_at
   for (const deal of deals) {
     const updated = deal.updated_at ?? deal.created_at

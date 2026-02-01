@@ -1,6 +1,9 @@
 import type { Database } from '@/types/database'
 
-type ActivityRow = Database['public']['Tables']['activities']['Row']
+type ActivityRow = Pick<
+  Database['public']['Tables']['activities']['Row'],
+  'id' | 'title' | 'description' | 'type' | 'created_at'
+>
 
 export type DashboardActivity = {
   id: string

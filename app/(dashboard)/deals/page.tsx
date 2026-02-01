@@ -6,7 +6,10 @@ import { normalizeStage } from '@/components/deals'
 
 export const dynamic = 'force-dynamic'
 
-type DealRow = Database['public']['Tables']['deals']['Row']
+type DealRow = Pick<
+  Database['public']['Tables']['deals']['Row'],
+  'id' | 'title' | 'value' | 'stage' | 'updated_at' | 'contact_id' | 'user_id'
+>
 
 type DealContact = {
   full_name: string | null
@@ -48,9 +51,12 @@ export default async function DealsPage() {
   const { data: deals } = await dealsQuery
 
   const mappedDeals = (deals ?? []).map((deal) => {
-    const record = deal as DealRow & { contacts?: DealContact | null; users?: DealOwner | null }
-    const contact = record.contacts
-    const owner = record.users
+    const record = deal as DealRow & {
+      contacts?: DealContact | DealContact[] | null
+      users?: DealOwner | DealOwner[] | null
+    }
+    const contact = Array.isArray(record.contacts) ? record.contacts[0] : record.contacts
+    const owner = Array.isArray(record.users) ? record.users[0] : record.users
     const contactName = contact?.full_name?.trim() || 'Bilinmeyen Kişi'
     const initials = contactName
       .split(' ')

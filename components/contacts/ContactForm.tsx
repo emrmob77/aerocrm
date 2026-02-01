@@ -60,14 +60,14 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
 
     setLoading(true)
     try {
+      const contactsTable = supabase.from('contacts')
       if (mode === 'create') {
         if (!profile?.team_id) {
           toast.error('Takım bilgisi bulunamadı')
           return
         }
 
-        const { data, error } = await supabase
-          .from('contacts')
+        const { data, error } = await contactsTable
           .insert({
             full_name: formData.full_name.trim(),
             email: formData.email.trim() || null,
@@ -97,8 +97,7 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
         return
       }
 
-      const { error } = await supabase
-        .from('contacts')
+      const { error } = await contactsTable
         .update({
           full_name: formData.full_name.trim(),
           email: formData.email.trim() || null,

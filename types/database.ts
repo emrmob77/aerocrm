@@ -25,6 +25,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       users: {
         Row: {
@@ -57,6 +58,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       contacts: {
         Row: {
@@ -101,6 +103,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       products: {
         Row: {
@@ -139,6 +142,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       deals: {
         Row: {
@@ -186,6 +190,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       deal_products: {
         Row: {
@@ -215,6 +220,7 @@ export interface Database {
           total_price?: number
           created_at?: string
         }
+        Relationships: []
       }
       proposals: {
         Row: {
@@ -265,6 +271,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       proposal_views: {
         Row: {
@@ -294,6 +301,7 @@ export interface Database {
           blocks_viewed?: Json
           created_at?: string
         }
+        Relationships: []
       }
       templates: {
         Row: {
@@ -335,6 +343,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       webhooks: {
         Row: {
@@ -376,6 +385,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -411,6 +421,7 @@ export interface Database {
           metadata?: Json
           created_at?: string
         }
+        Relationships: []
       }
       activities: {
         Row: {
@@ -449,11 +460,10 @@ export interface Database {
           metadata?: Json
           created_at?: string
         }
+        Relationships: []
       }
     }
-    Views: {
-      [_ in never]: never
-    }
+    Views: Record<string, never>
     Functions: {
       get_dashboard_metrics: {
         Args: Record<PropertyKey, never>

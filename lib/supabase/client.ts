@@ -1,4 +1,5 @@
 import { createBrowserClient, type CookieOptions } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { parse, serialize } from 'cookie'
 
@@ -79,11 +80,11 @@ export function createClient() {
     {
       cookies: cookieMethods,
     }
-  )
+  ) as unknown as SupabaseClient<any>
 }
 
 // Singleton instance for client-side
-let client: ReturnType<typeof createClient> | null = null
+let client: SupabaseClient<any> | null = null
 
 export function getSupabaseClient() {
   if (!client) {

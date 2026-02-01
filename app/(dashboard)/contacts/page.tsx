@@ -6,7 +6,12 @@ import { ContactsDirectory } from '@/components/contacts'
 export const dynamic = 'force-dynamic'
 
 type ContactRow = Database['public']['Tables']['contacts']['Row']
+type ContactCore = Pick<
+  ContactRow,
+  'id' | 'full_name' | 'email' | 'phone' | 'company' | 'position' | 'created_at' | 'updated_at' | 'user_id' | 'team_id'
+>
 type DealRow = Database['public']['Tables']['deals']['Row']
+type DealForStats = Pick<DealRow, 'contact_id' | 'value' | 'updated_at' | 'created_at'>
 
 type DealStats = {
   totalValue: number
@@ -14,7 +19,7 @@ type DealStats = {
   dealsCount: number
 }
 
-const buildDealStats = (deals: DealRow[]) => {
+const buildDealStats = (deals: DealForStats[]) => {
   const stats = new Map<string, DealStats>()
 
   for (const deal of deals) {
@@ -71,7 +76,7 @@ export default async function ContactsPage() {
 
   const contactIds = (contacts ?? []).map((contact) => contact.id)
 
-  let deals: DealRow[] = []
+  let deals: DealForStats[] = []
   if (contactIds.length > 0) {
     let dealsQuery = supabase
       .from('deals')
@@ -90,7 +95,7 @@ export default async function ContactsPage() {
 
   const dealStats = buildDealStats(deals)
 
-  const initialContacts = (contacts ?? []).map((contact: ContactRow) => {
+  const initialContacts = (contacts ?? []).map((contact: ContactCore) => {
     const stats = dealStats.get(contact.id)
     const fallbackLast = contact.updated_at ?? contact.created_at
 
@@ -109,5 +114,5 @@ export default async function ContactsPage() {
     }
   })
 
-  return <ContactsDirectory initialContacts={initialContacts} />
+  return <ContactsDirectory initialContacts={initialContacts} teamId={teamId} userId={user.id} />
 }

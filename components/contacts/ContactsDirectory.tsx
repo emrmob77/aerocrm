@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { useSupabase } from '@/hooks/use-supabase'
+import type { Database } from '@/types/database'
 import {
   formatCurrency,
   formatRelativeTime,
   getInitials,
-  isOlderThanDays,
-  isWithinDays,
+  filterContacts,
+  type ContactFilterInput,
+  type ContactFilterType,
 } from './contact-utils'
 
 export type ContactListItem = {
@@ -26,7 +28,6 @@ export type ContactListItem = {
   dealsCount: number
 }
 
-type FilterType = 'all' | 'new' | 'highValue' | 'inactive'
 type ViewMode = 'list' | 'card'
 type SortKey = 'name' | 'value' | 'activity'
 
@@ -42,19 +43,30 @@ const getAvatarStyle = (seed: string) => {
   return avatarPalette[hash % avatarPalette.length]
 }
 
-const filterOptions: { id: FilterType; label: string }[] = [
+const filterOptions: { id: ContactFilterType; label: string }[] = [
   { id: 'all', label: 'Tüm Kişiler' },
   { id: 'new', label: 'Yeni Eklenenler' },
   { id: 'highValue', label: 'Yüksek Değerli' },
   { id: 'inactive', label: 'Hareketsiz' },
 ]
 
-export function ContactsDirectory({ initialContacts }: { initialContacts: ContactListItem[] }) {
+type ContactRow = Database['public']['Tables']['contacts']['Row']
+type DealRow = Database['public']['Tables']['deals']['Row']
+
+export function ContactsDirectory({
+  initialContacts,
+  teamId,
+  userId,
+}: {
+  initialContacts: ContactListItem[]
+  teamId: string | null
+  userId: string | null
+}) {
   const supabase = useSupabase()
   const [contacts, setContacts] = useState<ContactListItem[]>(initialContacts)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [query, setQuery] = useState('')
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all')
+  const [activeFilter, setActiveFilter] = useState<ContactFilterType>('all')
   const [sortKey, setSortKey] = useState<SortKey>('activity')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [selectedContacts, setSelectedContacts] = useState<string[]>([])
@@ -66,39 +78,190 @@ export function ContactsDirectory({ initialContacts }: { initialContacts: Contac
   }, [initialContacts])
 
   useEffect(() => {
+    if (!teamId && !userId) {
+      return
+    }
+
+    const contactFilter = teamId ? `team_id=eq.${teamId}` : `user_id=eq.${userId}`
+    const dealFilter = teamId ? `team_id=eq.${teamId}` : `user_id=eq.${userId}`
+
+    const updateContactStats = async (contactId: string) => {
+      let dealsQuery = supabase
+        .from('deals')
+        .select('value, updated_at, created_at')
+        .eq('contact_id', contactId)
+
+      if (teamId) {
+        dealsQuery = dealsQuery.eq('team_id', teamId)
+      } else if (userId) {
+        dealsQuery = dealsQuery.eq('user_id', userId)
+      }
+
+      const { data: deals } = await dealsQuery
+      const rows = (deals ?? []) as Pick<DealRow, 'value' | 'updated_at' | 'created_at'>[]
+
+      const stats = rows.reduce(
+        (acc, deal) => {
+          const value = deal.value ?? 0
+          const updatedAt = deal.updated_at ?? deal.created_at
+          acc.totalValue += value
+          acc.dealsCount += 1
+          if (new Date(updatedAt) > new Date(acc.lastActivityAt)) {
+            acc.lastActivityAt = updatedAt
+          }
+          return acc
+        },
+        { totalValue: 0, dealsCount: 0, lastActivityAt: '' }
+      )
+
+      setContacts((prev) =>
+        prev.map((contact) => {
+          if (contact.id !== contactId) {
+            return contact
+          }
+
+          const fallbackLast = contact.updatedAt ?? contact.createdAt
+          const lastActivityAt = stats.dealsCount > 0 ? stats.lastActivityAt : fallbackLast
+
+          return {
+            ...contact,
+            totalValue: stats.totalValue,
+            dealsCount: stats.dealsCount,
+            lastActivityAt,
+          }
+        })
+      )
+    }
+
+    const channel = supabase
+      .channel('contacts-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'contacts', filter: contactFilter },
+        (payload) => {
+          const row = payload.new as ContactRow
+          if (!row?.id) return
+
+          setContacts((prev) => {
+            if (prev.some((contact) => contact.id === row.id)) {
+              return prev
+            }
+
+            return [
+              {
+                id: row.id,
+                fullName: row.full_name,
+                email: row.email,
+                phone: row.phone,
+                company: row.company,
+                position: row.position,
+                createdAt: row.created_at,
+                updatedAt: row.updated_at,
+                totalValue: 0,
+                lastActivityAt: row.updated_at ?? row.created_at,
+                dealsCount: 0,
+              },
+              ...prev,
+            ]
+          })
+
+          updateContactStats(row.id)
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'contacts', filter: contactFilter },
+        (payload) => {
+          const row = payload.new as ContactRow
+          if (!row?.id) return
+
+          setContacts((prev) =>
+            prev.map((contact) => {
+              if (contact.id !== row.id) {
+                return contact
+              }
+
+              const updatedAt = row.updated_at ?? contact.updatedAt
+              const lastActivityAt =
+                new Date(updatedAt) > new Date(contact.lastActivityAt)
+                  ? updatedAt
+                  : contact.lastActivityAt
+
+              return {
+                ...contact,
+                fullName: row.full_name,
+                email: row.email,
+                phone: row.phone,
+                company: row.company,
+                position: row.position,
+                createdAt: row.created_at,
+                updatedAt,
+                lastActivityAt,
+              }
+            })
+          )
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'contacts', filter: contactFilter },
+        (payload) => {
+          const row = payload.old as ContactRow
+          if (!row?.id) return
+
+          setContacts((prev) => prev.filter((contact) => contact.id !== row.id))
+          setSelectedContacts((prev) => prev.filter((id) => id !== row.id))
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'deals', filter: dealFilter },
+        (payload) => {
+          const row = payload.new as DealRow
+          if (!row?.contact_id) return
+          updateContactStats(row.contact_id)
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'deals', filter: dealFilter },
+        (payload) => {
+          const row = payload.new as DealRow
+          const oldRow = payload.old as DealRow
+
+          if (oldRow?.contact_id && oldRow.contact_id !== row?.contact_id) {
+            updateContactStats(oldRow.contact_id)
+          }
+
+          if (row?.contact_id) {
+            updateContactStats(row.contact_id)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'deals', filter: dealFilter },
+        (payload) => {
+          const row = payload.old as DealRow
+          if (!row?.contact_id) return
+          updateContactStats(row.contact_id)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [supabase, teamId, userId])
+
+  useEffect(() => {
     setCurrentPage(1)
   }, [query, activeFilter, rowsPerPage])
 
-  const filteredContacts = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-
-    return contacts.filter((contact) => {
-      const searchMatch =
-        !normalizedQuery ||
-        contact.fullName.toLowerCase().includes(normalizedQuery) ||
-        (contact.email ?? '').toLowerCase().includes(normalizedQuery) ||
-        (contact.phone ?? '').toLowerCase().includes(normalizedQuery) ||
-        (contact.company ?? '').toLowerCase().includes(normalizedQuery)
-
-      if (!searchMatch) {
-        return false
-      }
-
-      if (activeFilter === 'new') {
-        return isWithinDays(contact.createdAt, 7)
-      }
-
-      if (activeFilter === 'highValue') {
-        return contact.totalValue >= 50000
-      }
-
-      if (activeFilter === 'inactive') {
-        return isOlderThanDays(contact.lastActivityAt, 30)
-      }
-
-      return true
-    })
-  }, [contacts, query, activeFilter])
+  const filteredContacts = useMemo(
+    () => filterContacts(contacts as ContactFilterInput[], query, activeFilter),
+    [contacts, query, activeFilter]
+  )
 
   const sortedContacts = useMemo(() => {
     const sorted = [...filteredContacts]
@@ -262,7 +425,7 @@ export function ContactsDirectory({ initialContacts }: { initialContacts: Contac
               <span className="text-sm font-semibold text-[#48679d] dark:text-gray-400">Filtre:</span>
               <select
                 value={activeFilter}
-                onChange={(event) => setActiveFilter(event.target.value as FilterType)}
+                onChange={(event) => setActiveFilter(event.target.value as ContactFilterType)}
                 className="bg-white dark:bg-slate-800 border border-[#ced8e9] dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-semibold text-[#0d121c] dark:text-white"
               >
                 {filterOptions.map((option) => (

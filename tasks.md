@@ -89,11 +89,11 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - Toplu işlemler (bulk actions)
   - _Gereksinimler: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
-- [ ]* 7.1 Kişi yönetimi property testleri
+- [x]* 7.1 Kişi yönetimi property testleri ✅
   - **Property 6: Arama Kapsamlılığı**
   - **Doğrular: Gereksinim 4.2**
 
-- [ ] 8. Checkpoint - Temel CRM İşlevselliği
+- [x] 8. Checkpoint - Temel CRM İşlevselliği ✅
   - Tüm testlerin geçtiğini doğrula
   - Performans testleri çalıştır
   - Kullanıcı deneyimi testi yap

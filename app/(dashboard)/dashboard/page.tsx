@@ -11,8 +11,12 @@ const quickActions = [
 
 type DashboardMetrics = Database['public']['Functions']['get_dashboard_metrics']['Returns']
 
-type ActivityRow = Database['public']['Tables']['activities']['Row']
+type ActivityRow = Pick<
+  Database['public']['Tables']['activities']['Row'],
+  'id' | 'title' | 'description' | 'type' | 'created_at'
+>
 type DealRow = Database['public']['Tables']['deals']['Row']
+type DealMetricRow = Pick<DealRow, 'id' | 'stage' | 'value' | 'created_at'>
 
 type UserProfile = {
   full_name: string
@@ -29,7 +33,7 @@ const emptyMetrics: DashboardMetrics = {
 const closedStages = new Set(['Kazanıldı', 'Kaybedildi', 'won', 'lost', 'closed_won', 'closed_lost'])
 const wonStages = new Set(['Kazanıldı', 'won', 'closed_won'])
 
-const buildMetricsFromDeals = (deals: DealRow[]): DashboardMetrics => {
+const buildMetricsFromDeals = (deals: DealMetricRow[]): DashboardMetrics => {
   if (deals.length === 0) {
     return emptyMetrics
   }

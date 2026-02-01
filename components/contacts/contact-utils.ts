@@ -48,6 +48,58 @@ export const getInitials = (name: string) => {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
+export type ContactFilterType = 'all' | 'new' | 'highValue' | 'inactive'
+
+export type ContactFilterInput = {
+  id: string
+  fullName: string
+  email: string | null
+  phone: string | null
+  company: string | null
+  totalValue: number
+  createdAt: string
+  lastActivityAt: string
+}
+
+export const matchesContactQuery = (contact: ContactFilterInput, query: string) => {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery) {
+    return true
+  }
+
+  return (
+    contact.fullName.toLowerCase().includes(normalizedQuery) ||
+    (contact.email ?? '').toLowerCase().includes(normalizedQuery) ||
+    (contact.phone ?? '').toLowerCase().includes(normalizedQuery) ||
+    (contact.company ?? '').toLowerCase().includes(normalizedQuery)
+  )
+}
+
+export const filterContacts = (
+  contacts: ContactFilterInput[],
+  query: string,
+  filter: ContactFilterType
+) =>
+  contacts.filter((contact) => {
+    if (!matchesContactQuery(contact, query)) {
+      return false
+    }
+
+    if (filter === 'new') {
+      return isWithinDays(contact.createdAt, 7)
+    }
+
+    if (filter === 'highValue') {
+      return contact.totalValue >= 50000
+    }
+
+    if (filter === 'inactive') {
+      return isOlderThanDays(contact.lastActivityAt, 30)
+    }
+
+    return true
+  })
+
 export const isWithinDays = (isoDate: string, days: number) => {
   const target = new Date(isoDate)
   const now = new Date()

@@ -5,10 +5,26 @@ export * from './ui'
 export * from './layout'
 
 // Dashboard Components
-export * from './dashboard'
+export {
+  ActivityFeed,
+  MetricsGrid,
+  QuickActions,
+  WebhookActivity,
+  mapActivityRow,
+  formatRelativeTime as formatActivityRelativeTime,
+  type DashboardActivity,
+} from './dashboard'
 
 // Deals Components
-export * from './deals'
+export {
+  DealsBoard,
+  stageConfigs,
+  normalizeStage,
+  getDbStage,
+  formatCurrency,
+  formatRelativeTime as formatDealRelativeTime,
+  type StageId,
+} from './deals'
 
 // Contacts Components
-export * from './contacts'
+export { ContactsDirectory, ContactForm } from './contacts'
