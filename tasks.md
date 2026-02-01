@@ -156,10 +156,14 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
 - [x] 12. Spyglass Analytics Sistemi ✅
   - Analytics dashboard sayfası (SSR) ✅
   - Metrik kartları ve KPI'lar ✅
-  - Recharts ile grafik bileşenleri
+  - Recharts ile grafik bileşenleri ✅
   - Dönüşüm hunisi görselleştirmesi ✅
   - Blok etkileşim haritası ✅
   - Gerçek zamanlı aktivite akışı
+  - Tarih aralığı (takvim) filtresi ✅
+  - CSV export (rapor dışa aktarma) ✅
+  - Proposals tablosu (özet liste) ✅
+  - Line & Pie chart analitik grafikleri ✅
   - _Gereksinimler: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6_
 
 - [ ]* 12.1 Analytics property testleri
