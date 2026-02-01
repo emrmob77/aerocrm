@@ -112,6 +112,12 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 8: Akıllı Değişken Otomatik Tamamlama**
   - **Doğrular: Gereksinimler 5.2, 5.5**
 
+- [ ]* 9.2 Teklif taslak & sürüm yönetimi
+  - Taslak sürümlerini DB'de sakla (örn. proposals_versions)
+  - Otomatik taslak kaydetme (periyodik auto-save)
+  - Sürüm geçmişinden geri yükleme akışı
+  - _Gereksinimler: 5.1, 5.4, 5.6_
+
 - [x] 10. Teklif Gönderim Sistemi ✅
   - Teklif gönderim modal'ı
   - E-posta, WhatsApp, SMS gönderim seçenekleri
