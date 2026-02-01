@@ -58,3 +58,21 @@ CREATE POLICY "Invitee can accept invite" ON team_invites
 FOR UPDATE
 USING (email = (auth.jwt() ->> 'email'))
 WITH CHECK (email = (auth.jwt() ->> 'email'));
+
+-- Bildirim tercihleri için RLS
+ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users manage notification preferences" ON notification_preferences;
+CREATE POLICY "Users manage notification preferences" ON notification_preferences
+FOR ALL
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- Push abonelikleri için RLS
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users manage push subscriptions" ON push_subscriptions;
+CREATE POLICY "Users manage push subscriptions" ON push_subscriptions
+FOR ALL
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());

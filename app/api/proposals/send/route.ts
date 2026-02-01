@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
+import { buildProposalDeliveryEmail } from '@/lib/notifications/email-templates'
 
 type SendProposalPayload = {
   title?: string
@@ -49,12 +50,6 @@ const buildMessageWithLink = (message: string, link: string, includeLink?: boole
   }
   return `${message}\n\n${link}`
 }
-
-const formatHtml = (text: string) =>
-  text
-    .split('\n')
-    .map((line) => line.trim())
-    .join('<br />')
 
 const sendEmail = async (params: { to: string; subject: string; text: string; html: string }) => {
   const apiKey = process.env.RESEND_API_KEY
@@ -234,11 +229,16 @@ export async function POST(request: Request) {
         throw new Error('E-posta gönderimi için alıcı e-posta gerekli.')
       }
       const subject = payload.subject?.trim() || `${clientName} için Teklif`
+      const template = buildProposalDeliveryEmail({
+        subject,
+        message: messageBody,
+        link: payload.includeLink === false ? undefined : publicUrl,
+      })
       await sendEmail({
         to: recipient,
-        subject,
-        text: messageBody,
-        html: formatHtml(messageBody),
+        subject: template.subject,
+        text: template.text,
+        html: template.html,
       })
     } else if (method === 'sms') {
       const recipient = contactPhone

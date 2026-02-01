@@ -1094,6 +1094,32 @@ CREATE TABLE notifications (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Bildirim tercihleri
+CREATE TABLE notification_preferences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  email_enabled BOOLEAN DEFAULT true,
+  in_app_enabled BOOLEAN DEFAULT true,
+  push_enabled BOOLEAN DEFAULT false,
+  proposals_enabled BOOLEAN DEFAULT true,
+  deals_enabled BOOLEAN DEFAULT true,
+  system_enabled BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Push bildirim abonelikleri
+CREATE TABLE push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  user_agent TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Aktivite Logları
 CREATE TABLE activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1133,6 +1159,11 @@ CREATE INDEX idx_proposal_views_created_at ON proposal_views(created_at);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_read ON notifications(read);
 CREATE INDEX idx_notifications_created_at ON notifications(created_at);
+
+CREATE INDEX idx_notification_preferences_user_id ON notification_preferences(user_id);
+
+CREATE INDEX idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+CREATE UNIQUE INDEX idx_push_subscriptions_endpoint ON push_subscriptions(endpoint);
 
 CREATE INDEX idx_activities_user_id ON activities(user_id);
 CREATE INDEX idx_activities_team_id ON activities(team_id);

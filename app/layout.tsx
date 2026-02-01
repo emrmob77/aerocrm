@@ -20,6 +20,7 @@ export const metadata: Metadata = {
     title: 'AERO CRM - Satış, Hızla Uçar',
     description: 'Modern satış ekipleri için kapsamlı CRM ve teklif hazırlama platformu',
   },
+  manifest: '/manifest.webmanifest',
   twitter: {
     card: 'summary_large_image',
     title: 'AERO CRM - Satış, Hızla Uçar',

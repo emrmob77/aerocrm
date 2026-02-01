@@ -225,7 +225,7 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 14: Ürün Kataloğu Erişilebilirliği**
   - **Doğrular: Gereksinim 11.3**
 
-- [ ] 17. Bildirim Sistemi
+- [x] 17. Bildirim Sistemi
   - Bildirim merkezi bileşeni
   - Toast bildirim sistemi (React Hot Toast)
   - E-posta bildirim şablonları

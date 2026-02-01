@@ -20,6 +20,7 @@ const navItems: NavItem[] = [
   { label: 'Satışlar', href: '/sales', icon: 'handshake' },
   { label: 'Raporlar', href: '/reports', icon: 'bar_chart' },
   { label: 'Analitik', href: '/analytics', icon: 'analytics' },
+  { label: 'Bildirimler', href: '/notifications', icon: 'notifications' },
   { label: 'Webhooks', href: '/webhooks', icon: 'webhook' },
   { label: 'Entegrasyonlar', href: '/integrations', icon: 'extension' },
   { label: 'Ayarlar', href: '/settings', icon: 'settings' },

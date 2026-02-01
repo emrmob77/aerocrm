@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAppStore } from '@/store'
 import { useSupabase, useTeamPresence, useUser } from '@/hooks'
@@ -19,6 +20,7 @@ const pageTitles: Record<string, string> = {
   '/reports': 'Raporlar',
   '/proposals': 'Teklifler',
   '/analytics': 'Analitik',
+  '/notifications': 'Bildirimler',
   '/webhooks': 'Webhooks',
   '/integrations': 'Entegrasyonlar',
   '/settings': 'Ayarlar',
@@ -201,6 +203,14 @@ export function Header({ onMenuClick }: HeaderProps) {
             ]
             return next.slice(0, 8)
           })
+          if (!row.read) {
+            const messageText = row.title ? `${row.title}` : row.message ?? 'Yeni bildirim'
+            if (row.type?.includes('signed')) {
+              toast.success(messageText)
+            } else {
+              toast(messageText)
+            }
+          }
         }
       )
       .on(
@@ -369,6 +379,14 @@ export function Header({ onMenuClick }: HeaderProps) {
                     </Link>
                   ))
                 )}
+              </div>
+              <div className="border-t border-[#e7ebf4] dark:border-gray-800">
+                <Link
+                  href="/notifications"
+                  className="block px-4 py-3 text-sm font-semibold text-primary hover:bg-primary/5 transition-colors"
+                >
+                  Tüm bildirimleri gör
+                </Link>
               </div>
             </div>
           )}

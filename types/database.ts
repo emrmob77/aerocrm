@@ -501,6 +501,78 @@ export interface Database {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          id: string
+          user_id: string
+          email_enabled: boolean
+          in_app_enabled: boolean
+          push_enabled: boolean
+          proposals_enabled: boolean
+          deals_enabled: boolean
+          system_enabled: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          email_enabled?: boolean
+          in_app_enabled?: boolean
+          push_enabled?: boolean
+          proposals_enabled?: boolean
+          deals_enabled?: boolean
+          system_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          email_enabled?: boolean
+          in_app_enabled?: boolean
+          push_enabled?: boolean
+          proposals_enabled?: boolean
+          deals_enabled?: boolean
+          system_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          user_agent?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       activities: {
         Row: {
           id: string
@@ -558,4 +630,3 @@ export interface Database {
     }
   }
 }
-

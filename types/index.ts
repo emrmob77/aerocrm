@@ -70,6 +70,16 @@ export type Notification = Database['public']['Tables']['notifications']['Row']
 export type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
 export type NotificationUpdate = Database['public']['Tables']['notifications']['Update']
 
+// Notification preferences
+export type NotificationPreference = Database['public']['Tables']['notification_preferences']['Row']
+export type NotificationPreferenceInsert = Database['public']['Tables']['notification_preferences']['Insert']
+export type NotificationPreferenceUpdate = Database['public']['Tables']['notification_preferences']['Update']
+
+// Push subscription types
+export type PushSubscription = Database['public']['Tables']['push_subscriptions']['Row']
+export type PushSubscriptionInsert = Database['public']['Tables']['push_subscriptions']['Insert']
+export type PushSubscriptionUpdate = Database['public']['Tables']['push_subscriptions']['Update']
+
 // Activity types
 export type Activity = Database['public']['Tables']['activities']['Row']
 export type ActivityInsert = Database['public']['Tables']['activities']['Insert']

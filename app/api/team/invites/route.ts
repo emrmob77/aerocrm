@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { buildTeamInviteEmail } from '@/lib/notifications/email-templates'
 
 const allowedRoles = ['admin', 'member', 'viewer']
 
@@ -14,15 +15,7 @@ const sendInviteEmail = async (params: { to: string; link: string; inviter: stri
     return false
   }
 
-  const subject = 'AERO CRM takım daveti'
-  const text = `${params.inviter} sizi AERO CRM takımına davet etti. Katılmak için: ${params.link}`
-  const html = `
-    <div style="font-family:Arial, sans-serif; line-height:1.6">
-      <p>${params.inviter} sizi AERO CRM takımına davet etti.</p>
-      <p>Katılmak için aşağıdaki bağlantıyı kullanın:</p>
-      <p><a href="${params.link}">${params.link}</a></p>
-    </div>
-  `
+  const template = buildTeamInviteEmail({ inviter: params.inviter, link: params.link })
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -33,9 +26,9 @@ const sendInviteEmail = async (params: { to: string; link: string; inviter: stri
     body: JSON.stringify({
       from,
       to: [params.to],
-      subject,
-      text,
-      html,
+      subject: template.subject,
+      text: template.text,
+      html: template.html,
     }),
   })
 
