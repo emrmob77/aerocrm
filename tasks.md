@@ -142,6 +142,17 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 10: İmza Kaydetme Tutarlılığı**
   - **Doğrular: Gereksinim 7.5**
 
+- [ ]* 11.2 Public teklif güvenlik ve iyileştirmeler
+  - Public view/sign için RLS politikaları (public_url üzerinden okuma/yazma)
+  - İmza sonrası PDF indirme linkini gerçek PDF üretimiyle bağlama
+  - Teklif tasarım ayarlarını (accent/bg vb.) DB’ye kaydetme ve public sayfada kullanma
+  - _Gereksinimler: 7.1, 7.4, 7.6_
+
+- [ ]* 11.3 Public teklifler için RLS politikaları
+  - public_url üzerinden read izni
+  - imza ve view tracking için update izni
+  - _Gereksinimler: 7.1, 7.5_
+
 - [ ] 12. Spyglass Analytics Sistemi
   - Analytics dashboard sayfası (SSR)
   - Metrik kartları ve KPI'lar
