@@ -49,6 +49,11 @@ export function setAuthStorageMode(mode: AuthPersistenceMode) {
   )
 }
 
+export function clearAuthPersistence() {
+  authPersistence = 'session'
+  setCookieValue(PERSISTENCE_COOKIE_NAME, '', { maxAge: 0 })
+}
+
 const cookieMethods = {
   get(name: string) {
     return getCookieValue(name) ?? undefined

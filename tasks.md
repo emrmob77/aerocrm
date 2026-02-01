@@ -55,12 +55,12 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - Dark mode toggle ✅
   - _Gereksinimler: Tüm sayfa navigasyonu_
 
-- [ ] 5. Dashboard Sistemi (SSR)
-  - Dashboard sayfası oluştur (Server Component)
-  - Metrik kartları bileşeni
-  - Aktivite akışı bileşeni
-  - Hızlı aksiyonlar bileşeni
-  - Gerçek zamanlı veri güncellemeleri
+- [x] 5. Dashboard Sistemi (SSR) ✅
+  - Dashboard sayfası oluştur (Server Component) ✅
+  - Metrik kartları bileşeni ✅
+  - Aktivite akışı bileşeni ✅
+  - Hızlı aksiyonlar bileşeni ✅
+  - Gerçek zamanlı veri güncellemeleri ✅
   - _Gereksinimler: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
 - [ ]* 5.1 Dashboard property testleri

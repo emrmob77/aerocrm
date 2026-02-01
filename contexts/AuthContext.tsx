@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
-import { getSupabaseClient, setAuthStorageMode } from '@/lib/supabase/client'
+import { clearAuthPersistence, getSupabaseClient, setAuthStorageMode } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 interface AuthContextType {
@@ -107,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase])
 
   const signOut = useCallback(async () => {
+    clearAuthPersistence()
     await supabase.auth.signOut()
   }, [supabase])
 

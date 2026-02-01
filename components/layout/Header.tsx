@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAppStore } from '@/store'
+import { useUser } from '@/hooks'
 
 // Breadcrumb mapping
 const pageTitles: Record<string, string> = {
@@ -28,7 +29,8 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname()
-  const { user, signOut } = useAuth()
+  const { signOut } = useAuth()
+  const { user: profile, authUser } = useUser()
   const { theme, setTheme } = useAppStore()
   const [showSearch, setShowSearch] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
@@ -40,14 +42,34 @@ export function Header({ onMenuClick }: HeaderProps) {
   const currentPageTitle = pageTitles[pathname] || 'Sayfa'
 
   // Get user initials
-  const getUserInitials = () => {
-    if (!user?.full_name) return 'U'
-    const names = user.full_name.split(' ')
+  const getUserInitials = (name: string) => {
+    if (!name) return 'U'
+    const names = name.split(' ')
     if (names.length >= 2) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
     }
     return names[0][0].toUpperCase()
   }
+
+  const displayName =
+    profile?.full_name ||
+    (authUser?.user_metadata?.full_name as string | undefined) ||
+    authUser?.email?.split('@')[0] ||
+    'Kullanıcı'
+
+  const userEmail = authUser?.email || profile?.email || ''
+  const avatarUrl =
+    profile?.avatar_url ||
+    (authUser?.user_metadata?.avatar_url as string | undefined) ||
+    (authUser?.user_metadata?.picture as string | undefined) ||
+    null
+
+  const roleLabel =
+    profile?.role === 'owner'
+      ? 'Yönetici'
+      : profile?.role === 'admin'
+        ? 'Admin'
+        : 'Üye'
 
   // Toggle dark mode
   const toggleDarkMode = () => {
@@ -257,24 +279,24 @@ export function Header({ onMenuClick }: HeaderProps) {
           >
             <div className="text-right hidden md:block">
               <p className="text-sm font-bold text-[#0d121c] dark:text-white">
-                {user?.full_name || 'Kullanıcı'}
+                {displayName}
               </p>
               <p className="text-xs text-[#48679d] dark:text-gray-400">
-                {user?.role === 'owner' ? 'Yönetici' : user?.role === 'admin' ? 'Admin' : 'Üye'}
+                {roleLabel}
               </p>
             </div>
             <div className="size-10 rounded-full border-2 border-primary p-0.5 overflow-hidden">
-              {user?.avatar_url ? (
+              {avatarUrl ? (
                 <Image
-                  src={user.avatar_url}
-                  alt={user.full_name}
+                  src={avatarUrl}
+                  alt={displayName}
                   width={36}
                   height={36}
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                  {getUserInitials()}
+                  {getUserInitials(displayName)}
                 </div>
               )}
             </div>
@@ -285,9 +307,9 @@ export function Header({ onMenuClick }: HeaderProps) {
             <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#161e2b] rounded-xl shadow-xl border border-[#e7ebf4] dark:border-gray-800 overflow-hidden z-50">
               <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800">
                 <p className="font-bold text-[#0d121c] dark:text-white">
-                  {user?.full_name || 'Kullanıcı'}
+                  {displayName}
                 </p>
-                <p className="text-sm text-[#48679d]">{user?.email}</p>
+                <p className="text-sm text-[#48679d]">{userEmail}</p>
               </div>
               <div className="py-2">
                 <Link
