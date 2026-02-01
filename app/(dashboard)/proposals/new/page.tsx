@@ -151,6 +151,245 @@ const paletteItems: PaletteItem[] = [
   { id: 'signature', label: 'E-İmza', icon: 'draw', group: 'action' },
 ]
 
+type TemplatePreset = {
+  id: string
+  name: string
+  description: string
+  title: string
+  design: {
+    background: string
+    text: string
+    accent: string
+    radius: number
+    fontScale: number
+  }
+  build: () => ProposalBlock[]
+}
+
+const updateBlock = <T extends ProposalBlock>(block: T, data: Partial<T['data']>): T => ({
+  ...block,
+  data: { ...block.data, ...data },
+})
+
+const templatePresets: TemplatePreset[] = [
+  {
+    id: 'web',
+    name: 'Web Tasarım',
+    description: 'Kurumsal web sitesi ve UX odaklı',
+    title: 'Web Sitesi Tasarım Teklifi',
+    design: {
+      background: '#ffffff',
+      text: '#0d121c',
+      accent: '#2563eb',
+      radius: 12,
+      fontScale: 100,
+    },
+    build: () => [
+      updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
+        title: 'Yeni Nesil Web Deneyimi',
+        subtitle: 'Markanız için ölçeklenebilir, hızlı ve modern tasarım.',
+        backgroundUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200',
+      }),
+      updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
+        text: 'Proje Kapsamı',
+        level: 'h2',
+        align: 'left',
+      }),
+      updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
+        content:
+          'Bu teklif; kurumsal kimliğinize uygun arayüz tasarımı, içerik mimarisi ve hızlı teslimat planını kapsar.',
+      }),
+      updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
+        columns: 3,
+      }),
+      updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
+        items: [
+          { id: crypto.randomUUID(), name: 'UI/UX Tasarım', qty: 1, price: 38000 },
+          { id: crypto.randomUUID(), name: 'Frontend Geliştirme', qty: 1, price: 52000 },
+        ],
+      }),
+      updateBlock(createBlock('testimonial') as Extract<ProposalBlock, { type: 'testimonial' }>, {
+        quote: 'Tasarım sürecinde beklentimizin çok üstünde bir iş çıktı.',
+        author: 'Selin Aksoy',
+        role: 'Marketing Lead, Orion',
+      }),
+      updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
+        label: 'Demo Toplantısı Planla',
+        url: 'https://cal.com/aero/demo',
+        variant: 'primary',
+      }),
+      createBlock('signature'),
+    ],
+  },
+  {
+    id: 'seo',
+    name: 'SEO Paketi',
+    description: 'Organik büyüme ve teknik iyileştirme',
+    title: 'SEO Hizmet Teklifi',
+    design: {
+      background: '#ffffff',
+      text: '#0f172a',
+      accent: '#10b981',
+      radius: 12,
+      fontScale: 100,
+    },
+    build: () => [
+      updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
+        title: 'Arama Motorlarında Zirve',
+        subtitle: 'Teknik SEO + içerik stratejisi ile sürdürülebilir büyüme.',
+        backgroundUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200',
+      }),
+      updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
+        text: 'Hızlı Kazanımlar',
+        level: 'h2',
+        align: 'left',
+      }),
+      updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
+        content: 'İlk 30 günde teknik iyileştirme + içerik denetimi planı uygulanacaktır.',
+      }),
+      updateBlock(createBlock('timeline') as Extract<ProposalBlock, { type: 'timeline' }>, {
+        items: [
+          { id: crypto.randomUUID(), title: 'Denetim', description: 'Teknik analiz', date: 'Hafta 1' },
+          { id: crypto.randomUUID(), title: 'Optimizasyon', description: 'Hız + yapı', date: 'Hafta 2' },
+          { id: crypto.randomUUID(), title: 'İçerik', description: 'Yeni içerik planı', date: 'Hafta 3-4' },
+        ],
+      }),
+      updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
+        items: [
+          { id: crypto.randomUUID(), name: 'Teknik SEO', qty: 1, price: 18000 },
+          { id: crypto.randomUUID(), name: 'İçerik Optimizasyonu', qty: 1, price: 12000 },
+        ],
+      }),
+      updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
+        label: 'SEO Yol Haritasını İndir',
+        url: 'https://aero-crm.app/seo',
+        variant: 'secondary',
+      }),
+      createBlock('signature'),
+    ],
+  },
+  {
+    id: 'social',
+    name: 'Sosyal Medya',
+    description: 'İçerik üretimi ve performans planı',
+    title: 'Sosyal Medya Yönetim Teklifi',
+    design: {
+      background: '#ffffff',
+      text: '#111827',
+      accent: '#f97316',
+      radius: 12,
+      fontScale: 100,
+    },
+    build: () => [
+      updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
+        title: 'Markanızın Sosyal Gücü',
+        subtitle: 'Planlı içerik üretimi + performans optimizasyonu.',
+        backgroundUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200',
+      }),
+      updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
+        content: 'Aylık içerik planı, üretim ve yayın takvimiyle sürekli etkileşim hedeflenir.',
+      }),
+      updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
+        columns: 3,
+      }),
+      updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
+        items: [
+          { id: crypto.randomUUID(), name: 'İçerik Üretimi', qty: 1, price: 15000 },
+          { id: crypto.randomUUID(), name: 'Reklam Yönetimi', qty: 1, price: 9000 },
+        ],
+      }),
+      updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
+        label: 'Örnek İçerikleri Gör',
+        url: 'https://aero-crm.app/social',
+        variant: 'primary',
+      }),
+      createBlock('signature'),
+    ],
+  },
+  {
+    id: 'real-estate',
+    name: 'Emlakçı',
+    description: 'Portföy sunumu ve satış planı',
+    title: 'Emlak Portföy Teklifi',
+    design: {
+      background: '#ffffff',
+      text: '#0f172a',
+      accent: '#ef4444',
+      radius: 12,
+      fontScale: 100,
+    },
+    build: () => [
+      updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
+        title: 'Premium Portföy Sunumu',
+        subtitle: 'Doğru alıcıya hızlı ulaşım ve satış planı.',
+        backgroundUrl: 'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?w=1200',
+      }),
+      updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
+        columns: 3,
+      }),
+      updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
+        content: 'Portföyünüz için hedef kitle analizi, ilan optimizasyonu ve saha desteği.',
+      }),
+      updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
+        items: [
+          { id: crypto.randomUUID(), name: 'Portföy Yönetimi', qty: 1, price: 14000 },
+          { id: crypto.randomUUID(), name: 'Pazarlama Desteği', qty: 1, price: 8000 },
+        ],
+      }),
+      updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
+        label: 'Portföy Raporunu Paylaş',
+        url: 'https://aero-crm.app/real-estate',
+        variant: 'outline',
+      }),
+      createBlock('signature'),
+    ],
+  },
+  {
+    id: 'logistics',
+    name: 'Lojistik',
+    description: 'Operasyon ve teslimat planı',
+    title: 'Lojistik Operasyon Teklifi',
+    design: {
+      background: '#ffffff',
+      text: '#0f172a',
+      accent: '#0ea5e9',
+      radius: 12,
+      fontScale: 100,
+    },
+    build: () => [
+      updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
+        title: 'Hızlı ve Şeffaf Lojistik',
+        subtitle: 'Maliyetleri düşüren operasyon modeli.',
+        backgroundUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200',
+      }),
+      updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
+        text: 'Operasyon Akışı',
+        level: 'h2',
+        align: 'left',
+      }),
+      updateBlock(createBlock('timeline') as Extract<ProposalBlock, { type: 'timeline' }>, {
+        items: [
+          { id: crypto.randomUUID(), title: 'Analiz', description: 'Rota + depo', date: 'Hafta 1' },
+          { id: crypto.randomUUID(), title: 'Pilot', description: 'Örnek sevkiyat', date: 'Hafta 2' },
+          { id: crypto.randomUUID(), title: 'Yaygınlaştırma', description: 'Tam geçiş', date: 'Hafta 3' },
+        ],
+      }),
+      updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
+        items: [
+          { id: crypto.randomUUID(), name: 'Operasyon Yönetimi', qty: 1, price: 24000 },
+          { id: crypto.randomUUID(), name: 'Sevkiyat Takibi', qty: 1, price: 11000 },
+        ],
+      }),
+      updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
+        label: 'Operasyon Raporunu Gör',
+        url: 'https://aero-crm.app/logistics',
+        variant: 'primary',
+      }),
+      createBlock('signature'),
+    ],
+  },
+]
+
 const createBlock = (type: BlockType): ProposalBlock => {
   const id = crypto.randomUUID()
 
@@ -350,8 +589,8 @@ export default function ProposalEditorPage() {
   ])
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [activePaletteId, setActivePaletteId] = useState<string | null>(null)
-  const [showSendModal, setShowSendModal] = useState(false)
-  const [previewMode, setPreviewMode] = useState(false)
+  const [editorMode, setEditorMode] = useState<'edit' | 'preview' | 'send'>('edit')
+  const [leftPanel, setLeftPanel] = useState<'blocks' | 'order'>('blocks')
   const [designSettings, setDesignSettings] = useState({
     background: '#ffffff',
     text: '#0d121c',
@@ -381,6 +620,14 @@ export default function ProposalEditorPage() {
     return new Map(entries)
   }, [])
 
+  const applyTemplate = (template: TemplatePreset) => {
+    setBlocks(template.build())
+    setDesignSettings(template.design)
+    setDocumentTitle(template.title)
+    setSelectedBlockId(null)
+    setEditorMode('edit')
+  }
+
   const selectedBlock = useMemo(
     () => blocks.find((block) => block.id === selectedBlockId) ?? null,
     [blocks, selectedBlockId]
@@ -407,9 +654,12 @@ export default function ProposalEditorPage() {
   }
 
   const moveBlock = (fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= blocks.length) return
-    setBlocks((prev) => arrayMove(prev, fromIndex, toIndex))
-    setSelectedBlockId(blocks[fromIndex]?.id ?? null)
+    setBlocks((prev) => {
+      if (toIndex < 0 || toIndex >= prev.length) return prev
+      const next = arrayMove(prev, fromIndex, toIndex)
+      setSelectedBlockId(next[toIndex]?.id ?? null)
+      return next
+    })
   }
 
   const updateBlockData = (
@@ -617,6 +867,22 @@ export default function ProposalEditorPage() {
       return
     }
 
+    if (activeId.startsWith('order-') && overId.startsWith('order-')) {
+      const activeBlockId = activeId.replace('order-', '')
+      const overBlockId = overId.replace('order-', '')
+      if (activeBlockId === overBlockId) return
+      setBlocks((prev) => {
+        const oldIndex = prev.findIndex((block) => block.id === activeBlockId)
+        const newIndex = prev.findIndex((block) => block.id === overBlockId)
+        if (oldIndex === -1 || newIndex === -1) return prev
+        return arrayMove(prev, oldIndex, newIndex)
+      })
+      return
+    }
+    if (activeId.startsWith('order-') && !overId.startsWith('order-')) {
+      return
+    }
+
     if (activeId === overId) return
 
     const oldIndex = blocks.findIndex((block) => block.id === activeId)
@@ -636,6 +902,113 @@ export default function ProposalEditorPage() {
     .flatMap((block) => block.data.items)
     .reduce((sum, item) => sum + item.qty * item.price, 0)
 
+  if (editorMode === 'send') {
+    return (
+      <div className="-mx-4 -mt-4 lg:-mx-8 lg:-mt-8 flex min-h-screen flex-col bg-[#f5f6f8] dark:bg-[#1a212c]">
+        <header className="flex h-16 items-center justify-between border-b border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#101722] px-6 z-10">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setEditorMode('edit')}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            >
+              <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+              Düzenlemeye dön
+            </button>
+            <div className="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+            <div>
+              <p className="text-xs text-gray-500">Teklifi Gönder</p>
+              <h2 className="text-sm font-semibold text-[#0d121c] dark:text-white">{documentTitle}</h2>
+            </div>
+          </div>
+          <div className="hidden lg:flex flex-1 justify-center">
+            <StepNav mode={editorMode} onChange={setEditorMode} />
+          </div>
+          <button
+            onClick={() => {
+              setEditorMode('preview')
+            }}
+            className="flex h-10 px-4 items-center justify-center rounded-lg bg-[#e7ebf4] dark:bg-gray-800 text-[#0d121c] dark:text-white text-sm font-bold hover:bg-opacity-80"
+          >
+            Önizle
+          </button>
+        </header>
+
+        <main className="flex-1 overflow-y-auto px-6 py-8 lg:px-10">
+          <SendProposalModal
+            proposalTitle={documentTitle}
+            clientName={proposalMeta.clientName}
+            defaultEmail={proposalMeta.contactEmail}
+            defaultPhone={proposalMeta.contactPhone}
+            proposalLink={proposalLink}
+            blocks={blocks}
+            onLinkUpdate={setProposalLink}
+            onPreview={() => {
+              setEditorMode('preview')
+            }}
+            onClose={() => setEditorMode('edit')}
+            layout="page"
+          />
+        </main>
+      </div>
+    )
+  }
+
+  if (editorMode === 'preview') {
+    return (
+      <div className="-mx-4 -mt-4 lg:-mx-8 lg:-mt-8 flex min-h-screen flex-col bg-[#f5f6f8] dark:bg-[#1a212c]">
+        <header className="flex h-16 items-center justify-between border-b border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#101722] px-6 z-10">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setEditorMode('edit')}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            >
+              <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+              Düzenlemeye dön
+            </button>
+            <div className="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+            <div>
+              <p className="text-xs text-gray-500">Önizleme</p>
+              <h2 className="text-sm font-semibold text-[#0d121c] dark:text-white">{documentTitle}</h2>
+            </div>
+          </div>
+          <div className="hidden lg:flex flex-1 justify-center">
+            <StepNav mode={editorMode} onChange={setEditorMode} />
+          </div>
+          <button
+            onClick={() => {
+              setEditorMode('send')
+            }}
+            className="flex h-10 px-4 items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90"
+          >
+            Gönder
+          </button>
+        </header>
+
+        <main className="flex-1 overflow-y-auto px-6 py-8 lg:px-10">
+          <div
+            className="w-full max-w-[820px] mx-auto bg-[color:var(--proposal-bg)] text-[color:var(--proposal-text)] shadow-xl"
+            style={{
+              ['--proposal-bg' as never]: designSettings.background,
+              ['--proposal-text' as never]: designSettings.text,
+              ['--proposal-accent' as never]: designSettings.accent,
+              borderRadius: `${designSettings.radius}px`,
+              fontSize: `${designSettings.fontScale}%`,
+            }}
+          >
+            <div className="flex flex-col gap-6 py-10 px-10">
+              {blocks.map((block) => (
+                <div key={block.id} className="rounded-lg overflow-hidden">
+                  <BlockContent block={block} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+
+      </div>
+    )
+  }
+
   return (
     <div className="-mx-4 -mt-4 lg:-mx-8 lg:-mt-8 flex min-h-screen flex-col">
       <header className="flex h-16 items-center justify-between border-b border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#101722] px-6 z-10">
@@ -651,11 +1024,14 @@ export default function ProposalEditorPage() {
                 onChange={(event) => setDocumentTitle(event.target.value)}
                 className="text-sm font-bold text-[#0d121c] dark:text-white bg-transparent border-b border-transparent focus:border-primary outline-none"
               />
-              <span className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] rounded uppercase font-bold">
-                Kaydedildi
+              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] rounded uppercase font-bold">
+                Taslak
               </span>
             </div>
           </div>
+        </div>
+        <div className="hidden lg:flex flex-1 justify-center">
+          <StepNav mode={editorMode} onChange={setEditorMode} />
         </div>
         <div className="flex items-center gap-3">
           <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
@@ -664,103 +1040,141 @@ export default function ProposalEditorPage() {
           </button>
           <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
           <button
-            onClick={() => setPreviewMode(true)}
+            onClick={() => setEditorMode('preview')}
             className="flex h-10 px-4 items-center justify-center rounded-lg bg-[#e7ebf4] dark:bg-gray-800 text-[#0d121c] dark:text-white text-sm font-bold hover:bg-opacity-80"
           >
             Önizle
           </button>
           <button
-            onClick={() => setShowSendModal(true)}
+            onClick={() => setEditorMode('send')}
             className="flex h-10 px-4 items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90"
           >
             Gönder
           </button>
-          <div className="size-9 rounded-full bg-gray-200 dark:bg-gray-700 ml-2"></div>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <aside className="w-64 flex flex-col border-r border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#101722] overflow-y-auto">
-          <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[#48679d] dark:text-gray-400">Bloklar</h2>
-            <p className="text-xs text-gray-500 mt-1">Sürükle & bırak veya tıkla</p>
-          </div>
-          <div className="p-4 space-y-6">
-            <PaletteGroup title="Temel" items={paletteItems.filter((item) => item.group === 'basic')} onAdd={handleAddBlock} />
-            <PaletteGroup title="İçerik" items={paletteItems.filter((item) => item.group === 'content')} onAdd={handleAddBlock} />
-            <PaletteGroup title="Aksiyon" items={paletteItems.filter((item) => item.group === 'action')} onAdd={handleAddBlock} />
-
-            <div className="pt-4 mt-4 border-t border-[#e7ebf4] dark:border-gray-800">
-              <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400 mb-3">AKILLI DEĞİŞKENLER</h3>
-              <div className="flex flex-wrap gap-2">
-                {smartVariables.map((variable) => (
-                  <button
-                    key={variable}
-                    onClick={() => insertSmartVariable(variable)}
-                    className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono text-primary cursor-pointer border border-gray-200 dark:border-gray-700 hover:border-primary transition-colors"
-                  >
-                    {variable}
-                  </button>
-                ))}
-              </div>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="flex flex-1 overflow-hidden">
+          <aside className="w-72 flex flex-col border-r border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#101722] overflow-y-auto">
+            <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[#48679d] dark:text-gray-400">Bloklar</h2>
+              <p className="text-xs text-gray-500 mt-1">Sürükle & bırak veya tıkla</p>
             </div>
-
-            <div className="pt-4 mt-4 border-t border-[#e7ebf4] dark:border-gray-800">
-              <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400 mb-3">BLOK SIRALAMASI</h3>
-              <div className="space-y-2">
-                {blocks.map((block, index) => {
-                  const meta = blockMetaMap.get(block.type)
-                  return (
-                    <div
-                      key={block.id}
-                      className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-xs transition-colors ${
-                        selectedBlockId === block.id
-                          ? 'border-primary/60 bg-primary/5 text-primary'
-                          : 'border-transparent bg-gray-50 dark:bg-gray-900/40 text-gray-500 hover:border-primary/30'
-                      }`}
-                    >
-                      <button
-                        onClick={() => setSelectedBlockId(block.id)}
-                        className="flex items-center gap-2 text-left"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">
-                          {meta?.icon ?? 'description'}
-                        </span>
-                        <span className="font-semibold text-[11px]">
-                          {index + 1}. {meta?.label ?? block.type}
-                        </span>
-                      </button>
-                      <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e7ebf4] dark:border-gray-800">
+              <button
+                onClick={() => setLeftPanel('blocks')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                  leftPanel === 'blocks' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                Bloklar
+              </button>
+              <button
+                onClick={() => setLeftPanel('order')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                  leftPanel === 'order' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                Sıralama
+              </button>
+            </div>
+            <div className="p-4 space-y-6">
+              {leftPanel === 'blocks' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400 mb-3">HAZIR ŞABLONLAR</h3>
+                    <div className="space-y-2">
+                      {templatePresets.map((template) => (
                         <button
-                          onClick={() => moveBlock(index, index - 1)}
-                          className="size-6 rounded-md border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-primary"
-                          aria-label="Yukarı taşı"
+                          key={template.id}
+                          onClick={() => applyTemplate(template)}
+                          className="w-full rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-3 text-left hover:border-primary/40 hover:bg-primary/5 transition-colors"
                         >
-                          <span className="material-symbols-outlined text-[16px]">expand_less</span>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{template.name}</p>
+                              <p className="text-xs text-gray-500">{template.description}</p>
+                            </div>
+                            <span className="material-symbols-outlined text-[18px] text-gray-400">arrow_outward</span>
+                          </div>
+                          <div className="mt-3 flex items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: template.design.accent }}
+                            />
+                            <span className="text-[10px] text-gray-400">{template.title}</span>
+                          </div>
                         </button>
-                        <button
-                          onClick={() => moveBlock(index, index + 1)}
-                          className="size-6 rounded-md border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-primary"
-                          aria-label="Aşağı taşı"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">expand_more</span>
-                        </button>
-                      </div>
+                      ))}
                     </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </aside>
+                  </div>
 
-        <main className="flex-1 bg-[#f5f6f8] dark:bg-[#1a212c] overflow-x-hidden p-10 pb-24 flex justify-center relative">
-          <DndContext
-            sensors={sensors}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-          >
+                  <PaletteGroup
+                    title="Temel"
+                    items={paletteItems.filter((item) => item.group === 'basic')}
+                    onAdd={handleAddBlock}
+                  />
+                  <PaletteGroup
+                    title="İçerik"
+                    items={paletteItems.filter((item) => item.group === 'content')}
+                    onAdd={handleAddBlock}
+                  />
+                  <PaletteGroup
+                    title="Aksiyon"
+                    items={paletteItems.filter((item) => item.group === 'action')}
+                    onAdd={handleAddBlock}
+                  />
+
+                  <div className="pt-4 mt-4 border-t border-[#e7ebf4] dark:border-gray-800">
+                    <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400 mb-3">AKILLI DEĞİŞKENLER</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {smartVariables.map((variable) => (
+                        <button
+                          key={variable}
+                          onClick={() => insertSmartVariable(variable)}
+                          className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono text-primary cursor-pointer border border-gray-200 dark:border-gray-700 hover:border-primary transition-colors"
+                        >
+                          {variable}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {leftPanel === 'order' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400">BLOK SIRALAMASI</h3>
+                    <span className="text-[10px] text-gray-400">Sürükle & bırak</span>
+                  </div>
+                  <SortableContext items={blocks.map((block) => `order-${block.id}`)}>
+                    <div className="space-y-2">
+                      {blocks.map((block, index) => (
+                        <OrderListItem
+                          key={block.id}
+                          block={block}
+                          index={index}
+                          isSelected={selectedBlockId === block.id}
+                          onSelect={() => setSelectedBlockId(block.id)}
+                          onMove={(direction) => moveBlock(index, direction === 'up' ? index - 1 : index + 1)}
+                          meta={blockMetaMap.get(block.type)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </div>
+              )}
+            </div>
+          </aside>
+
+          <main className="flex-1 bg-[#f5f6f8] dark:bg-[#1a212c] overflow-x-hidden p-10 pb-24 flex justify-center relative">
             <CanvasDropZone>
               <div
                 className={`w-full max-w-[820px] bg-[color:var(--proposal-bg)] text-[color:var(--proposal-text)] min-h-[1120px] shadow-lg flex flex-col transition-all ${
@@ -804,102 +1218,94 @@ export default function ProposalEditorPage() {
                 </div>
               </div>
             </CanvasDropZone>
-            <DragOverlay>
-              {activePaletteId ? (
-                <div className="bg-white dark:bg-gray-900 border border-primary/30 rounded-lg px-4 py-2 shadow-xl text-sm font-semibold text-primary">
-                  Blok ekle
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
 
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-[#101722]/90 backdrop-blur-md shadow-2xl rounded-full px-6 py-3 border border-gray-200 dark:border-gray-700 flex items-center gap-6">
-            <div className="flex items-center gap-1">
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-[#101722]/90 backdrop-blur-md shadow-2xl rounded-full px-6 py-3 border border-gray-200 dark:border-gray-700 flex items-center gap-6">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setViewMode('desktop')}
+                  className={`p-1.5 rounded-full ${viewMode === 'desktop' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                >
+                  <span className="material-symbols-outlined text-[20px]">desktop_windows</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('tablet')}
+                  className={`p-1.5 rounded-full ${viewMode === 'tablet' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                >
+                  <span className="material-symbols-outlined text-[20px]">tablet_mac</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('mobile')}
+                  className={`p-1.5 rounded-full ${viewMode === 'mobile' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                >
+                  <span className="material-symbols-outlined text-[20px]">smartphone</span>
+                </button>
+              </div>
+              <div className="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
+              <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">zoom_in</span> 100%
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">pages</span> Sayfa 1/1
+                </span>
+              </div>
+            </div>
+          </main>
+
+          <aside className="w-80 border-l border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#101722] overflow-y-auto">
+            <div className="flex border-b border-[#e7ebf4] dark:border-gray-800">
               <button
-                onClick={() => setViewMode('desktop')}
-                className={`p-1.5 rounded-full ${viewMode === 'desktop' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                onClick={() => setActivePanel('content')}
+                className={`flex-1 py-4 text-sm font-bold ${activePanel === 'content' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
-                <span className="material-symbols-outlined text-[20px]">desktop_windows</span>
+                İçerik
               </button>
               <button
-                onClick={() => setViewMode('tablet')}
-                className={`p-1.5 rounded-full ${viewMode === 'tablet' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                onClick={() => setActivePanel('design')}
+                className={`flex-1 py-4 text-sm font-medium ${activePanel === 'design' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
-                <span className="material-symbols-outlined text-[20px]">tablet_mac</span>
-              </button>
-              <button
-                onClick={() => setViewMode('mobile')}
-                className={`p-1.5 rounded-full ${viewMode === 'mobile' ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-              >
-                <span className="material-symbols-outlined text-[20px]">smartphone</span>
+                Tasarım
               </button>
             </div>
-            <div className="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
-            <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
-              <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">zoom_in</span> 100%
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">pages</span> Sayfa 1/1
-              </span>
-            </div>
-          </div>
-        </main>
+            <div className="p-6 space-y-6">
+              {activePanel === 'content' && !selectedBlock && (
+                <div className="text-sm text-gray-500">Bir blok seçerek ayarlarını düzenleyin.</div>
+              )}
 
-        <aside className="w-80 border-l border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#101722] overflow-y-auto">
-          <div className="flex border-b border-[#e7ebf4] dark:border-gray-800">
-            <button
-              onClick={() => setActivePanel('content')}
-              className={`flex-1 py-4 text-sm font-bold ${activePanel === 'content' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-            >
-              İçerik
-            </button>
-            <button
-              onClick={() => setActivePanel('design')}
-              className={`flex-1 py-4 text-sm font-medium ${activePanel === 'design' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-            >
-              Tasarım
-            </button>
-          </div>
-          <div className="p-6 space-y-6">
-            {activePanel === 'content' && !selectedBlock && (
-              <div className="text-sm text-gray-500">Bir blok seçerek ayarlarını düzenleyin.</div>
-            )}
-
-            {activePanel === 'content' && selectedBlock && (
-              <>
-                {selectedBlock.type === 'hero' && (
-                  <div className="space-y-4">
-                    <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      Hero Ayarları
-                    </label>
-                    <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Başlık</label>
-                      <input
-                        value={selectedBlock.data.title}
-                        onChange={(event) => updateBlockData(selectedBlock.id, { title: event.target.value })}
-                        className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
-                      />
+              {activePanel === 'content' && selectedBlock && (
+                <>
+                  {selectedBlock.type === 'hero' && (
+                    <div className="space-y-4">
+                      <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
+                        Hero Ayarları
+                      </label>
+                      <div>
+                        <label className="text-[11px] text-gray-500 block mb-1">Başlık</label>
+                        <input
+                          value={selectedBlock.data.title}
+                          onChange={(event) => updateBlockData(selectedBlock.id, { title: event.target.value })}
+                          className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-gray-500 block mb-1">Alt Başlık</label>
+                        <textarea
+                          value={selectedBlock.data.subtitle}
+                          onChange={(event) => updateBlockData(selectedBlock.id, { subtitle: event.target.value })}
+                          className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+                          rows={3}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-gray-500 block mb-1">Arka Plan URL</label>
+                        <input
+                          value={selectedBlock.data.backgroundUrl}
+                          onChange={(event) => updateBlockData(selectedBlock.id, { backgroundUrl: event.target.value })}
+                          className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Alt Başlık</label>
-                      <textarea
-                        value={selectedBlock.data.subtitle}
-                        onChange={(event) => updateBlockData(selectedBlock.id, { subtitle: event.target.value })}
-                        className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
-                        rows={3}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Arka Plan URL</label>
-                      <input
-                        value={selectedBlock.data.backgroundUrl}
-                        onChange={(event) => updateBlockData(selectedBlock.id, { backgroundUrl: event.target.value })}
-                        className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
-                      />
-                    </div>
-                  </div>
-                )}
+                  )}
 
                 {selectedBlock.type === 'heading' && (
                   <div className="space-y-4">
@@ -1384,29 +1790,15 @@ export default function ProposalEditorPage() {
           </div>
         </aside>
       </div>
+      <DragOverlay>
+        {activePaletteId ? (
+          <div className="bg-white dark:bg-gray-900 border border-primary/30 rounded-lg px-4 py-2 shadow-xl text-sm font-semibold text-primary">
+            Blok ekle
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
 
-      {showSendModal && (
-        <SendProposalModal
-          proposalTitle={documentTitle}
-          clientName={proposalMeta.clientName}
-          defaultEmail={proposalMeta.contactEmail}
-          defaultPhone={proposalMeta.contactPhone}
-          proposalLink={proposalLink}
-          blocks={blocks}
-          onLinkUpdate={setProposalLink}
-          onPreview={() => setPreviewMode(true)}
-          onClose={() => setShowSendModal(false)}
-        />
-      )}
-
-      {previewMode && (
-        <PreviewOverlay
-          title={documentTitle}
-          blocks={blocks}
-          designSettings={designSettings}
-          onClose={() => setPreviewMode(false)}
-        />
-      )}
     </div>
   )
 }
@@ -1450,6 +1842,73 @@ function PaletteItem({ item, onAdd }: { item: PaletteItem; onAdd: (type: BlockTy
   )
 }
 
+function OrderListItem({
+  block,
+  index,
+  isSelected,
+  onSelect,
+  onMove,
+  meta,
+}: {
+  block: ProposalBlock
+  index: number
+  isSelected: boolean
+  onSelect: () => void
+  onMove: (direction: 'up' | 'down') => void
+  meta?: { label: string; icon: string }
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `order-${block.id}`,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-xs transition-colors ${
+        isSelected
+          ? 'border-primary/60 bg-primary/5 text-primary'
+          : 'border-transparent bg-gray-50 dark:bg-gray-900/40 text-gray-500 hover:border-primary/30'
+      } ${isDragging ? 'opacity-60' : ''}`}
+    >
+      <button onClick={onSelect} className="flex items-center gap-2 text-left">
+        <span
+          {...attributes}
+          {...listeners}
+          className="material-symbols-outlined text-[16px] cursor-grab text-gray-400"
+        >
+          drag_indicator
+        </span>
+        <span className="material-symbols-outlined text-[16px]">{meta?.icon ?? 'description'}</span>
+        <span className="font-semibold text-[11px]">
+          {index + 1}. {meta?.label ?? block.type}
+        </span>
+      </button>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onMove('up')}
+          className="size-6 rounded-md border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-primary"
+          aria-label="Yukarı taşı"
+        >
+          <span className="material-symbols-outlined text-[16px]">expand_less</span>
+        </button>
+        <button
+          onClick={() => onMove('down')}
+          className="size-6 rounded-md border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-primary"
+          aria-label="Aşağı taşı"
+        >
+          <span className="material-symbols-outlined text-[16px]">expand_more</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function CanvasDropZone({ children }: { children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas-drop' })
 
@@ -1461,6 +1920,42 @@ function CanvasDropZone({ children }: { children: React.ReactNode }) {
       }`}
     >
       {children}
+    </div>
+  )
+}
+
+const editorSteps: { id: 'edit' | 'preview' | 'send'; label: string }[] = [
+  { id: 'edit', label: 'Düzenleme' },
+  { id: 'preview', label: 'Önizleme' },
+  { id: 'send', label: 'Gönder' },
+]
+
+function StepNav({
+  mode,
+  onChange,
+}: {
+  mode: 'edit' | 'preview' | 'send'
+  onChange: (mode: 'edit' | 'preview' | 'send') => void
+}) {
+  return (
+    <div className="flex items-center gap-2 text-xs font-semibold text-[#48679d]">
+      {editorSteps.map((step, index) => (
+        <div key={step.id} className="flex items-center gap-2">
+          <button
+            onClick={() => onChange(step.id)}
+            className={`px-2.5 py-1 rounded-full border transition-colors ${
+              mode === step.id
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-transparent hover:border-primary/30 hover:text-primary'
+            }`}
+          >
+            {step.label}
+          </button>
+          {index < editorSteps.length - 1 && (
+            <span className="material-symbols-outlined text-[16px] text-gray-400">chevron_right</span>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
@@ -1753,6 +2248,7 @@ type SendProposalModalProps = {
   onLinkUpdate?: (nextLink: string) => void
   onPreview?: () => void
   onClose: () => void
+  layout?: 'modal' | 'page'
 }
 
 const sendMethods: { id: SendMethod; label: string; description: string; icon: string }[] = [
@@ -1781,7 +2277,9 @@ function SendProposalModal({
   onLinkUpdate,
   onPreview,
   onClose,
+  layout = 'modal',
 }: SendProposalModalProps) {
+  const isModal = layout === 'modal'
   const [method, setMethod] = useState<SendMethod>('email')
   const [recipientEmail, setRecipientEmail] = useState(defaultEmail)
   const [recipientPhone, setRecipientPhone] = useState(defaultPhone)
@@ -1800,11 +2298,12 @@ function SendProposalModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!isModal) return
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = ''
     }
-  }, [])
+  }, [isModal])
 
   useEffect(() => {
     if (view !== 'success') return
@@ -1878,12 +2377,20 @@ function SendProposalModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 py-6"
-      onClick={onClose}
+      className={
+        isModal
+          ? 'fixed inset-0 z-[60] flex items-start justify-center bg-black/50 px-4 py-6 overflow-y-auto sm:items-center'
+          : 'w-full'
+      }
+      onClick={isModal ? onClose : undefined}
     >
       <div
-        className="w-full max-w-[600px] bg-white dark:bg-[#101722] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-        onClick={(event) => event.stopPropagation()}
+        className={
+          isModal
+            ? 'w-full max-w-[600px] bg-white dark:bg-[#101722] rounded-2xl shadow-2xl flex flex-col max-h-[calc(100vh-3rem)] overflow-y-auto'
+            : 'w-full max-w-[720px] mx-auto bg-white dark:bg-[#101722] rounded-2xl shadow-xl flex flex-col'
+        }
+        onClick={isModal ? (event) => event.stopPropagation() : undefined}
       >
         <div className="px-6 py-4 border-b border-[#e7ebf4] dark:border-gray-800 flex items-start justify-between">
           <div>
@@ -2099,8 +2606,12 @@ function SendProposalModal({
           <div className="px-6 py-4 border-t border-[#e7ebf4] dark:border-gray-800 flex items-center justify-between">
             <button
               onClick={() => {
+                if (isModal) {
+                  onPreview?.()
+                  onClose()
+                  return
+                }
                 onPreview?.()
-                onClose()
               }}
               className="text-sm font-semibold text-[#48679d] hover:text-primary"
             >
@@ -2128,68 +2639,6 @@ function SendProposalModal({
             </div>
           </div>
         )}
-      </div>
-    </div>
-  )
-}
-
-type PreviewOverlayProps = {
-  title: string
-  blocks: ProposalBlock[]
-  designSettings: {
-    background: string
-    text: string
-    accent: string
-    radius: number
-    fontScale: number
-  }
-  onClose: () => void
-}
-
-function PreviewOverlay({ title, blocks, designSettings, onClose }: PreviewOverlayProps) {
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [])
-
-  return (
-    <div
-      className="fixed inset-0 z-[70] bg-[#0b111c]/70 backdrop-blur-sm flex flex-col"
-      onClick={onClose}
-    >
-      <div className="flex flex-col flex-1" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-[#101722] border-b border-[#e7ebf4] dark:border-gray-800">
-          <div>
-            <p className="text-xs text-gray-500">Önizleme</p>
-            <h2 className="text-base font-semibold text-[#0d121c] dark:text-white">{title}</h2>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <span className="material-symbols-outlined">close</span>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6 lg:p-10">
-          <div
-            className="w-full max-w-[820px] mx-auto bg-[color:var(--proposal-bg)] text-[color:var(--proposal-text)] shadow-xl"
-            style={{
-              ['--proposal-bg' as never]: designSettings.background,
-              ['--proposal-text' as never]: designSettings.text,
-              ['--proposal-accent' as never]: designSettings.accent,
-              borderRadius: `${designSettings.radius}px`,
-              fontSize: `${designSettings.fontScale}%`,
-            }}
-          >
-            <div className="flex flex-col gap-6 py-10 px-10">
-              {blocks.map((block) => (
-                <div key={block.id} className="rounded-lg overflow-hidden">
-                  <BlockContent block={block} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )
