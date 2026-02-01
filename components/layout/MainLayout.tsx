@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { cn } from '@/lib/utils'
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -10,15 +11,33 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false)
   }, [])
 
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('sidebar-collapsed') : null
+    if (stored) {
+      setSidebarCollapsed(stored === 'true')
+    }
+  }, [])
+
   // Close sidebar when clicking outside (mobile)
   const handleOverlayClick = () => {
     setSidebarOpen(false)
+  }
+
+  const toggleCollapsed = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('sidebar-collapsed', String(next))
+      }
+      return next
+    })
   }
 
   return (
@@ -33,12 +52,17 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Sidebar */}
       <div
-        className={`
-          fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          sidebarCollapsed && 'lg:w-20'
+        )}
       >
-        <Sidebar onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          onClose={() => setSidebarOpen(false)}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleCollapsed}
+        />
       </div>
 
       {/* Main Content */}
