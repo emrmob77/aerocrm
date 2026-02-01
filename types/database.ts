@@ -501,6 +501,60 @@ export interface Database {
         }
         Relationships: []
       }
+      search_history: {
+        Row: {
+          id: string
+          user_id: string
+          query: string
+          filters: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          query: string
+          filters?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          query?: string
+          filters?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
+      saved_searches: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          query: string
+          filters: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          query: string
+          filters?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          query?: string
+          filters?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           id: string

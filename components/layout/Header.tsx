@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAppStore } from '@/store'
@@ -30,8 +30,42 @@ interface HeaderProps {
   onMenuClick?: () => void
 }
 
+type SearchResults = {
+  deals: {
+    id: string
+    title: string
+    value: number
+    currency: string
+    stage: string
+    updated_at: string
+    contact?: { full_name?: string | null; company?: string | null } | null
+  }[]
+  contacts: {
+    id: string
+    full_name: string
+    email: string | null
+    company: string | null
+    updated_at: string
+  }[]
+  proposals: {
+    id: string
+    title: string
+    status: string
+    updated_at: string
+    contact?: { full_name?: string | null } | null
+  }[]
+}
+
+type SearchMetaItem = {
+  id: string
+  query: string
+  filters: Record<string, unknown>
+  name?: string
+}
+
 export function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const { signOut } = useAuth()
   const { user: profile, authUser } = useUser()
   const supabase = useSupabase()
@@ -39,6 +73,17 @@ export function Header({ onMenuClick }: HeaderProps) {
   const [showSearch, setShowSearch] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<SearchResults>({
+    deals: [],
+    contacts: [],
+    proposals: [],
+  })
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchMeta, setSearchMeta] = useState<{ saved: SearchMetaItem[]; history: SearchMetaItem[] }>({
+    saved: [],
+    history: [],
+  })
   const searchRef = useRef<HTMLDivElement>(null)
   const notificationsRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
@@ -75,6 +120,13 @@ export function Header({ onMenuClick }: HeaderProps) {
         ? 'Admin'
         : 'Üye'
 
+  const closeSearch = () => {
+    setShowSearch(false)
+    setSearchQuery('')
+    setSearchResults({ deals: [], contacts: [], proposals: [] })
+    setSearchLoading(false)
+  }
+
   // Toggle dark mode
   const toggleDarkMode = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark'
@@ -95,7 +147,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowSearch(false)
+        closeSearch()
       }
       if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
         setShowNotifications(false)
@@ -117,7 +169,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         setShowSearch(true)
       }
       if (event.key === 'Escape') {
-        setShowSearch(false)
+        closeSearch()
         setShowNotifications(false)
         setShowUserMenu(false)
       }
@@ -126,6 +178,52 @@ export function Header({ onMenuClick }: HeaderProps) {
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  useEffect(() => {
+    if (!showSearch) return
+    const fetchMeta = async () => {
+      const response = await fetch('/api/search/meta')
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        return
+      }
+      setSearchMeta({
+        saved: (payload?.saved ?? []) as SearchMetaItem[],
+        history: (payload?.history ?? []) as SearchMetaItem[],
+      })
+    }
+    fetchMeta()
+  }, [showSearch])
+
+  useEffect(() => {
+    if (!showSearch) return
+    if (!searchQuery.trim()) {
+      setSearchResults({ deals: [], contacts: [], proposals: [] })
+      setSearchLoading(false)
+      return
+    }
+    setSearchLoading(true)
+    const handle = window.setTimeout(async () => {
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: searchQuery,
+          filters: { types: ['deals', 'contacts', 'proposals'] },
+          track: false,
+        }),
+      })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        setSearchLoading(false)
+        return
+      }
+      setSearchResults((payload?.results ?? { deals: [], contacts: [], proposals: [] }) as SearchResults)
+      setSearchLoading(false)
+    }, 250)
+
+    return () => window.clearTimeout(handle)
+  }, [searchQuery, showSearch])
 
   const teamId = profile?.team_id ?? null
   const userId = authUser?.id ?? null
@@ -246,6 +344,14 @@ export function Header({ onMenuClick }: HeaderProps) {
   }
 
   const unreadCount = notifications.filter((notification) => !notification.read).length
+  const searchTotal =
+    searchResults.deals.length + searchResults.contacts.length + searchResults.proposals.length
+  const hasSearchQuery = searchQuery.trim().length > 0
+  const openSearchPage = () => {
+    if (!hasSearchQuery) return
+    router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+    closeSearch()
+  }
 
   return (
     <header className="flex items-center justify-between px-4 lg:px-8 py-4 bg-white dark:bg-[#161e2b] border-b border-[#e7ebf4] dark:border-gray-800">
@@ -295,22 +401,158 @@ export function Header({ onMenuClick }: HeaderProps) {
                 <div className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-xl text-[#48679d]">search</span>
                   <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        openSearchPage()
+                      }
+                    }}
                     type="text"
                     placeholder="Müşteri, teklif veya rapor ara..."
                     className="flex-1 bg-transparent border-none outline-none text-[#0d121c] dark:text-white placeholder:text-[#48679d]"
                     autoFocus
                   />
                   <button
-                    onClick={() => setShowSearch(false)}
+                    onClick={closeSearch}
                     className="px-2 py-1 text-xs text-[#48679d] hover:text-[#0d121c] dark:hover:text-white"
                   >
                     ESC
                   </button>
                 </div>
+                <p className="mt-2 text-xs text-[#48679d]">Enter ile tüm sonuçlara git</p>
               </div>
-              <div className="p-4">
-                <p className="text-sm text-[#48679d]">Aramaya başlamak için yazmaya başlayın...</p>
+              <div className="p-4 max-h-[60vh] overflow-y-auto space-y-4">
+                {searchLoading && hasSearchQuery ? (
+                  <p className="text-sm text-[#48679d]">Aranıyor...</p>
+                ) : null}
+
+                {!hasSearchQuery ? (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-xs font-bold text-[#48679d] mb-2">KAYITLI ARAMALAR</h4>
+                      {searchMeta.saved.length === 0 ? (
+                        <p className="text-sm text-[#48679d]">Henüz kayıtlı arama yok.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {searchMeta.saved.map((item) => (
+                            <button
+                              key={item.id}
+                              onClick={() => setSearchQuery(item.query)}
+                              className="w-full text-left px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold text-[#0d121c] dark:text-white">{item.name}</span>
+                                <span className="material-symbols-outlined text-[16px] text-gray-400">north_east</span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">{item.query}</p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-[#48679d] mb-2">SON ARAMALAR</h4>
+                      {searchMeta.history.length === 0 ? (
+                        <p className="text-sm text-[#48679d]">Henüz arama geçmişi yok.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {searchMeta.history.map((item) => (
+                            <button
+                              key={item.id}
+                              onClick={() => setSearchQuery(item.query)}
+                              className="w-full text-left px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                            >
+                              <span className="text-sm text-[#0d121c] dark:text-white">{item.query}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : searchTotal === 0 ? (
+                  <p className="text-sm text-[#48679d]">Sonuç bulunamadı.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {searchResults.deals.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold text-[#48679d] mb-2">ANLAŞMALAR</p>
+                        <div className="space-y-2">
+                          {searchResults.deals.map((item) => (
+                            <Link
+                              key={item.id}
+                              href={`/deals/${item.id}`}
+                              onClick={closeSearch}
+                              className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{item.title}</p>
+                                <p className="text-xs text-gray-500">
+                                  {item.contact?.full_name || item.contact?.company || 'Müşteri'}
+                                </p>
+                              </div>
+                              <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at)}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {searchResults.proposals.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold text-[#48679d] mb-2">TEKLİFLER</p>
+                        <div className="space-y-2">
+                          {searchResults.proposals.map((item) => (
+                            <Link
+                              key={item.id}
+                              href={`/proposals/${item.id}`}
+                              onClick={closeSearch}
+                              className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{item.title}</p>
+                                <p className="text-xs text-gray-500">{item.contact?.full_name || 'Müşteri'}</p>
+                              </div>
+                              <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at)}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {searchResults.contacts.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold text-[#48679d] mb-2">KİŞİLER</p>
+                        <div className="space-y-2">
+                          {searchResults.contacts.map((item) => (
+                            <Link
+                              key={item.id}
+                              href={`/contacts/${item.id}`}
+                              onClick={closeSearch}
+                              className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{item.full_name}</p>
+                                <p className="text-xs text-gray-500">{item.company || item.email || 'Kayıt'}</p>
+                              </div>
+                              <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at)}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+              {hasSearchQuery && (
+                <div className="border-t border-[#e7ebf4] dark:border-gray-800">
+                  <button
+                    onClick={openSearchPage}
+                    className="w-full px-4 py-3 text-sm font-semibold text-primary hover:bg-primary/5 transition-colors"
+                  >
+                    Tüm sonuçları gör ({searchTotal})
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

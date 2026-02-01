@@ -1120,6 +1120,26 @@ CREATE TABLE push_subscriptions (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Arama geçmişi
+CREATE TABLE search_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  query TEXT NOT NULL,
+  filters JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Kayıtlı arama sorguları
+CREATE TABLE saved_searches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  query TEXT NOT NULL,
+  filters JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Aktivite Logları
 CREATE TABLE activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1164,6 +1184,12 @@ CREATE INDEX idx_notification_preferences_user_id ON notification_preferences(us
 
 CREATE INDEX idx_push_subscriptions_user_id ON push_subscriptions(user_id);
 CREATE UNIQUE INDEX idx_push_subscriptions_endpoint ON push_subscriptions(endpoint);
+
+CREATE INDEX idx_search_history_user_id ON search_history(user_id);
+CREATE INDEX idx_search_history_created_at ON search_history(created_at);
+
+CREATE INDEX idx_saved_searches_user_id ON saved_searches(user_id);
+CREATE INDEX idx_saved_searches_updated_at ON saved_searches(updated_at);
 
 CREATE INDEX idx_activities_user_id ON activities(user_id);
 CREATE INDEX idx_activities_team_id ON activities(team_id);

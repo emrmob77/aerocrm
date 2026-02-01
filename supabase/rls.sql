@@ -76,3 +76,21 @@ CREATE POLICY "Users manage push subscriptions" ON push_subscriptions
 FOR ALL
 USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
+
+-- Arama geçmişi için RLS
+ALTER TABLE search_history ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users manage search history" ON search_history;
+CREATE POLICY "Users manage search history" ON search_history
+FOR ALL
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- Kayıtlı arama sorguları için RLS
+ALTER TABLE saved_searches ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users manage saved searches" ON saved_searches;
+CREATE POLICY "Users manage saved searches" ON saved_searches
+FOR ALL
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());

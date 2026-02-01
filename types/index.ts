@@ -70,6 +70,14 @@ export type Notification = Database['public']['Tables']['notifications']['Row']
 export type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
 export type NotificationUpdate = Database['public']['Tables']['notifications']['Update']
 
+// Search types
+export type SearchHistory = Database['public']['Tables']['search_history']['Row']
+export type SearchHistoryInsert = Database['public']['Tables']['search_history']['Insert']
+export type SearchHistoryUpdate = Database['public']['Tables']['search_history']['Update']
+export type SavedSearch = Database['public']['Tables']['saved_searches']['Row']
+export type SavedSearchInsert = Database['public']['Tables']['saved_searches']['Insert']
+export type SavedSearchUpdate = Database['public']['Tables']['saved_searches']['Update']
+
 // Notification preferences
 export type NotificationPreference = Database['public']['Tables']['notification_preferences']['Row']
 export type NotificationPreferenceInsert = Database['public']['Tables']['notification_preferences']['Insert']
