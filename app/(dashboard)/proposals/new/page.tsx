@@ -675,7 +675,9 @@ export default function ProposalEditorPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   const blockMetaMap = useMemo(() => {
-    const entries = paletteItems.map((item) => [item.id, { label: item.label, icon: item.icon }])
+    const entries = paletteItems.map(
+      (item): [BlockType, { label: string; icon: string }] => [item.id, { label: item.label, icon: item.icon }]
+    )
     return new Map(entries)
   }, [])
 
@@ -776,33 +778,10 @@ export default function ProposalEditorPage() {
     })
   }
 
-  const updateBlockData = (
-    id: string,
-    updates: Partial<
-      HeroData &
-        HeadingData &
-        TextData &
-        PricingData &
-        VideoData &
-        GalleryData &
-        TestimonialData &
-        TimelineData &
-        CountdownData &
-        CtaData &
-        SignatureData
-    >
-  ) => {
+  const updateBlockData = (id: string, updates: Partial<ProposalBlock['data']>) => {
     setBlocks((prev) =>
       prev.map((block) =>
-        block.id === id
-          ? {
-              ...block,
-              data: {
-                ...block.data,
-                ...updates,
-              },
-            }
-          : block
+        block.id === id ? updateBlock(block, updates as Partial<typeof block.data>) : block
       )
     )
   }
@@ -1617,7 +1596,9 @@ export default function ProposalEditorPage() {
                       <label className="text-[11px] text-gray-500 block mb-1">Kaynak</label>
                       <select
                         value={selectedBlock.data.source}
-                        onChange={(event) => updateBlockData(selectedBlock.id, { source: event.target.value })}
+                        onChange={(event) =>
+                          updateBlockData(selectedBlock.id, { source: event.target.value as PricingData['source'] })
+                        }
                         className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                       >
                         <option value="crm">Ürün Kataloğu</option>

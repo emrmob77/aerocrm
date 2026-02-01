@@ -555,6 +555,87 @@ export interface Database {
         }
         Relationships: []
       }
+      data_import_jobs: {
+        Row: {
+          id: string
+          user_id: string
+          team_id: string
+          entity: string
+          file_name: string | null
+          status: string
+          total_rows: number
+          success_count: number
+          error_count: number
+          errors: Json
+          created_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          team_id: string
+          entity: string
+          file_name?: string | null
+          status?: string
+          total_rows?: number
+          success_count?: number
+          error_count?: number
+          errors?: Json
+          created_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          team_id?: string
+          entity?: string
+          file_name?: string | null
+          status?: string
+          total_rows?: number
+          success_count?: number
+          error_count?: number
+          errors?: Json
+          created_at?: string
+          completed_at?: string | null
+        }
+        Relationships: []
+      }
+      data_export_jobs: {
+        Row: {
+          id: string
+          user_id: string
+          team_id: string
+          entity: string
+          file_name: string | null
+          status: string
+          row_count: number
+          created_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          team_id: string
+          entity: string
+          file_name?: string | null
+          status?: string
+          row_count?: number
+          created_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          team_id?: string
+          entity?: string
+          file_name?: string | null
+          status?: string
+          row_count?: number
+          created_at?: string
+          completed_at?: string | null
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           id: string

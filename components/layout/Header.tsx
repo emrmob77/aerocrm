@@ -279,19 +279,22 @@ export function Header({ onMenuClick }: HeaderProps) {
         (payload) => {
           const row = payload.new as {
             id?: string
+            title?: string
+            type?: string
             message?: string
             read?: boolean
             action_url?: string | null
             created_at?: string
           }
           if (!row?.id) return
+          const nextId = row.id
           setNotifications((prev) => {
-            if (prev.some((item) => item.id === row.id)) {
+            if (prev.some((item) => item.id === nextId)) {
               return prev
             }
             const next = [
               {
-                id: row.id,
+                id: nextId,
                 message: row.message ?? 'Yeni bildirim',
                 time: row.created_at ? formatRelativeTime(row.created_at) : 'az önce',
                 read: row.read ?? false,

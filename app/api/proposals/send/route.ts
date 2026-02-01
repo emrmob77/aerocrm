@@ -207,7 +207,7 @@ export async function POST(request: Request) {
       public_url: publicUrl,
       expires_at: expiresAt,
     })
-    .select('id, public_url, expires_at')
+    .select('id, public_url, expires_at, status, title')
     .single()
 
   if (proposalError || !proposal) {

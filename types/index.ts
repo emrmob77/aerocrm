@@ -78,6 +78,14 @@ export type SavedSearch = Database['public']['Tables']['saved_searches']['Row']
 export type SavedSearchInsert = Database['public']['Tables']['saved_searches']['Insert']
 export type SavedSearchUpdate = Database['public']['Tables']['saved_searches']['Update']
 
+// Data transfer job types
+export type DataImportJob = Database['public']['Tables']['data_import_jobs']['Row']
+export type DataImportJobInsert = Database['public']['Tables']['data_import_jobs']['Insert']
+export type DataImportJobUpdate = Database['public']['Tables']['data_import_jobs']['Update']
+export type DataExportJob = Database['public']['Tables']['data_export_jobs']['Row']
+export type DataExportJobInsert = Database['public']['Tables']['data_export_jobs']['Insert']
+export type DataExportJobUpdate = Database['public']['Tables']['data_export_jobs']['Update']
+
 // Notification preferences
 export type NotificationPreference = Database['public']['Tables']['notification_preferences']['Row']
 export type NotificationPreferenceInsert = Database['public']['Tables']['notification_preferences']['Insert']

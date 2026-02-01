@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 
 type ReportType = 'sales' | 'deals' | 'team' | 'forecast'
@@ -97,6 +98,13 @@ export default function ReportsPage() {
               </button>
             ))}
           </div>
+          <Link
+            href="/reports/import-export"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-[#e7ebf4] dark:border-gray-700 text-[#0d121c] dark:text-white rounded-lg text-sm font-bold hover:border-primary/30 hover:text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined text-lg">swap_vert</span>
+            Veri Aktarımı
+          </Link>
           <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
             <span className="material-symbols-outlined text-lg">download</span>
             Dışa Aktar

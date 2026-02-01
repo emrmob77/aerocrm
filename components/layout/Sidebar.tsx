@@ -26,6 +26,11 @@ const navItems: NavItem[] = [
   { label: 'Ayarlar', href: '/settings', icon: 'settings' },
 ]
 
+const generalItems: NavItem[] = [
+  { label: 'Arama', href: '/search', icon: 'search' },
+  { label: 'Veri Aktarımı', href: '/reports/import-export', icon: 'swap_vert' },
+]
+
 interface SidebarProps {
   onClose?: () => void
 }
@@ -56,26 +61,53 @@ export function Sidebar({ onClose }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
-                isActive
-                  ? 'bg-primary/10 text-primary font-semibold'
-                  : 'text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-              )}
-            >
-              <span className="material-symbols-outlined">{item.icon}</span>
-              <span className="text-sm">{item.label}</span>
-            </Link>
-          )
-        })}
+      <nav className="flex-1 px-4 space-y-4">
+        <div className="space-y-1">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
+                  isActive
+                    ? 'bg-primary/10 text-primary font-semibold'
+                    : 'text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                )}
+              >
+                <span className="material-symbols-outlined">{item.icon}</span>
+                <span className="text-sm">{item.label}</span>
+              </Link>
+            )
+          })}
+        </div>
+
+        <div>
+          <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Genel</p>
+          <div className="space-y-1">
+            {generalItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onClose}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',
+                    isActive
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  )}
+                >
+                  <span className="material-symbols-outlined">{item.icon}</span>
+                  <span className="text-sm">{item.label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
       </nav>
 
       {/* Bottom Action Button */}

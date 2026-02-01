@@ -106,7 +106,7 @@ export async function POST(request: Request) {
     }
 
     tasks.push(
-      dealsQuery.then(({ data }) => {
+      Promise.resolve(dealsQuery).then(({ data }) => {
         results.deals = (data ?? []) as typeof results.deals
       })
     )
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
     }
 
     tasks.push(
-      contactsQuery.then(({ data }) => {
+      Promise.resolve(contactsQuery).then(({ data }) => {
         results.contacts = (data ?? []) as typeof results.contacts
       })
     )
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
     }
 
     tasks.push(
-      proposalsQuery.then(({ data }) => {
+      Promise.resolve(proposalsQuery).then(({ data }) => {
         results.proposals = (data ?? []) as typeof results.proposals
       })
     )

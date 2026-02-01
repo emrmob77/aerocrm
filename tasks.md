@@ -246,7 +246,7 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 24: Gerçek Zamanlı Filtre Güncelleme**
   - **Doğrular: Gereksinimler 13.2, 21.4**
 
-- [ ] 19. Veri İçe/Dışa Aktarma
+- [x] 19. Veri İçe/Dışa Aktarma
   - CSV içe aktarma arayüzü
   - Sütun eşleştirme bileşeni
   - Toplu veri işleme

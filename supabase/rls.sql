@@ -94,3 +94,20 @@ CREATE POLICY "Users manage saved searches" ON saved_searches
 FOR ALL
 USING (user_id = auth.uid())
 WITH CHECK (user_id = auth.uid());
+
+-- Veri içe/dışa aktarma logları için RLS
+ALTER TABLE data_import_jobs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Team members manage import jobs" ON data_import_jobs;
+CREATE POLICY "Team members manage import jobs" ON data_import_jobs
+FOR ALL
+USING (team_id = (SELECT team_id FROM users WHERE id = auth.uid()))
+WITH CHECK (team_id = (SELECT team_id FROM users WHERE id = auth.uid()));
+
+ALTER TABLE data_export_jobs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Team members manage export jobs" ON data_export_jobs;
+CREATE POLICY "Team members manage export jobs" ON data_export_jobs
+FOR ALL
+USING (team_id = (SELECT team_id FROM users WHERE id = auth.uid()))
+WITH CHECK (team_id = (SELECT team_id FROM users WHERE id = auth.uid()));

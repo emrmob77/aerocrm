@@ -1140,6 +1140,35 @@ CREATE TABLE saved_searches (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Veri içe aktarma işleri
+CREATE TABLE data_import_jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
+  entity TEXT NOT NULL,
+  file_name TEXT,
+  status TEXT NOT NULL DEFAULT 'processing',
+  total_rows INTEGER DEFAULT 0,
+  success_count INTEGER DEFAULT 0,
+  error_count INTEGER DEFAULT 0,
+  errors JSONB DEFAULT '[]',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  completed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Veri dışa aktarma işleri
+CREATE TABLE data_export_jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
+  entity TEXT NOT NULL,
+  file_name TEXT,
+  status TEXT NOT NULL DEFAULT 'completed',
+  row_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  completed_at TIMESTAMP WITH TIME ZONE
+);
+
 -- Aktivite Logları
 CREATE TABLE activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1190,6 +1219,12 @@ CREATE INDEX idx_search_history_created_at ON search_history(created_at);
 
 CREATE INDEX idx_saved_searches_user_id ON saved_searches(user_id);
 CREATE INDEX idx_saved_searches_updated_at ON saved_searches(updated_at);
+
+CREATE INDEX idx_data_import_jobs_team_id ON data_import_jobs(team_id);
+CREATE INDEX idx_data_import_jobs_created_at ON data_import_jobs(created_at);
+
+CREATE INDEX idx_data_export_jobs_team_id ON data_export_jobs(team_id);
+CREATE INDEX idx_data_export_jobs_created_at ON data_export_jobs(created_at);
 
 CREATE INDEX idx_activities_user_id ON activities(user_id);
 CREATE INDEX idx_activities_team_id ON activities(team_id);

@@ -1,6 +1,6 @@
 import { createHmac } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/database'
+import type { Database, Json } from '@/types/database'
 
 type WebhookRow = Database['public']['Tables']['webhooks']['Row']
 
@@ -83,7 +83,7 @@ const insertWebhookLog = async (params: {
   await supabase.from('webhook_logs').insert({
     webhook_id: webhook.id,
     event_type: event,
-    payload: data,
+    payload: data as Json,
     response_status: attempt.result.status ?? null,
     response_body: attempt.result.statusText ?? null,
     success: attempt.result.ok,
@@ -187,7 +187,7 @@ export async function retryWebhookDelivery(params: {
     .insert({
       webhook_id: webhook.id,
       event_type: event,
-      payload: data,
+      payload: data as Json,
       response_status: attempt.result.status ?? null,
       response_body: attempt.result.statusText ?? null,
       success: attempt.result.ok,
