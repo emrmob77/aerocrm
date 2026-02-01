@@ -9,6 +9,11 @@ export type User = Database['public']['Tables']['users']['Row']
 export type UserInsert = Database['public']['Tables']['users']['Insert']
 export type UserUpdate = Database['public']['Tables']['users']['Update']
 
+// Team invite types
+export type TeamInvite = Database['public']['Tables']['team_invites']['Row']
+export type TeamInviteInsert = Database['public']['Tables']['team_invites']['Insert']
+export type TeamInviteUpdate = Database['public']['Tables']['team_invites']['Update']
+
 // Team types
 export type Team = Database['public']['Tables']['teams']['Row']
 export type TeamInsert = Database['public']['Tables']['teams']['Insert']
@@ -56,6 +61,9 @@ export type TemplateUpdate = Database['public']['Tables']['templates']['Update']
 export type Webhook = Database['public']['Tables']['webhooks']['Row']
 export type WebhookInsert = Database['public']['Tables']['webhooks']['Insert']
 export type WebhookUpdate = Database['public']['Tables']['webhooks']['Update']
+export type WebhookLog = Database['public']['Tables']['webhook_logs']['Row']
+export type WebhookLogInsert = Database['public']['Tables']['webhook_logs']['Insert']
+export type WebhookLogUpdate = Database['public']['Tables']['webhook_logs']['Update']
 
 // Notification types
 export type Notification = Database['public']['Tables']['notifications']['Row']

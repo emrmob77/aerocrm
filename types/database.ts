@@ -60,6 +60,45 @@ export interface Database {
         }
         Relationships: []
       }
+      team_invites: {
+        Row: {
+          id: string
+          team_id: string
+          email: string
+          role: string
+          invited_by: string | null
+          token: string
+          status: string
+          expires_at: string | null
+          accepted_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          email: string
+          role?: string
+          invited_by?: string | null
+          token: string
+          status?: string
+          expires_at?: string | null
+          accepted_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          email?: string
+          role?: string
+          invited_by?: string | null
+          token?: string
+          status?: string
+          expires_at?: string | null
+          accepted_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           id: string
@@ -384,6 +423,45 @@ export interface Database {
           team_id?: string
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      webhook_logs: {
+        Row: {
+          id: string
+          webhook_id: string
+          event_type: string
+          payload: Json
+          response_status: number | null
+          response_body: string | null
+          success: boolean
+          error_message: string | null
+          duration_ms: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          webhook_id: string
+          event_type: string
+          payload?: Json
+          response_status?: number | null
+          response_body?: string | null
+          success?: boolean
+          error_message?: string | null
+          duration_ms?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          webhook_id?: string
+          event_type?: string
+          payload?: Json
+          response_status?: number | null
+          response_body?: string | null
+          success?: boolean
+          error_message?: string | null
+          duration_ms?: number | null
+          created_at?: string
         }
         Relationships: []
       }

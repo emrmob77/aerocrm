@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 
 type SendProposalPayload = {
   title?: string
@@ -259,8 +260,40 @@ export async function POST(request: Request) {
       })
     }
 
+    let finalStatus = proposal.status
     if (method !== 'link') {
       await supabase.from('proposals').update({ status: 'sent' }).eq('id', proposal.id)
+      finalStatus = 'sent'
+    }
+
+    await supabase.from('notifications').insert({
+      user_id: user.id,
+      type: method === 'link' ? 'proposal_link' : 'proposal_sent',
+      title: method === 'link' ? 'Teklif linki hazır' : 'Teklif gönderildi',
+      message:
+        method === 'link'
+          ? `${proposal.title} için link oluşturuldu.`
+          : `${proposal.title} müşteriye gönderildi.`,
+      read: false,
+      action_url: `/proposals/${proposal.id}`,
+      metadata: {
+        proposal_id: proposal.id,
+        status: finalStatus,
+      },
+    })
+
+    if (method !== 'link') {
+      await dispatchWebhookEvent({
+        supabase,
+        teamId,
+        event: 'proposal.sent',
+        data: {
+          proposal_id: proposal.id,
+          title: proposal.title,
+          status: finalStatus,
+          public_url: proposal.public_url,
+        },
+      })
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Gönderim başarısız oldu.'

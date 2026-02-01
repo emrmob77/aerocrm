@@ -1,37 +1,121 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
+import { formatRelativeTime } from '@/components/dashboard/activity-utils'
 
 type FilterType = 'all' | 'success' | 'error'
 
-// Webhook logs data
-const logsData = [
-  { id: 1, timestamp: '24 May 14:30:05', event: 'proposal.signed', url: 'https://api.partner-client.com/hooks/v1/event', status: 200, statusText: '200 OK', responseTime: '145ms', type: 'success' },
-  { id: 2, timestamp: '24 May 14:28:12', event: 'proposal.viewed', url: 'https://webhook.site/b12-9c9a-4c22-b0e6', status: 200, statusText: '200 OK', responseTime: '98ms', type: 'success' },
-  { id: 3, timestamp: '24 May 14:25:00', event: 'lead.created', url: 'https://crm-sync.io/api/v2/webhooks/incoming', status: 500, statusText: '500 Internal Error', responseTime: '1.2s', type: 'error' },
-  { id: 4, timestamp: '24 May 14:20:45', event: 'proposal.signed', url: 'https://api.partner-client.com/hooks/v1/event', status: 200, statusText: '200 OK', responseTime: '132ms', type: 'success' },
-  { id: 5, timestamp: '24 May 14:15:22', event: 'contract.updated', url: 'https://files.storage.com/wh/v2/update', status: 404, statusText: '404 Not Found', responseTime: '45ms', type: 'error' },
-]
+type WebhookLog = {
+  id: string
+  webhook_id: string
+  event_type: string
+  webhook_url: string | null
+  response_status: number | null
+  response_body: string | null
+  duration_ms: number | null
+  success: boolean
+  error_message: string | null
+  created_at: string
+}
+
+const formatResponseTime = (value: number | null) => {
+  if (value === null || Number.isNaN(value)) {
+    return '—'
+  }
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}s`
+  }
+  return `${Math.round(value)}ms`
+}
+
+const formatStatusText = (log: WebhookLog) => {
+  if (log.response_status != null) {
+    return log.response_body ? `${log.response_status} ${log.response_body}` : `${log.response_status}`
+  }
+  if (log.success) {
+    return 'Başarılı'
+  }
+  return 'Hata'
+}
+
+const getStatusClasses = (status: number | null, success: boolean) => {
+  if (status === null) {
+    return success
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
+      : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800'
+  }
+  if (status >= 200 && status < 300) {
+    return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
+  }
+  if (status >= 400 && status < 500) {
+    return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800'
+  }
+  return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800'
+}
 
 export default function WebhookLogsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
-  const [selectedLog, setSelectedLog] = useState<number | null>(null)
+  const [selectedLog, setSelectedLog] = useState<string | null>(null)
+  const [logs, setLogs] = useState<WebhookLog[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [retryingId, setRetryingId] = useState<string | null>(null)
 
-  const filteredLogs = logsData.filter(log => {
-    if (activeFilter === 'all') return true
-    if (activeFilter === 'success') return log.type === 'success'
-    if (activeFilter === 'error') return log.type === 'error'
-    return true
-  })
+  const fetchLogs = async () => {
+    setIsRefreshing(true)
+    const response = await fetch('/api/webhooks/logs')
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      toast.error(payload?.error || 'Webhook logları getirilemedi.')
+      setIsRefreshing(false)
+      return
+    }
+    setLogs((payload?.logs ?? []) as WebhookLog[])
+    setIsRefreshing(false)
+  }
 
-  const successCount = logsData.filter(l => l.type === 'success').length
-  const errorCount = logsData.filter(l => l.type === 'error').length
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true)
+      await fetchLogs()
+      setIsLoading(false)
+    }
+    load()
+  }, [])
 
-  const getStatusClasses = (status: number) => {
-    if (status >= 200 && status < 300) return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
-    if (status >= 400 && status < 500) return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800'
-    return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800'
+  const filteredLogs = useMemo(() => {
+    return logs.filter((log) => {
+      if (activeFilter === 'all') return true
+      if (activeFilter === 'success') return log.success
+      if (activeFilter === 'error') return !log.success
+      return true
+    })
+  }, [logs, activeFilter])
+
+  const successCount = logs.filter((log) => log.success).length
+  const errorCount = logs.filter((log) => !log.success).length
+
+  const handleRetry = async (log: WebhookLog) => {
+    if (retryingId) return
+    setRetryingId(log.id)
+    try {
+      const response = await fetch(`/api/webhooks/logs/${log.id}/retry`, { method: 'POST' })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        toast.error(payload?.error || 'Webhook yeniden denenemedi.')
+        setRetryingId(null)
+        return
+      }
+      const newLog = payload?.log as WebhookLog
+      setLogs((prev) => [newLog, ...prev.filter((item) => item.id !== log.id)])
+      toast.success('Webhook yeniden denendi.')
+      setRetryingId(null)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Webhook yeniden denenemedi.')
+      setRetryingId(null)
+    }
   }
 
   return (
@@ -55,9 +139,13 @@ export default function WebhookLogsPage() {
               <span className="material-symbols-outlined text-xl">arrow_back</span>
               <span>Konfigürasyona Dön</span>
             </Link>
-            <button className="flex items-center gap-2 px-4 h-10 rounded-lg bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+            <button
+              onClick={fetchLogs}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-4 h-10 rounded-lg bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-70"
+            >
               <span className="material-symbols-outlined text-xl">refresh</span>
-              <span>Yenile</span>
+              <span>{isRefreshing ? 'Yenileniyor' : 'Yenile'}</span>
             </button>
           </div>
         </div>
@@ -107,11 +195,11 @@ export default function WebhookLogsPage() {
             <div className="flex items-center gap-3 text-slate-500 text-sm font-medium">
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border border-emerald-200 dark:border-emerald-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                {successCount * 249} Success
+                {successCount} Başarılı
               </span>
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-600 border border-rose-200 dark:border-rose-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                {errorCount * 6} Errors
+                {errorCount} Hatalı
               </span>
             </div>
           </div>
@@ -133,46 +221,102 @@ export default function WebhookLogsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {filteredLogs.map((log, index) => (
-                  <tr
-                    key={log.id}
-                    className={`group hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer ${
-                      index % 2 === 1 ? 'bg-slate-50/30 dark:bg-slate-900/20' : ''
-                    }`}
-                    onClick={() => setSelectedLog(selectedLog === log.id ? null : log.id)}
-                  >
-                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{log.timestamp}</td>
-                    <td className="px-6 py-4">
-                      <span className="font-mono text-xs font-semibold px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/20 text-primary border border-blue-100 dark:border-blue-800">
-                        {log.event}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-mono text-xs text-slate-500 truncate max-w-[300px] block">{log.url}</span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusClasses(log.status)}`}>
-                        {log.statusText}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-sm text-slate-600 dark:text-slate-400">{log.responseTime}</td>
-                    <td className="px-6 py-4 text-center">
-                      <button className={`p-1.5 rounded-md transition-all ${
-                        log.type === 'error' 
-                          ? 'hover:bg-rose-100 dark:hover:bg-rose-900/20 text-rose-600' 
-                          : 'hover:bg-primary/10 hover:text-primary text-slate-400'
-                      }`}>
-                        <span className="material-symbols-outlined text-xl">visibility</span>
-                      </button>
+                  <Fragment key={log.id}>
+                    <tr
+                      className={`group hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer ${
+                        index % 2 === 1 ? 'bg-slate-50/30 dark:bg-slate-900/20' : ''
+                      }`}
+                      onClick={() => setSelectedLog(selectedLog === log.id ? null : log.id)}
+                    >
+                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        {formatRelativeTime(log.created_at)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="font-mono text-xs font-semibold px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/20 text-primary border border-blue-100 dark:border-blue-800">
+                          {log.event_type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="font-mono text-xs text-slate-500 truncate max-w-[300px] block">
+                          {log.webhook_url ?? '—'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusClasses(
+                            log.response_status,
+                            log.success
+                          )}`}
+                        >
+                          {formatStatusText(log)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right font-mono text-sm text-slate-600 dark:text-slate-400">
+                        {formatResponseTime(log.duration_ms)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {log.success ? (
+                          <button
+                            className="p-1.5 rounded-md transition-all hover:bg-primary/10 hover:text-primary text-slate-400"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setSelectedLog(selectedLog === log.id ? null : log.id)
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-xl">info</span>
+                          </button>
+                        ) : (
+                          <button
+                            className="p-1.5 rounded-md transition-all hover:bg-rose-100 dark:hover:bg-rose-900/20 text-rose-600 disabled:opacity-60"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleRetry(log)
+                            }}
+                            disabled={retryingId === log.id}
+                          >
+                            <span className="material-symbols-outlined text-xl">
+                              {retryingId === log.id ? 'autorenew' : 'replay'}
+                            </span>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                    {selectedLog === log.id && (
+                      <tr className="bg-slate-50 dark:bg-slate-900/40">
+                        <td className="px-6 py-4 text-sm text-slate-500" colSpan={6}>
+                          <div className="flex flex-wrap items-center gap-6">
+                            <div>
+                              <p className="text-[11px] uppercase tracking-wider text-slate-400">Zaman</p>
+                              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                {formatRelativeTime(log.created_at)}
+                              </p>
+                            </div>
+                            {log.error_message && (
+                              <div className="min-w-[240px]">
+                                <p className="text-[11px] uppercase tracking-wider text-slate-400">Hata</p>
+                                <p className="text-sm font-semibold text-rose-600">{log.error_message}</p>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+                {!isLoading && filteredLogs.length === 0 && (
+                  <tr>
+                    <td className="px-6 py-10 text-center text-sm text-slate-500" colSpan={6}>
+                      Henüz webhook logu yok.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
           
           {/* Pagination */}
           <div className="px-6 py-4 border-t border-[#e2e8f0] dark:border-slate-700 flex items-center justify-between">
-            <span className="text-sm text-slate-500">Toplam 1,257 kayıt gösteriliyor</span>
+            <span className="text-sm text-slate-500">Toplam {logs.length} kayıt gösteriliyor</span>
             <div className="flex items-center gap-2">
               <button className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] dark:border-slate-600 text-slate-600 dark:text-slate-400 text-sm font-medium disabled:opacity-50" disabled>
                 Geri

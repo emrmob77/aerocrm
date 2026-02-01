@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
+import { getSupabaseClient } from '@/lib/supabase/client'
 
 // Stage options
 const stageOptions = [
@@ -13,24 +15,26 @@ const stageOptions = [
   { id: 'lost', label: 'Kaybedildi' },
 ]
 
-// Sample contacts for dropdown
-const contacts = [
-  { id: '1', name: 'Ahmet Yılmaz', company: 'ABC Şirketi', email: 'ahmet@abc.com' },
-  { id: '2', name: 'Mehmet Akın', company: 'Yıldız Holding', email: 'mehmet@yildiz.com' },
-  { id: '3', name: 'Ayşe Kara', company: 'Global Lojistik', email: 'ayse@global.com' },
-  { id: '4', name: 'Ali Öztürk', company: 'Mega İnşaat', email: 'ali@mega.com' },
-]
+type ContactOption = {
+  id: string
+  name: string
+  company: string | null
+  email: string | null
+}
 
-// Sample team members
-const teamMembers = [
-  { id: '1', name: 'Ahmet Yılmaz', avatar: 'AY' },
-  { id: '2', name: 'Caner Yılmaz', avatar: 'CY' },
-  { id: '3', name: 'Elif Demir', avatar: 'ED' },
-  { id: '4', name: 'Mert Kaya', avatar: 'MK' },
-]
+type TeamMemberOption = {
+  id: string
+  name: string
+  avatar: string | null
+}
 
 export default function NewDealPage() {
   const router = useRouter()
+  const supabase = useMemo(() => getSupabaseClient(), [])
+  const [contacts, setContacts] = useState<ContactOption[]>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   // Form state
   const [formData, setFormData] = useState({
@@ -48,6 +52,89 @@ export default function NewDealPage() {
   const [products, setProducts] = useState([
     { name: '', quantity: 1, unitPrice: '' }
   ])
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        setIsLoading(false)
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('users')
+        .select('team_id, full_name')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      const teamId = profile?.team_id ?? null
+
+      if (teamId) {
+        const { data: contactsData } = await supabase
+          .from('contacts')
+          .select('id, full_name, company, email')
+          .eq('team_id', teamId)
+          .order('created_at', { ascending: false })
+
+        setContacts(
+          (contactsData ?? []).map((contact) => ({
+            id: contact.id,
+            name: contact.full_name,
+            company: contact.company,
+            email: contact.email,
+          }))
+        )
+
+        const { data: membersData } = await supabase
+          .from('users')
+          .select('id, full_name, avatar_url')
+          .eq('team_id', teamId)
+          .order('full_name', { ascending: true })
+
+        const mappedMembers = (membersData ?? []).map((member) => ({
+          id: member.id,
+          name: member.full_name,
+          avatar: member.avatar_url,
+        }))
+        setTeamMembers(mappedMembers)
+      } else {
+        const { data: contactsData } = await supabase
+          .from('contacts')
+          .select('id, full_name, company, email')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        setContacts(
+          (contactsData ?? []).map((contact) => ({
+            id: contact.id,
+            name: contact.full_name,
+            company: contact.company,
+            email: contact.email,
+          }))
+        )
+
+        setTeamMembers([
+          {
+            id: user.id,
+            name: profile?.full_name ?? user.email ?? 'Kullanıcı',
+            avatar: null,
+          },
+        ])
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        ownerId: user.id,
+      }))
+      setIsLoading(false)
+    }
+
+    load()
+  }, [supabase])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -81,11 +168,45 @@ export default function NewDealPage() {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 0 }).format(value)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically send data to API
-    console.log('Form submitted:', { ...formData, products })
-    router.push('/deals')
+    if (isSubmitting) return
+    if (!formData.contactId) {
+      toast.error('İlgili kişi seçilmelidir.')
+      return
+    }
+
+    const totalValue = calculateTotal()
+    setIsSubmitting(true)
+    try {
+      const response = await fetch('/api/deals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          value: totalValue,
+          stage: formData.stage,
+          contactId: formData.contactId,
+          ownerId: formData.ownerId,
+          expectedCloseDate: formData.closeDate || null,
+          notes: formData.description || null,
+        }),
+      })
+      const payload = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        toast.error(payload?.error || 'Anlaşma oluşturulamadı.')
+        setIsSubmitting(false)
+        return
+      }
+
+      toast.success('Anlaşma oluşturuldu.')
+      router.push('/deals')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Anlaşma oluşturulamadı.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -148,18 +269,25 @@ export default function NewDealPage() {
               {/* Contact */}
               <div>
                 <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
-                  İlgili Kişi
+                  İlgili Kişi <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="contactId"
                   value={formData.contactId}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white"
+                  required
+                  disabled={isLoading || contacts.length === 0}
+                  className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white disabled:opacity-60"
                 >
-                  <option value="">Kişi seçin...</option>
+                  <option value="">{isLoading ? 'Yükleniyor...' : 'Kişi seçin...'}</option>
+                  {!isLoading && contacts.length === 0 && (
+                    <option value="" disabled>
+                      Henüz kişi yok
+                    </option>
+                  )}
                   {contacts.map(contact => (
                     <option key={contact.id} value={contact.id}>
-                      {contact.name} - {contact.company}
+                      {contact.name} - {contact.company ?? 'Şirket yok'}
                     </option>
                   ))}
                 </select>
@@ -193,8 +321,11 @@ export default function NewDealPage() {
                   value={formData.ownerId}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white"
+                  disabled={isLoading || teamMembers.length === 0}
+                  className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white disabled:opacity-60"
                 >
+                  {isLoading && <option value="">Yükleniyor...</option>}
+                  {!isLoading && teamMembers.length === 0 && <option value="">Kullanıcı bulunamadı</option>}
                   {teamMembers.map(member => (
                     <option key={member.id} value={member.id}>{member.name}</option>
                   ))}
@@ -362,10 +493,11 @@ export default function NewDealPage() {
             </button>
             <button
               type="submit"
-              className="px-8 py-3 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 flex items-center gap-2"
+              disabled={isSubmitting || isLoading || contacts.length === 0}
+              className="px-8 py-3 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-70"
             >
               <span className="material-symbols-outlined text-lg">add</span>
-              Anlaşma Oluştur
+              {isSubmitting ? 'Kaydediliyor' : 'Anlaşma Oluştur'}
             </button>
           </div>
         </div>

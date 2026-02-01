@@ -6,7 +6,8 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAppStore } from '@/store'
-import { useUser } from '@/hooks'
+import { useSupabase, useTeamPresence, useUser } from '@/hooks'
+import { formatRelativeTime } from '@/components/dashboard/activity-utils'
 
 // Breadcrumb mapping
 const pageTitles: Record<string, string> = {
@@ -31,6 +32,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname()
   const { signOut } = useAuth()
   const { user: profile, authUser } = useUser()
+  const supabase = useSupabase()
   const { theme, setTheme } = useAppStore()
   const [showSearch, setShowSearch] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
@@ -123,13 +125,117 @@ export function Header({ onMenuClick }: HeaderProps) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const notifications = [
-    { id: 1, message: 'Teklif gönderildi - Global Teknoloji A.Ş.', time: '10 dk önce', read: false },
-    { id: 2, message: 'Anlaşma kapatıldı - TeknoPark Ltd.', time: '2 saat önce', read: false },
-    { id: 3, message: 'Toplantı planlandı - Arkas Lojistik', time: '4 saat önce', read: true },
-  ]
+  const teamId = profile?.team_id ?? null
+  const userId = authUser?.id ?? null
+  const { count: onlineCount } = useTeamPresence(
+    teamId,
+    userId,
+    profile?.full_name ?? (authUser?.user_metadata?.full_name as string | undefined)
+  )
+  const [notifications, setNotifications] = useState<
+    { id: string; message: string; time: string; read: boolean; href?: string }[]
+  >([])
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  useEffect(() => {
+    if (!userId) {
+      setNotifications([])
+      return
+    }
+
+    const fetchNotifications = async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('id, message, read, action_url, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(8)
+
+      if (!data) return
+
+      const mapped = data.map((row) => ({
+        id: row.id,
+        message: row.message,
+        time: formatRelativeTime(row.created_at),
+        read: row.read ?? false,
+        href: row.action_url ?? undefined,
+      }))
+
+      setNotifications(mapped)
+    }
+
+    fetchNotifications()
+  }, [supabase, userId])
+
+  useEffect(() => {
+    if (!userId) {
+      return
+    }
+
+    const channel = supabase
+      .channel(`notifications-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const row = payload.new as {
+            id?: string
+            message?: string
+            read?: boolean
+            action_url?: string | null
+            created_at?: string
+          }
+          if (!row?.id) return
+          setNotifications((prev) => {
+            if (prev.some((item) => item.id === row.id)) {
+              return prev
+            }
+            const next = [
+              {
+                id: row.id,
+                message: row.message ?? 'Yeni bildirim',
+                time: row.created_at ? formatRelativeTime(row.created_at) : 'az önce',
+                read: row.read ?? false,
+                href: row.action_url ?? undefined,
+              },
+              ...prev,
+            ]
+            return next.slice(0, 8)
+          })
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const row = payload.new as { id?: string; read?: boolean }
+          if (!row?.id) return
+          setNotifications((prev) =>
+            prev.map((item) => (item.id === row.id ? { ...item, read: row.read ?? item.read } : item))
+          )
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [supabase, userId])
+
+  const markAllNotificationsRead = async () => {
+    if (!userId) return
+    setNotifications((prev) => prev.map((item) => ({ ...item, read: true })))
+    await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false)
+  }
+
+  const markNotificationRead = async (notificationId: string) => {
+    if (!userId) return
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === notificationId ? { ...item, read: true } : item))
+    )
+    await supabase.from('notifications').update({ read: true }).eq('id', notificationId).eq('user_id', userId)
+  }
+
+  const unreadCount = notifications.filter((notification) => !notification.read).length
 
   return (
     <header className="flex items-center justify-between px-4 lg:px-8 py-4 bg-white dark:bg-[#161e2b] border-b border-[#e7ebf4] dark:border-gray-800">
@@ -202,6 +308,10 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       {/* Right Actions */}
       <div className="flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-2 rounded-full border border-[#e7ebf4] dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1 text-xs font-semibold text-[#48679d] dark:text-gray-300">
+          <span className="size-2 rounded-full bg-emerald-500"></span>
+          {onlineCount} aktif
+        </div>
         {/* Notifications */}
         <div ref={notificationsRef} className="relative">
           <button
@@ -210,7 +320,9 @@ export function Header({ onMenuClick }: HeaderProps) {
           >
             <span className="material-symbols-outlined">notifications</span>
             {unreadCount > 0 && (
-              <span className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-red-500"></span>
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                {unreadCount}
+              </span>
             )}
           </button>
 
@@ -219,31 +331,44 @@ export function Header({ onMenuClick }: HeaderProps) {
             <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-[#161e2b] rounded-xl shadow-xl border border-[#e7ebf4] dark:border-gray-800 overflow-hidden z-50">
               <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800 flex items-center justify-between">
                 <h3 className="font-bold text-[#0d121c] dark:text-white">Bildirimler</h3>
-                <button className="text-sm text-primary hover:underline font-semibold">
+                <button
+                  onClick={markAllNotificationsRead}
+                  className="text-sm text-primary hover:underline font-semibold"
+                >
                   Tümünü okundu işaretle
                 </button>
               </div>
               <div className="max-h-80 overflow-y-auto">
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-4 border-b border-[#e7ebf4] dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors ${!notification.read ? 'bg-primary/5' : ''}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      {!notification.read && (
-                        <span className="w-2 h-2 mt-2 rounded-full bg-primary flex-shrink-0" />
-                      )}
-                      <div className="flex-1">
-                        <p className="text-sm text-[#0d121c] dark:text-white font-medium">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-[#48679d] mt-1">
-                          {notification.time}
-                        </p>
-                      </div>
-                    </div>
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-sm text-[#48679d] dark:text-gray-400">
+                    Henüz bildirim yok.
                   </div>
-                ))}
+                ) : (
+                  notifications.map((notification) => (
+                    <Link
+                      key={notification.id}
+                      href={notification.href ?? '/proposals'}
+                      onClick={() =>
+                        markNotificationRead(notification.id)
+                      }
+                      className={`block p-4 border-b border-[#e7ebf4] dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${!notification.read ? 'bg-primary/5' : ''}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {!notification.read && (
+                          <span className="w-2 h-2 mt-2 rounded-full bg-primary flex-shrink-0" />
+                        )}
+                        <div className="flex-1">
+                          <p className="text-sm text-[#0d121c] dark:text-white font-medium">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-[#48679d] mt-1">
+                            {notification.time}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                )}
               </div>
             </div>
           )}

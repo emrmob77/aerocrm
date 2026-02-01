@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 
 type ViewPayload = {
   slug?: string
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient()
   const { data: proposal } = await supabase
     .from('proposals')
-    .select('id, status, public_url')
+    .select('id, status, public_url, title, user_id, team_id')
     .like('public_url', `%/p/${slug}`)
     .maybeSingle()
 
@@ -34,8 +35,39 @@ export async function POST(request: Request) {
     blocks_viewed: {},
   })
 
+  const shouldNotify = proposal.status !== 'viewed' && proposal.status !== 'signed' && proposal.status !== 'draft'
+
   if (proposal.status !== 'signed' && proposal.status !== 'draft') {
     await supabase.from('proposals').update({ status: 'viewed' }).eq('id', proposal.id)
+  }
+
+  if (shouldNotify && proposal.user_id) {
+    await supabase.from('notifications').insert({
+      user_id: proposal.user_id,
+      type: 'proposal_viewed',
+      title: 'Teklif görüntülendi',
+      message: `${proposal.title ?? 'Teklif'} görüntülendi.`,
+      read: false,
+      action_url: `/proposals/${proposal.id}`,
+      metadata: {
+        proposal_id: proposal.id,
+        status: 'viewed',
+      },
+    })
+
+    if (proposal.team_id) {
+      await dispatchWebhookEvent({
+        supabase,
+        teamId: proposal.team_id,
+        event: 'proposal.viewed',
+        data: {
+          proposal_id: proposal.id,
+          title: proposal.title,
+          status: 'viewed',
+          public_url: proposal.public_url,
+        },
+      })
+    }
   }
 
   return NextResponse.json({ tracked: true })

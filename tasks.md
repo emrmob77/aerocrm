@@ -148,7 +148,7 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - Teklif tasarım ayarlarını (accent/bg vb.) DB’ye kaydetme ve public sayfada kullanma
   - _Gereksinimler: 7.1, 7.4, 7.6_
 
-- [ ]* 11.3 Public teklifler için RLS politikaları
+- [x]* 11.3 Public teklifler için RLS politikaları ✅
   - public_url üzerinden read izni
   - imza ve view tracking için update izni
   - _Gereksinimler: 7.1, 7.5_
@@ -171,35 +171,42 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Doğrular: Gereksinim 8.2**
 
 - [ ] 13. Gerçek Zamanlı Sistem Implementasyonu
-  - Supabase Realtime kanalları kurulumu
-  - WebSocket bağlantı yönetimi
+  - Supabase Realtime kanalları kurulumu ✅
+  - WebSocket bağlantı yönetimi ✅
   - Optimistic updates hook'ları
-  - Gerçek zamanlı bildirim sistemi
-  - Takım işbirliği özellikleri
+  - Gerçek zamanlı bildirim sistemi ✅
+  - Takım işbirliği özellikleri (presence) ✅
   - _Gereksinimler: Tüm gerçek zamanlı özellikler_
 
 - [ ]* 13.1 Gerçek zamanlı sistem property testleri
   - **Property 15: Gerçek Zamanlı Bildirim Gönderimi**
   - **Doğrular: Gereksinim 12.1**
 
+- [ ]* 13.2 Bildirimler için kalıcı okundu durumu
+  - Notifications tablosundan okuma + realtime güncelleme
+  - Okundu/okunmadı durumunun DB’ye yazılması
+  - Teklif olayları için bildirim kaydı oluşturma (sent/viewed/signed)
+  - _Gereksinimler: 12.1_
+
 - [ ] 14. Webhook Entegrasyon Sistemi
-  - Webhook yönetim sayfası
-  - Webhook konfigürasyon formları
+  - Webhook yönetim sayfası ✅
+  - Webhook konfigürasyon formları ✅
   - Supabase Edge Functions oluştur
-  - Test gönderimi işlevselliği
-  - Webhook logları ve monitoring
+  - Test gönderimi işlevselliği ✅
+  - Webhook logları ve monitoring ✅
+  - Deal eventleri (deal.created/won/lost) webhook dispatch ✅
   - _Gereksinimler: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6_
 
 - [ ]* 14.1 Webhook property testleri
   - **Property 12: Webhook Test Gönderimi**
   - **Doğrular: Gereksinim 9.3**
 
-- [ ] 15. Takım Yönetimi Sistemi
-  - Takım üyeleri listesi sayfası
-  - Üye davet etme işlevselliği
-  - Rol ve izin yönetimi
-  - Anlaşma atama sistemi
-  - Takım performans metrikleri
+- [x] 15. Takım Yönetimi Sistemi ✅
+  - Takım üyeleri listesi sayfası ✅
+  - Üye davet etme işlevselliği ✅
+  - Rol ve izin yönetimi ✅
+  - Anlaşma atama sistemi ✅
+  - Takım performans metrikleri ✅
   - _Gereksinimler: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
 
 - [ ]* 15.1 Takım yönetimi property testleri

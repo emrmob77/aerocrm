@@ -931,6 +931,20 @@ CREATE TABLE users (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Takım Davetleri
+CREATE TABLE team_invites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID REFERENCES teams(id) NOT NULL,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member',
+  invited_by UUID REFERENCES users(id),
+  token TEXT UNIQUE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  expires_at TIMESTAMP WITH TIME ZONE,
+  accepted_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Kişiler ve Şirketler
 CREATE TABLE contacts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1048,6 +1062,25 @@ CREATE TABLE webhooks (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Webhook Logları
+CREATE TABLE webhook_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  webhook_id UUID REFERENCES webhooks(id) ON DELETE CASCADE,
+  team_id UUID REFERENCES teams(id) NOT NULL,
+  event TEXT NOT NULL,
+  webhook_url TEXT NOT NULL,
+  payload JSONB DEFAULT '{}'::jsonb,
+  status_code INTEGER,
+  status_text TEXT,
+  response_time_ms INTEGER,
+  success BOOLEAN DEFAULT false,
+  attempt_count INTEGER DEFAULT 1,
+  error_message TEXT,
+  last_attempt_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  next_retry_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Bildirimler
 CREATE TABLE notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1104,6 +1137,14 @@ CREATE INDEX idx_notifications_created_at ON notifications(created_at);
 CREATE INDEX idx_activities_user_id ON activities(user_id);
 CREATE INDEX idx_activities_team_id ON activities(team_id);
 CREATE INDEX idx_activities_created_at ON activities(created_at);
+
+CREATE INDEX idx_webhook_logs_team_id ON webhook_logs(team_id);
+CREATE INDEX idx_webhook_logs_created_at ON webhook_logs(created_at);
+CREATE INDEX idx_webhook_logs_success ON webhook_logs(success);
+
+CREATE INDEX idx_team_invites_team_id ON team_invites(team_id);
+CREATE INDEX idx_team_invites_status ON team_invites(status);
+CREATE INDEX idx_team_invites_token ON team_invites(token);
 ```
 
 ## Hata Yönetimi

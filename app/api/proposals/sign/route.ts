@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 
 type SignPayload = {
   slug?: string
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient()
   const { data: proposal, error } = await supabase
     .from('proposals')
-    .select('id, blocks, status, public_url')
+    .select('id, blocks, status, public_url, title, user_id, team_id')
     .like('public_url', `%/p/${slug}`)
     .maybeSingle()
 
@@ -73,6 +74,36 @@ export async function POST(request: Request) {
 
   if (updateError) {
     return NextResponse.json({ error: 'İmza kaydedilemedi.' }, { status: 400 })
+  }
+
+  if (proposal.status !== 'signed' && proposal.user_id) {
+    await supabase.from('notifications').insert({
+      user_id: proposal.user_id,
+      type: 'proposal_signed',
+      title: 'Teklif imzalandı',
+      message: `${proposal.title ?? 'Teklif'} imzalandı.`,
+      read: false,
+      action_url: `/proposals/${proposal.id}`,
+      metadata: {
+        proposal_id: proposal.id,
+        status: 'signed',
+      },
+    })
+
+    if (proposal.team_id) {
+      await dispatchWebhookEvent({
+        supabase,
+        teamId: proposal.team_id,
+        event: 'proposal.signed',
+        data: {
+          proposal_id: proposal.id,
+          title: proposal.title,
+          status: 'signed',
+          public_url: proposal.public_url,
+          signed_at: signedAt,
+        },
+      })
+    }
   }
 
   return NextResponse.json({ success: true, signedAt })

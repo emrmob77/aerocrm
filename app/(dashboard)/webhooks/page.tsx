@@ -1,14 +1,52 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
+import { formatRelativeTime } from '@/components/dashboard/activity-utils'
 
-// Webhook data
-const webhooksData = [
-  { id: 1, url: 'https://api.acme-corp.com/hooks/v1', status: 'active', lastTrigger: '2 dakika önce', selected: false },
-  { id: 2, url: 'https://webhook.site/b82a-4421-99af', status: 'inactive', lastTrigger: '3 saat önce', selected: true },
-  { id: 3, url: 'https://zapier.com/hooks/123/acme-crm', status: 'active', lastTrigger: 'Dün 14:30', selected: false },
+type WebhookRow = {
+  id: string
+  url: string
+  secret_key: string
+  events: string[]
+  active: boolean
+  last_triggered_at: string | null
+  success_count: number
+  failure_count: number
+}
+
+const eventGroups = [
+  {
+    title: 'Teklif Olayları',
+    icon: 'description',
+    options: [
+      { id: 'proposal.viewed', label: 'Görüntülendi' },
+      { id: 'proposal.signed', label: 'İmzalandı' },
+      { id: 'proposal.expired', label: 'Süresi Doldu' },
+      { id: 'proposal.sent', label: 'Gönderildi' },
+    ],
+  },
+  {
+    title: 'Anlaşma Olayları',
+    icon: 'handshake',
+    options: [
+      { id: 'deal.created', label: 'Oluşturuldu' },
+      { id: 'deal.won', label: 'Kazanıldı' },
+      { id: 'deal.lost', label: 'Kaybedildi' },
+    ],
+  },
 ]
+
+const buildEventState = (events: string[]) => {
+  const state: Record<string, boolean> = {}
+  eventGroups.forEach((group) => {
+    group.options.forEach((option) => {
+      state[option.id] = events.includes(option.id)
+    })
+  })
+  return state
+}
 
 // Settings menu items
 const settingsMenu = [
@@ -19,33 +57,163 @@ const settingsMenu = [
 ]
 
 export default function WebhooksPage() {
-  const [webhooks] = useState(webhooksData)
-  const [selectedWebhook, setSelectedWebhook] = useState(2)
-  
-  // Form state
-  const [targetUrl, setTargetUrl] = useState('https://webhook.site/b82a-4421-99af')
-  const [events, setEvents] = useState({
-    proposalViewed: true,
-    proposalSigned: true,
-    proposalExpired: false,
-    dealCreated: true,
-    dealWon: true,
-    dealLost: false,
-  })
+  const [webhooks, setWebhooks] = useState<WebhookRow[]>([])
+  const [selectedWebhookId, setSelectedWebhookId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const toggleEvent = (key: keyof typeof events) => {
-    setEvents(prev => ({ ...prev, [key]: !prev[key] }))
+  const [targetUrl, setTargetUrl] = useState('')
+  const [secretKey, setSecretKey] = useState('')
+  const [active, setActive] = useState(true)
+  const [events, setEvents] = useState<Record<string, boolean>>(() => buildEventState([]))
+  const [isSaving, setIsSaving] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
+
+  useEffect(() => {
+    const fetchWebhooks = async () => {
+      setIsLoading(true)
+      const response = await fetch('/api/webhooks')
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        toast.error(payload?.error || 'Webhooklar getirilemedi.')
+        setIsLoading(false)
+        return
+      }
+      const list = (payload?.webhooks ?? []) as WebhookRow[]
+      setWebhooks(list)
+      if (list.length > 0) {
+        const first = list[0]
+        setSelectedWebhookId(first.id)
+        setTargetUrl(first.url)
+        setSecretKey(first.secret_key)
+        setActive(first.active)
+        setEvents(buildEventState(first.events))
+      }
+      setIsLoading(false)
+    }
+
+    fetchWebhooks()
+  }, [])
+
+  const toggleEvent = (key: string) => {
+    setEvents((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
   const selectAllEvents = () => {
-    setEvents({
-      proposalViewed: true,
-      proposalSigned: true,
-      proposalExpired: true,
-      dealCreated: true,
-      dealWon: true,
-      dealLost: true,
+    const next: Record<string, boolean> = {}
+    eventGroups.forEach((group) => {
+      group.options.forEach((option) => {
+        next[option.id] = true
+      })
     })
+    setEvents(next)
+  }
+
+  const resetForm = () => {
+    setSelectedWebhookId(null)
+    setTargetUrl('')
+    setSecretKey('')
+    setActive(true)
+    setEvents(buildEventState([]))
+  }
+
+  const handleCancel = () => {
+    if (!selectedWebhookId) {
+      resetForm()
+      return
+    }
+    const webhook = webhooks.find((item) => item.id === selectedWebhookId)
+    if (webhook) {
+      handleSelectWebhook(webhook)
+      return
+    }
+    resetForm()
+  }
+
+  const handleSelectWebhook = (webhook: WebhookRow) => {
+    setSelectedWebhookId(webhook.id)
+    setTargetUrl(webhook.url)
+    setSecretKey(webhook.secret_key)
+    setActive(webhook.active)
+    setEvents(buildEventState(webhook.events))
+  }
+
+  const handleSave = async () => {
+    if (isSaving) return
+    const trimmedUrl = targetUrl.trim()
+    if (!trimmedUrl) {
+      toast.error('Webhook URL zorunludur.')
+      return
+    }
+    const selectedEvents = Object.entries(events)
+      .filter(([, enabled]) => enabled)
+      .map(([key]) => key)
+    if (selectedEvents.length === 0) {
+      toast.error('En az bir olay seçilmelidir.')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const response = await fetch(
+        selectedWebhookId ? `/api/webhooks/${selectedWebhookId}` : '/api/webhooks',
+        {
+          method: selectedWebhookId ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: trimmedUrl, events: selectedEvents, active }),
+        }
+      )
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Webhook kaydedilemedi.')
+      }
+      const saved = payload?.webhook as WebhookRow
+      if (selectedWebhookId) {
+        setWebhooks((prev) => prev.map((item) => (item.id === saved.id ? saved : item)))
+      } else {
+        setWebhooks((prev) => [saved, ...prev])
+        setSelectedWebhookId(saved.id)
+      }
+      setSecretKey(saved.secret_key)
+      toast.success('Webhook kaydedildi.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Webhook kaydedilemedi.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleTest = async () => {
+    if (!selectedWebhookId) {
+      toast.error('Test için önce webhook seçin.')
+      return
+    }
+    if (isTesting) return
+    setIsTesting(true)
+    try {
+      const response = await fetch(`/api/webhooks/${selectedWebhookId}/test`, { method: 'POST' })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Test gönderimi başarısız.')
+      }
+      const updated = payload?.webhook as WebhookRow
+      setWebhooks((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
+      toast.success('Test gönderildi.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Test gönderimi başarısız.')
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
+  const handleCopySecret = async () => {
+    if (!secretKey) return
+    await navigator.clipboard.writeText(secretKey)
+    toast.success('Secret key kopyalandı.')
+  }
+
+  const formatLastTrigger = (value: string | null) => {
+    if (!value) return 'Henüz yok'
+    return formatRelativeTime(value)
   }
 
   return (
@@ -92,7 +260,10 @@ export default function WebhooksPage() {
                 <span className="material-symbols-outlined text-[20px]">history</span>
                 Gönderim Logları
               </Link>
-              <button className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md transition-all">
+              <button
+                onClick={resetForm}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-bold rounded-lg shadow-md transition-all"
+              >
                 <span className="material-symbols-outlined text-[20px]">add</span>
                 Yeni Webhook Ekle
               </button>
@@ -112,24 +283,31 @@ export default function WebhooksPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e2e8f0] dark:divide-slate-700">
-                  {webhooks.map((webhook) => (
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-6 text-sm text-[#64748b]">Webhooklar yükleniyor...</td>
+                    </tr>
+                  ) : webhooks.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-6 text-sm text-[#64748b]">Henüz webhook yok.</td>
+                    </tr>
+                  ) : webhooks.map((webhook) => (
                     <tr 
                       key={webhook.id}
                       className={`transition-colors cursor-pointer ${
-                        selectedWebhook === webhook.id
+                        selectedWebhookId === webhook.id
                           ? 'bg-blue-50/30 dark:bg-blue-900/10 border-l-4 border-l-primary'
                           : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/50'
                       }`}
                       onClick={() => {
-                        setSelectedWebhook(webhook.id)
-                        setTargetUrl(webhook.url)
+                        handleSelectWebhook(webhook)
                       }}
                     >
                       <td className="px-6 py-4 text-sm font-medium text-[#0f172a] dark:text-white max-w-xs truncate">
                         {webhook.url}
                       </td>
                       <td className="px-6 py-4">
-                        {webhook.status === 'active' ? (
+                        {webhook.active ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                             Aktif
@@ -141,7 +319,9 @@ export default function WebhooksPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-[#64748b]">{webhook.lastTrigger}</td>
+                      <td className="px-6 py-4 text-sm text-[#64748b]">
+                        {formatLastTrigger(webhook.last_triggered_at)}
+                      </td>
                       <td className="px-6 py-4 text-right">
                         <button className="text-primary hover:underline text-sm font-bold">Düzenle</button>
                       </td>
@@ -178,15 +358,27 @@ export default function WebhooksPage() {
                     <input
                       type="password"
                       readOnly
-                      value="••••••••••••••••••••••••"
+                      value={secretKey ? '••••••••••••••••••••••••' : 'Kaydettikten sonra oluşur'}
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-[#e2e8f0] dark:border-slate-600 rounded-lg text-sm pr-10 px-4 py-2.5 focus:ring-2 focus:ring-primary focus:border-primary text-[#64748b]"
                     />
-                    <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#64748b] hover:text-primary transition-colors">
+                    <button
+                      onClick={handleCopySecret}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#64748b] hover:text-primary transition-colors"
+                    >
                       <span className="material-symbols-outlined text-[18px]">content_copy</span>
                     </button>
                   </div>
                 </div>
               </div>
+              <label className="flex items-center gap-3 cursor-pointer text-sm text-[#64748b]">
+                <input
+                  type="checkbox"
+                  checked={active}
+                  onChange={() => setActive((prev) => !prev)}
+                  className="rounded border-[#e2e8f0] text-primary focus:ring-primary h-4 w-4"
+                />
+                Webhook aktif
+              </label>
 
               {/* Events */}
               <div className="space-y-4">
@@ -202,94 +394,59 @@ export default function WebhooksPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Proposal Events */}
-                  <div className="p-5 bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-[#e2e8f0] dark:border-slate-700">
-                      <span className="material-symbols-outlined text-primary text-[20px]">description</span>
-                      <h4 className="text-sm font-bold text-[#0f172a] dark:text-white">Teklif Olayları</h4>
+                  {eventGroups.map((group) => (
+                    <div
+                      key={group.title}
+                      className="p-5 bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 space-y-4"
+                    >
+                      <div className="flex items-center gap-2 pb-2 border-b border-[#e2e8f0] dark:border-slate-700">
+                        <span className="material-symbols-outlined text-primary text-[20px]">{group.icon}</span>
+                        <h4 className="text-sm font-bold text-[#0f172a] dark:text-white">{group.title}</h4>
+                      </div>
+                      <div className="space-y-3">
+                        {group.options.map((option) => (
+                          <label key={option.id} className="flex items-center gap-3 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={events[option.id] ?? false}
+                              onChange={() => toggleEvent(option.id)}
+                              className="rounded border-[#e2e8f0] text-primary focus:ring-primary h-4 w-4"
+                            />
+                            <span className="text-sm text-[#64748b] group-hover:text-[#0f172a] dark:group-hover:text-white transition-colors">
+                              {option.label}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-3 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={events.proposalViewed}
-                          onChange={() => toggleEvent('proposalViewed')}
-                          className="rounded border-[#e2e8f0] text-primary focus:ring-primary h-4 w-4"
-                        />
-                        <span className="text-sm text-[#64748b] group-hover:text-[#0f172a] dark:group-hover:text-white transition-colors">Görüntülendi</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={events.proposalSigned}
-                          onChange={() => toggleEvent('proposalSigned')}
-                          className="rounded border-[#e2e8f0] text-primary focus:ring-primary h-4 w-4"
-                        />
-                        <span className="text-sm text-[#64748b] group-hover:text-[#0f172a] dark:group-hover:text-white transition-colors">İmzalandı</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={events.proposalExpired}
-                          onChange={() => toggleEvent('proposalExpired')}
-                          className="rounded border-[#e2e8f0] text-primary focus:ring-primary h-4 w-4"
-                        />
-                        <span className="text-sm text-[#64748b] group-hover:text-[#0f172a] dark:group-hover:text-white transition-colors">Süresi Doldu</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Deal Events */}
-                  <div className="p-5 bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-[#e2e8f0] dark:border-slate-700">
-                      <span className="material-symbols-outlined text-primary text-[20px]">handshake</span>
-                      <h4 className="text-sm font-bold text-[#0f172a] dark:text-white">Anlaşma Olayları</h4>
-                    </div>
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-3 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={events.dealCreated}
-                          onChange={() => toggleEvent('dealCreated')}
-                          className="rounded border-[#e2e8f0] text-primary focus:ring-primary h-4 w-4"
-                        />
-                        <span className="text-sm text-[#64748b] group-hover:text-[#0f172a] dark:group-hover:text-white transition-colors">Oluşturuldu</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={events.dealWon}
-                          onChange={() => toggleEvent('dealWon')}
-                          className="rounded border-[#e2e8f0] text-primary focus:ring-primary h-4 w-4"
-                        />
-                        <span className="text-sm text-[#64748b] group-hover:text-[#0f172a] dark:group-hover:text-white transition-colors">Kazanıldı</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={events.dealLost}
-                          onChange={() => toggleEvent('dealLost')}
-                          className="rounded border-[#e2e8f0] text-primary focus:ring-primary h-4 w-4"
-                        />
-                        <span className="text-sm text-[#64748b] group-hover:text-[#0f172a] dark:group-hover:text-white transition-colors">Kaybedildi</span>
-                      </label>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
 
             {/* Footer Actions */}
             <div className="px-6 py-5 bg-slate-50 dark:bg-slate-800 border-t border-[#e2e8f0] dark:border-slate-700 flex items-center justify-between">
-              <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-[#e2e8f0] dark:border-slate-600 text-[#0f172a] dark:text-white hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-bold rounded-lg transition-all shadow-sm">
+              <button
+                onClick={handleTest}
+                disabled={isTesting || !selectedWebhookId}
+                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-[#e2e8f0] dark:border-slate-600 text-[#0f172a] dark:text-white hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-bold rounded-lg transition-all shadow-sm disabled:opacity-60"
+              >
                 <span className="material-symbols-outlined text-[20px]">send</span>
-                Test Gönder
+                {isTesting ? 'Gönderiliyor' : 'Test Gönder'}
               </button>
               <div className="flex items-center gap-3">
-                <button className="px-4 py-2 text-[#64748b] hover:text-[#0f172a] dark:hover:text-white text-sm font-bold transition-colors">
+                <button
+                  onClick={handleCancel}
+                  className="px-4 py-2 text-[#64748b] hover:text-[#0f172a] dark:hover:text-white text-sm font-bold transition-colors"
+                >
                   İptal
                 </button>
-                <button className="px-8 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-bold rounded-lg shadow-lg shadow-primary/20 transition-all">
-                  Kaydet
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="px-8 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-bold rounded-lg shadow-lg shadow-primary/20 transition-all disabled:opacity-60"
+                >
+                  {isSaving ? 'Kaydediliyor' : 'Kaydet'}
                 </button>
               </div>
             </div>

@@ -7,7 +7,7 @@ import { CSS } from '@dnd-kit/utilities'
 import toast from 'react-hot-toast'
 import { getSupabaseClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database'
-import { formatCurrency, formatRelativeTime, getActivityMeta, getDbStage, normalizeStage, stageConfigs, type StageId } from './stage-utils'
+import { formatCurrency, formatRelativeTime, getActivityMeta, normalizeStage, stageConfigs, type StageId } from './stage-utils'
 
 export type DealCardData = {
   id: string
@@ -212,14 +212,44 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
       )
     )
 
-    const { data, error } = await supabase
-      .from('deals')
-      .update({ stage: getDbStage(targetStage), updated_at: now })
-      .eq('id', dealId)
-      .select('id, stage')
-      .single()
+    try {
+      const response = await fetch('/api/deals/stage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, stage: targetStage }),
+      })
+      const payload = await response.json().catch(() => null)
 
-    if (error || !data) {
+      if (!response.ok) {
+        setDeals(prev =>
+          prev.map(deal =>
+            deal.id === dealId
+              ? {
+                  ...deal,
+                  stage: previousStage,
+                  updatedAt: previousUpdatedAt,
+                }
+              : deal
+          )
+        )
+        toast.error(payload?.error || 'Aşama güncellenemedi. Lütfen tekrar deneyin.')
+        return
+      }
+
+      const updatedAt = payload?.deal?.updated_at
+      if (updatedAt) {
+        setDeals(prev =>
+          prev.map(deal =>
+            deal.id === dealId
+              ? {
+                  ...deal,
+                  updatedAt,
+                }
+              : deal
+          )
+        )
+      }
+    } catch (error) {
       setDeals(prev =>
         prev.map(deal =>
           deal.id === dealId
@@ -231,12 +261,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
             : deal
         )
       )
-      if (error) {
-        console.error('Stage update failed:', error)
-        toast.error(error.message || 'Aşama güncellenemedi. Lütfen tekrar deneyin.')
-      } else {
-        toast.error('Aşama güncellenemedi. Lütfen tekrar deneyin.')
-      }
+      toast.error(error instanceof Error ? error.message : 'Aşama güncellenemedi. Lütfen tekrar deneyin.')
     }
   }
 
