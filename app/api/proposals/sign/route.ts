@@ -59,7 +59,16 @@ export async function POST(request: Request) {
 
   const { error: updateError } = await supabase
     .from('proposals')
-    .update({ blocks: nextBlocks, status: 'signed' })
+    .update({
+      blocks: nextBlocks,
+      status: 'signed',
+      signed_at: signedAt,
+      signature_data: {
+        name,
+        image: signature,
+        signed_at: signedAt,
+      },
+    })
     .eq('id', proposal.id)
 
   if (updateError) {

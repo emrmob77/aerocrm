@@ -24,6 +24,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ tracked: false })
   }
 
+  const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
+  const userAgent = request.headers.get('user-agent')
+
+  await supabase.from('proposal_views').insert({
+    proposal_id: proposal.id,
+    ip_address: ipAddress,
+    user_agent: userAgent,
+    blocks_viewed: {},
+  })
+
   if (proposal.status !== 'signed' && proposal.status !== 'draft') {
     await supabase.from('proposals').update({ status: 'viewed' }).eq('id', proposal.id)
   }
