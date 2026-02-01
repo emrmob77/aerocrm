@@ -81,7 +81,7 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 5: Anlaşma Sürükle-Bırak Tutarlılığı**
   - **Doğrular: Gereksinimler 3.1, 3.2**
 
-- [ ] 7. Kişi Yönetimi Sistemi
+- [x] 7. Kişi Yönetimi Sistemi ✅
   - Kişiler listesi sayfası (SSR)
   - Kişi detay sayfası
   - Kişi ekleme/düzenleme formları

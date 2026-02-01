@@ -9,3 +9,6 @@ export * from './dashboard'
 
 // Deals Components
 export * from './deals'
+
+// Contacts Components
+export * from './contacts'
