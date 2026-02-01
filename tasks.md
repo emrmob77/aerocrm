@@ -67,13 +67,13 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 3: Dashboard Metrik Görünürlüğü**
   - **Doğrular: Gereksinim 2.2**
 
-- [ ] 6. CRM Kanban Sistemi
-  - Kanban board layout bileşeni
-  - Deal card bileşeni
-  - React Beautiful DnD entegrasyonu
-  - Sürükle-bırak işlevselliği
-  - Stage değişikliği optimistic updates
-  - Gerçek zamanlı senkronizasyon
+- [x] 6. CRM Kanban Sistemi ✅
+  - Kanban board layout bileşeni ✅
+  - Deal card bileşeni ✅
+  - React Beautiful DnD entegrasyonu ✅
+  - Sürükle-bırak işlevselliği ✅
+  - Stage değişikliği optimistic updates ✅
+  - Gerçek zamanlı senkronizasyon ✅
   - _Gereksinimler: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
 - [ ]* 6.1 Kanban property testleri

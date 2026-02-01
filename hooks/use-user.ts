@@ -3,68 +3,65 @@
 import { useEffect, useState } from 'react'
 import { useSupabase } from './use-supabase'
 import { useAppStore } from '@/store'
-import type { User as SupabaseUser } from '@supabase/supabase-js'
 import type { User } from '@/types'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function useUser() {
   const supabase = useSupabase()
+  const { user: authUser, loading: authLoading } = useAuth()
   const { user, setUser } = useAppStore()
   const [loading, setLoading] = useState(true)
-  const [authUser, setAuthUser] = useState<SupabaseUser | null>(null)
 
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
+    let isMounted = true
+
+    if (authLoading) {
+      setLoading(true)
+      return () => {
+        isMounted = false
+      }
+    }
+
+    if (!authUser) {
+      setUser(null)
+      setLoading(false)
+      return () => {
+        isMounted = false
+      }
+    }
+
+    const loadProfile = async () => {
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser()
-        setAuthUser(authUser)
-        
-        if (authUser) {
-          // Fetch user profile from users table
-          const { data: profile } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', authUser.id)
-            .single()
-          
-          if (profile) {
-            setUser(profile as User)
-          }
+        const { data: profile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', authUser.id)
+          .single()
+
+        if (!isMounted) {
+          return
+        }
+
+        if (profile) {
+          setUser(profile as User)
         }
       } catch (error) {
-        console.error('Error getting user:', error)
+        if (isMounted) {
+          console.error('Error getting user:', error)
+        }
       } finally {
-        setLoading(false)
-      }
-    }
-
-    getInitialSession()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setAuthUser(session?.user ?? null)
-        
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-          
-          if (profile) {
-            setUser(profile as User)
-          }
-        } else {
-          setUser(null)
+        if (isMounted) {
+          setLoading(false)
         }
       }
-    )
+    }
+
+    loadProfile()
 
     return () => {
-      subscription.unsubscribe()
+      isMounted = false
     }
-  }, [supabase, setUser])
+  }, [authLoading, authUser, setUser, supabase])
 
   return {
     user,

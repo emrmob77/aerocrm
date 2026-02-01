@@ -6,3 +6,6 @@ export * from './layout'
 
 // Dashboard Components
 export * from './dashboard'
+
+// Deals Components
+export * from './deals'

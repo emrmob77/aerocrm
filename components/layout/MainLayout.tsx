@@ -44,7 +44,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden bg-[#f5f6f8] dark:bg-[#101722]">
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <div className="flex-1 overflow-y-auto p-4 lg:p-8">
+        <div className="flex-1 overflow-y-auto px-4 lg:px-8 pt-4 lg:pt-8 pb-0">
           {children}
         </div>
       </main>
