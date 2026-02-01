@@ -258,7 +258,7 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 17: Veri İçe Aktarma Raporlaması**
   - **Doğrular: Gereksinim 14.4**
 
-- [ ] 20. Şablon Yönetimi Sistemi
+- [x] 20. Şablon Yönetimi Sistemi
   - Şablon galerisi sayfası
   - Şablon editörü
   - Şablon kategorileri

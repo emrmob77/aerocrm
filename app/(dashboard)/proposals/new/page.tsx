@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import {
   DndContext,
@@ -176,6 +177,18 @@ type TemplatePreset = {
     fontScale: number
   }
   build: () => ProposalBlock[]
+}
+
+type TemplateScope = 'team' | 'public' | 'all'
+
+type SavedTemplate = {
+  id: string
+  name: string
+  description: string | null
+  category: string | null
+  is_public: boolean
+  usage_count: number
+  blocks: unknown
 }
 
 const updateBlock = <T extends ProposalBlock>(block: T, data: Partial<T['data']>): T => ({
@@ -597,6 +610,8 @@ const getEmbedUrl = (url: string) => {
 export default function ProposalEditorPage() {
   const supabase = useSupabase()
   const { user, authUser, loading: userLoading } = useUser()
+  const searchParams = useSearchParams()
+  const templateId = searchParams.get('templateId')
   const [productOptions, setProductOptions] = useState<ProductOption[]>([])
   const [productSearch, setProductSearch] = useState('')
   const [productsLoading, setProductsLoading] = useState(false)
@@ -613,6 +628,15 @@ export default function ProposalEditorPage() {
   const [activePaletteId, setActivePaletteId] = useState<string | null>(null)
   const [editorMode, setEditorMode] = useState<'edit' | 'preview' | 'send'>('edit')
   const [leftPanel, setLeftPanel] = useState<'blocks' | 'templates' | 'order'>('blocks')
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([])
+  const [templatesLoading, setTemplatesLoading] = useState(false)
+  const [templateScope, setTemplateScope] = useState<TemplateScope>('team')
+  const [templateModalOpen, setTemplateModalOpen] = useState(false)
+  const [templateName, setTemplateName] = useState('')
+  const [templateDescription, setTemplateDescription] = useState('')
+  const [templateCategory, setTemplateCategory] = useState('')
+  const [templateIsPublic, setTemplateIsPublic] = useState(false)
+  const [templateSaving, setTemplateSaving] = useState(false)
   const [designSettings, setDesignSettings] = useState({
     background: '#ffffff',
     text: '#0d121c',
@@ -663,6 +687,29 @@ export default function ProposalEditorPage() {
     loadProducts()
   }, [authUser, user?.team_id, userLoading, supabase])
 
+  const fetchTemplates = useCallback(async (scope: TemplateScope) => {
+    setTemplatesLoading(true)
+    const response = await fetch(`/api/templates?scope=${scope}`)
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      toast.error(payload?.error || 'Şablonlar yüklenemedi.')
+      setTemplatesLoading(false)
+      return
+    }
+    setSavedTemplates((payload?.templates ?? []) as SavedTemplate[])
+    setTemplatesLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (userLoading) return
+    if (!authUser) {
+      setSavedTemplates([])
+      return
+    }
+
+    fetchTemplates(templateScope)
+  }, [authUser, userLoading, templateScope, fetchTemplates])
+
   const [proposalLink, setProposalLink] = useState(() => {
     const slug = crypto.randomUUID().split('-')[0]
     return `https://aero-crm.app/p/${slug}`
@@ -697,6 +744,99 @@ export default function ProposalEditorPage() {
     setSelectedBlockId(null)
     setEditorMode('edit')
   }
+
+  const applySavedTemplate = useCallback((template: SavedTemplate, trackUsage = true) => {
+    let nextBlocks: ProposalBlock[] = []
+    if (Array.isArray(template.blocks)) {
+      nextBlocks = template.blocks as ProposalBlock[]
+    } else if (typeof template.blocks === 'string') {
+      try {
+        const parsed = JSON.parse(template.blocks)
+        if (Array.isArray(parsed)) {
+          nextBlocks = parsed as ProposalBlock[]
+        }
+      } catch {
+        nextBlocks = []
+      }
+    }
+    if (nextBlocks.length === 0) {
+      toast.error('Şablon blokları bulunamadı. Şablonu düzenleyip blok ekleyin.')
+      return
+    }
+    if (trackUsage) {
+      void fetch(`/api/templates/${template.id}/use`, { method: 'POST' })
+    }
+    setBlocks(nextBlocks)
+    setDocumentTitle((prev) => template.name || prev)
+    setSelectedBlockId(null)
+    setEditorMode('edit')
+  }, [])
+
+  const openTemplateModal = () => {
+    setTemplateName(documentTitle)
+    setTemplateDescription('')
+    setTemplateCategory('')
+    setTemplateIsPublic(false)
+    setTemplateModalOpen(true)
+  }
+
+  const handleSaveTemplate = async () => {
+    if (templateSaving) return
+    if (!templateName.trim()) {
+      toast.error('Şablon adı zorunludur.')
+      return
+    }
+    if (blocks.length === 0) {
+      toast.error('Şablon kaydetmek için en az bir blok gerekir.')
+      return
+    }
+
+    setTemplateSaving(true)
+    const trimmedDescription = templateDescription.trim()
+    const trimmedCategory = templateCategory.trim()
+    const response = await fetch('/api/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: templateName.trim(),
+        description: trimmedDescription || undefined,
+        category: trimmedCategory || undefined,
+        is_public: templateIsPublic,
+        blocks,
+      }),
+    })
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      toast.error(payload?.error || 'Şablon kaydedilemedi.')
+      setTemplateSaving(false)
+      return
+    }
+
+    toast.success('Şablon kaydedildi.')
+    setTemplateSaving(false)
+    setTemplateModalOpen(false)
+    setLeftPanel('templates')
+    fetchTemplates(templateScope)
+  }
+
+  useEffect(() => {
+    if (!templateId) return
+    const loadTemplate = async () => {
+      const response = await fetch(`/api/templates/${templateId}`)
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        toast.error(payload?.error || 'Şablon yüklenemedi.')
+        return
+      }
+      const template = payload?.template as SavedTemplate | undefined
+      if (!template) {
+        toast.error('Şablon bulunamadı.')
+        return
+      }
+      applySavedTemplate(template, true)
+    }
+    loadTemplate()
+  }, [templateId, applySavedTemplate])
 
   const handleSaveDraft = async () => {
     if (isSavingDraft) return
@@ -1233,6 +1373,14 @@ export default function ProposalEditorPage() {
             Sürüm Geçmişi
           </button>
           <button
+            onClick={openTemplateModal}
+            title="Şablon olarak kaydet"
+            aria-label="Şablon olarak kaydet"
+            className="flex size-10 items-center justify-center rounded-lg border border-[#e7ebf4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <span className="material-symbols-outlined text-[20px]">bookmark_add</span>
+          </button>
+          <button
             onClick={handleSaveDraft}
             title="Taslak olarak kaydet"
             aria-label="Taslak olarak kaydet"
@@ -1264,6 +1412,21 @@ export default function ProposalEditorPage() {
         isOpen={historyOpen}
         onClose={() => setHistoryOpen(false)}
         versions={versionHistory}
+      />
+      <TemplateSaveModal
+        isOpen={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        onSave={handleSaveTemplate}
+        name={templateName}
+        description={templateDescription}
+        category={templateCategory}
+        isPublic={templateIsPublic}
+        onNameChange={setTemplateName}
+        onDescriptionChange={setTemplateDescription}
+        onCategoryChange={setTemplateCategory}
+        onPublicToggle={() => setTemplateIsPublic((prev) => !prev)}
+        isSaving={templateSaving}
+        blockCount={blocks.length}
       />
 
       <DndContext
@@ -1306,31 +1469,108 @@ export default function ProposalEditorPage() {
             </div>
             <div className="p-4 space-y-6">
               {leftPanel === 'templates' && (
-                <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400">HAZIR ŞABLONLAR</h3>
-                  <div className="space-y-2">
-                    {templatePresets.map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => applyTemplate(template)}
-                        className="w-full rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-3 text-left hover:border-primary/40 hover:bg-primary/5 transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{template.name}</p>
-                            <p className="text-xs text-gray-500">{template.description}</p>
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400">KAYITLI ŞABLONLAR</h3>
+                      <Link href="/templates" className="text-xs font-semibold text-primary hover:underline">
+                        Yönet
+                      </Link>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        { id: 'team', label: 'Takım' },
+                        { id: 'public', label: 'Genel' },
+                        { id: 'all', label: 'Tümü' },
+                      ] as { id: TemplateScope; label: string }[]).map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => setTemplateScope(item.id)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                            templateScope === item.id
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-gray-500 hover:bg-gray-100'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                    {templatesLoading ? (
+                      <div className="rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-3 text-xs text-gray-500">
+                        Şablonlar yükleniyor...
+                      </div>
+                    ) : savedTemplates.length === 0 ? (
+                      <div className="rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-3 text-xs text-gray-500">
+                        Şablon bulunamadı.{' '}
+                        <Link href="/templates/new" className="text-primary font-semibold hover:underline">
+                          Yeni şablon oluştur
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {savedTemplates.map((template) => (
+                          <button
+                            key={template.id}
+                            onClick={() => applySavedTemplate(template)}
+                            className="w-full rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-3 text-left hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{template.name}</p>
+                                <p className="text-xs text-gray-500">
+                                  {template.description || 'Açıklama eklenmedi.'}
+                                </p>
+                              </div>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                  template.is_public
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                {template.is_public ? 'Genel' : 'Takım'}
+                              </span>
+                            </div>
+                            <div className="mt-3 flex items-center gap-2 text-[10px] text-gray-400">
+                              <span>{template.category || 'Genel'}</span>
+                              <span>•</span>
+                              <span>{Array.isArray(template.blocks) ? template.blocks.length : 0} blok</span>
+                              <span>•</span>
+                              <span>{template.usage_count ?? 0} kullanım</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400">HAZIR ŞABLONLAR</h3>
+                    <div className="space-y-2">
+                      {templatePresets.map((template) => (
+                        <button
+                          key={template.id}
+                          onClick={() => applyTemplate(template)}
+                          className="w-full rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-3 text-left hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{template.name}</p>
+                              <p className="text-xs text-gray-500">{template.description}</p>
+                            </div>
+                            <span className="material-symbols-outlined text-[18px] text-gray-400">arrow_outward</span>
                           </div>
-                          <span className="material-symbols-outlined text-[18px] text-gray-400">arrow_outward</span>
-                        </div>
-                        <div className="mt-3 flex items-center gap-2">
-                          <span
-                            className="h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: template.design.accent }}
-                          />
-                          <span className="text-[10px] text-gray-400">{template.title}</span>
-                        </div>
-                      </button>
-                    ))}
+                          <div className="mt-3 flex items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: template.design.accent }}
+                            />
+                            <span className="text-[10px] text-gray-400">{template.title}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -2346,6 +2586,125 @@ function HistoryModal({
               })}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type TemplateSaveModalProps = {
+  isOpen: boolean
+  onClose: () => void
+  onSave: () => void
+  name: string
+  description: string
+  category: string
+  isPublic: boolean
+  onNameChange: (value: string) => void
+  onDescriptionChange: (value: string) => void
+  onCategoryChange: (value: string) => void
+  onPublicToggle: () => void
+  isSaving: boolean
+  blockCount: number
+}
+
+function TemplateSaveModal({
+  isOpen,
+  onClose,
+  onSave,
+  name,
+  description,
+  category,
+  isPublic,
+  onNameChange,
+  onDescriptionChange,
+  onCategoryChange,
+  onPublicToggle,
+  isSaving,
+  blockCount,
+}: TemplateSaveModalProps) {
+  if (!isOpen) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 px-4 py-6 overflow-y-auto sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[560px] bg-white dark:bg-[#101722] rounded-2xl shadow-2xl flex flex-col"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="px-6 py-4 border-b border-[#e7ebf4] dark:border-gray-800 flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-[#0d121c] dark:text-white">Şablon olarak kaydet</h2>
+            <p className="text-sm text-[#48679d] dark:text-gray-400">
+              Mevcut blok yapısını şablon olarak kaydedin.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Şablon Adı</label>
+            <input
+              value={name}
+              onChange={(event) => onNameChange(event.target.value)}
+              placeholder="Örn: Ajans Teklifi"
+              className="mt-2 w-full px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Açıklama</label>
+            <textarea
+              value={description}
+              onChange={(event) => onDescriptionChange(event.target.value)}
+              placeholder="Şablonun kullanım amacını yazın."
+              className="mt-2 w-full px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm min-h-[110px]"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Kategori</label>
+            <input
+              value={category}
+              onChange={(event) => onCategoryChange(event.target.value)}
+              placeholder="Örn: SaaS, Ajans, Emlak"
+              className="mt-2 w-full px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm"
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-[#e7ebf4] dark:border-gray-800 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-[#0d121c] dark:text-white">Şablonu paylaş</p>
+              <p className="text-xs text-[#48679d]">Şablon ekibiniz veya herkese açık olur.</p>
+            </div>
+            <button
+              onClick={onPublicToggle}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                isPublic ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {isPublic ? 'Genel' : 'Takım'}
+            </button>
+          </div>
+          <div className="rounded-lg border border-dashed border-[#e7ebf4] dark:border-gray-800 px-4 py-3 text-xs text-gray-500">
+            Bu şablon {blockCount} blok içeriyor.
+          </div>
+        </div>
+        <div className="px-6 py-4 border-t border-[#e7ebf4] dark:border-gray-800 flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-[#e7ebf4] text-sm font-semibold text-[#48679d]"
+          >
+            Vazgeç
+          </button>
+          <button
+            onClick={onSave}
+            disabled={isSaving}
+            className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-70"
+          >
+            {isSaving ? 'Kaydediliyor' : 'Şablonu Kaydet'}
+          </button>
         </div>
       </div>
     </div>

@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { label: 'Kişiler', href: '/contacts', icon: 'group' },
   { label: 'Ürünler', href: '/products', icon: 'inventory_2' },
   { label: 'Teklifler', href: '/proposals', icon: 'description' },
+  { label: 'Şablonlar', href: '/templates', icon: 'auto_awesome' },
   { label: 'Satışlar', href: '/sales', icon: 'handshake' },
   { label: 'Raporlar', href: '/reports', icon: 'bar_chart' },
   { label: 'Analitik', href: '/analytics', icon: 'analytics' },

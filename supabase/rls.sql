@@ -18,6 +18,7 @@ WITH CHECK (webhook_id IN (SELECT id FROM webhooks WHERE team_id = (SELECT team_
 ALTER TABLE proposals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE proposal_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE templates ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public read proposals" ON proposals;
 CREATE POLICY "Public read proposals" ON proposals
@@ -58,6 +59,18 @@ CREATE POLICY "Invitee can accept invite" ON team_invites
 FOR UPDATE
 USING (email = (auth.jwt() ->> 'email'))
 WITH CHECK (email = (auth.jwt() ->> 'email'));
+
+-- Şablonlar için RLS
+DROP POLICY IF EXISTS "Team members manage templates" ON templates;
+CREATE POLICY "Team members manage templates" ON templates
+FOR ALL
+USING (team_id = (SELECT team_id FROM users WHERE id = auth.uid()))
+WITH CHECK (team_id = (SELECT team_id FROM users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "Public read templates" ON templates;
+CREATE POLICY "Public read templates" ON templates
+FOR SELECT
+USING (is_public = true);
 
 -- Bildirim tercihleri için RLS
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;

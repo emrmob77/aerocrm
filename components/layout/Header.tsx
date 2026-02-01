@@ -19,6 +19,7 @@ const pageTitles: Record<string, string> = {
   '/sales': 'Satışlar',
   '/reports': 'Raporlar',
   '/proposals': 'Teklifler',
+  '/templates': 'Şablonlar',
   '/analytics': 'Analitik',
   '/notifications': 'Bildirimler',
   '/webhooks': 'Webhooks',
