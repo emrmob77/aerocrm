@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/lib/auth'
+import toast from 'react-hot-toast'
 
 type Plan = 'solo' | 'pro'
 
@@ -28,23 +28,16 @@ const plans = [
 ]
 
 export default function RegisterPage() {
-  const router = useRouter()
-  const { signUp, signInWithGoogle, isAuthenticated, loading: authLoading } = useAuth()
+  const { signUp, signInWithGoogle, loading: authLoading } = useAuth()
   const [selectedPlan, setSelectedPlan] = useState<Plan>('pro')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push('/dashboard')
-    }
-  }, [isAuthenticated, authLoading, router])
+  const [emailSent, setEmailSent] = useState(false)
 
   const getPasswordStrength = () => {
     if (password.length === 0) return { level: 0, text: '', color: '' }
@@ -74,62 +67,73 @@ export default function RegisterPage() {
 
     setIsLoading(true)
 
-    const { error: signUpError } = await signUp(email, password, fullName, selectedPlan)
+    const { error } = await signUp(email, password, fullName, selectedPlan)
 
-    if (signUpError) {
-      setError(signUpError.message === 'User already registered'
-        ? 'Bu e-posta adresi zaten kayıtlı'
-        : signUpError.message)
+    if (error) {
+      if (error.message.includes('already registered')) {
+        setError('Bu e-posta adresi zaten kayıtlı')
+      } else {
+        setError(error.message)
+      }
       setIsLoading(false)
     } else {
-      setSuccess(true)
-      setIsLoading(false)
+      setEmailSent(true)
+      toast.success('Hesabınız oluşturuldu! E-posta adresinizi doğrulamak için gelen kutunuzu kontrol edin.')
     }
   }
 
   const handleGoogleSignUp = async () => {
     setError('')
-    const { error: googleError } = await signInWithGoogle()
-    if (googleError) {
+    const { error } = await signInWithGoogle()
+
+    if (error) {
       setError('Google ile kayıt olurken bir hata oluştu')
     }
   }
 
-  // Show loading while checking auth
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <svg className="animate-spin h-8 w-8 text-aero-blue-500" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-          <p className="text-aero-slate-500">Yükleniyor...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }
 
-  // Show success message
-  if (success) {
+  // Email verification sent state
+  if (emailSent) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-8">
+      <div className="min-h-screen flex items-center justify-center p-8 bg-aero-slate-50 dark:bg-aero-slate-900">
         <div className="w-full max-w-md text-center">
-          <div className="w-16 h-16 rounded-full bg-aero-green-100 dark:bg-aero-green-900/30 flex items-center justify-center mx-auto mb-6">
-            <span className="material-symbols-outlined text-3xl text-aero-green-500">check_circle</span>
+          <div className="w-20 h-20 rounded-full bg-aero-green-100 dark:bg-aero-green-900/30 flex items-center justify-center mx-auto mb-6">
+            <span className="material-symbols-outlined text-4xl text-aero-green-500">mark_email_read</span>
           </div>
-          <h2 className="text-2xl font-bold text-aero-slate-900 dark:text-white mb-3">
-            Hesabınız Oluşturuldu!
+          <h2 className="text-2xl font-bold text-aero-slate-900 dark:text-white mb-4">
+            E-postanızı Kontrol Edin
           </h2>
-          <p className="text-aero-slate-500 dark:text-aero-slate-400 mb-6">
-            E-posta adresinize bir doğrulama linki gönderdik. Lütfen e-postanızı kontrol edin ve hesabınızı doğrulayın.
+          <p className="text-aero-slate-600 dark:text-aero-slate-400 mb-8">
+            <strong className="text-aero-slate-800 dark:text-aero-slate-200">{email}</strong> adresine bir doğrulama e-postası gönderdik.
+            Hesabınızı aktifleştirmek için e-postadaki linke tıklayın.
           </p>
-          <Link
-            href="/login"
-            className="inline-flex items-center justify-center px-6 py-3 bg-aero-blue-500 text-white font-medium rounded-lg hover:bg-aero-blue-600 transition-colors"
-          >
-            Giriş Sayfasına Git
-          </Link>
+          <div className="space-y-4">
+            <Link
+              href="/login"
+              className="block w-full py-3 px-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+            >
+              Giriş Sayfasına Git
+            </Link>
+            <p className="text-sm text-aero-slate-500">
+              E-posta gelmedi mi?{' '}
+              <button
+                onClick={() => {
+                  setEmailSent(false)
+                  setIsLoading(false)
+                }}
+                className="text-primary hover:underline"
+              >
+                Tekrar dene
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     )
@@ -251,6 +255,7 @@ export default function RegisterPage() {
                   placeholder="Ahmet Yılmaz"
                   className="input pl-12"
                   required
+                  autoComplete="name"
                 />
               </div>
             </div>
@@ -272,6 +277,7 @@ export default function RegisterPage() {
                   placeholder="ornek@sirket.com"
                   className="input pl-12"
                   required
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -287,13 +293,23 @@ export default function RegisterPage() {
                 </span>
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="input pl-12"
+                  className="input pl-12 pr-12"
                   required
+                  autoComplete="new-password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-aero-slate-400 hover:text-aero-slate-600 transition-colors"
+                >
+                  <span className="material-symbols-outlined">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
               </div>
               {/* Password Strength Meter */}
               {password.length > 0 && (
@@ -343,7 +359,7 @@ export default function RegisterPage() {
               className="w-full btn-primary btn-lg"
             >
               {isLoading ? (
-                <span className="flex items-center gap-2">
+                <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />

@@ -2,126 +2,163 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function ForgotPasswordPage() {
-  const { resetPassword } = useAuth()
+  const { resetPassword, loading: authLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsLoading(true)
 
-    const { error: resetError } = await resetPassword(email)
+    const { error } = await resetPassword(email)
 
-    if (resetError) {
+    if (error) {
       setError('Şifre sıfırlama e-postası gönderilemedi. Lütfen e-posta adresinizi kontrol edin.')
       setIsLoading(false)
     } else {
-      setSuccess(true)
-      setIsLoading(false)
+      setEmailSent(true)
     }
   }
 
-  if (success) {
+  if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-8 bg-[#f5f6f8] dark:bg-[#101722]">
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  // Email sent success state
+  if (emailSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8 bg-aero-slate-50 dark:bg-aero-slate-900">
         <div className="w-full max-w-md text-center">
-          <div className="w-16 h-16 rounded-full bg-aero-green-100 dark:bg-aero-green-900/30 flex items-center justify-center mx-auto mb-6">
-            <span className="material-symbols-outlined text-3xl text-aero-green-500">mark_email_read</span>
+          <div className="w-20 h-20 rounded-full bg-aero-green-100 dark:bg-aero-green-900/30 flex items-center justify-center mx-auto mb-6">
+            <span className="material-symbols-outlined text-4xl text-aero-green-500">mark_email_read</span>
           </div>
-          <h2 className="text-2xl font-bold text-[#0d121c] dark:text-white mb-3">
-            E-posta Gönderildi!
+          <h2 className="text-2xl font-bold text-aero-slate-900 dark:text-white mb-4">
+            E-postanızı Kontrol Edin
           </h2>
-          <p className="text-[#48679d] dark:text-gray-400 mb-6">
-            Şifre sıfırlama bağlantısı <strong>{email}</strong> adresine gönderildi.
-            Lütfen gelen kutunuzu kontrol edin.
+          <p className="text-aero-slate-600 dark:text-aero-slate-400 mb-8">
+            <strong className="text-aero-slate-800 dark:text-aero-slate-200">{email}</strong> adresine
+            şifre sıfırlama linki gönderdik. Lütfen gelen kutunuzu kontrol edin.
           </p>
-          <Link
-            href="/login"
-            className="inline-flex items-center justify-center px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Giriş Sayfasına Dön
-          </Link>
+          <div className="space-y-4">
+            <Link
+              href="/login"
+              className="block w-full py-3 px-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+            >
+              Giriş Sayfasına Dön
+            </Link>
+            <p className="text-sm text-aero-slate-500">
+              E-posta gelmedi mi?{' '}
+              <button
+                onClick={() => {
+                  setEmailSent(false)
+                  setIsLoading(false)
+                }}
+                className="text-primary hover:underline"
+              >
+                Tekrar gönder
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-8 bg-[#f5f6f8] dark:bg-[#101722]">
+    <div className="min-h-screen flex items-center justify-center p-8 bg-aero-slate-50 dark:bg-aero-slate-900">
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-block mb-6">
-            <h1 className="text-primary text-4xl font-black tracking-tighter">AERO</h1>
-          </Link>
-          <h2 className="text-2xl font-bold text-[#0d121c] dark:text-white mb-2">
-            Şifrenizi mi Unuttunuz?
-          </h2>
-          <p className="text-[#48679d] dark:text-gray-400">
-            E-posta adresinizi girin, size şifre sıfırlama bağlantısı gönderelim.
-          </p>
+        {/* Logo */}
+        <div className="flex items-center justify-center mb-8">
+          <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
+            <span className="text-white font-bold text-xl">A</span>
+          </div>
+          <span className="ml-3 font-bold text-2xl text-aero-slate-900 dark:text-white">AERO</span>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        {/* Card */}
+        <div className="bg-white dark:bg-aero-slate-800 rounded-2xl shadow-xl p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-full bg-aero-blue-100 dark:bg-aero-blue-900/30 flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-3xl text-aero-blue-500">lock_reset</span>
+            </div>
+            <h2 className="text-2xl font-bold text-aero-slate-900 dark:text-white mb-2">
+              Şifrenizi mi Unuttunuz?
+            </h2>
+            <p className="text-aero-slate-500 dark:text-aero-slate-400 text-sm">
+              E-posta adresinizi girin, size şifre sıfırlama linki gönderelim.
+            </p>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Email Field */}
-          <div className="flex flex-col gap-2">
-            <label className="text-[#0d121c] dark:text-gray-200 text-base font-medium leading-normal">
-              E-posta
-            </label>
-            <div className="flex w-full items-stretch rounded-lg shadow-sm">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e-posta@adresiniz.com"
-                className="flex w-full min-w-0 flex-1 rounded-l-lg text-[#0d121c] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] h-14 placeholder:text-[#48679d]/50 p-[15px] border-r-0 pr-2 text-base font-normal leading-normal transition-colors"
-                required
-              />
-              <div className="text-[#48679d] flex border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] items-center justify-center pr-[15px] rounded-r-lg border-l-0">
-                <span className="material-symbols-outlined">mail</span>
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-aero-red-50 dark:bg-aero-red-900/20 border border-aero-red-200 dark:border-aero-red-800 rounded-lg">
+              <p className="text-sm text-aero-red-600 dark:text-aero-red-400">{error}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-aero-slate-700 dark:text-aero-slate-300 mb-1.5">
+                E-posta
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-xl text-aero-slate-400">
+                  mail
+                </span>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="e-posta@adresiniz.com"
+                  className="input pl-12"
+                  required
+                  autoComplete="email"
+                />
               </div>
             </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full btn-primary btn-lg"
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Gönderiliyor...
+                </span>
+              ) : (
+                'Sıfırlama Linki Gönder'
+              )}
+            </button>
+          </form>
+
+          {/* Back to Login */}
+          <div className="mt-6 text-center">
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 text-sm text-aero-slate-500 hover:text-primary transition-colors"
+            >
+              <span className="material-symbols-outlined text-lg">arrow_back</span>
+              Giriş sayfasına dön
+            </Link>
           </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full flex h-14 items-center justify-center rounded-lg bg-primary text-white text-base font-bold tracking-wide hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-70"
-          >
-            {isLoading ? (
-              <span className="flex items-center gap-2">
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Gönderiliyor...
-              </span>
-            ) : (
-              'Şifre Sıfırlama Linki Gönder'
-            )}
-          </button>
-        </form>
-
-        {/* Back to Login */}
-        <div className="mt-8 text-center">
-          <Link href="/login" className="text-primary font-semibold hover:underline inline-flex items-center gap-2">
-            <span className="material-symbols-outlined text-xl">arrow_back</span>
-            Giriş Sayfasına Dön
-          </Link>
         </div>
       </div>
     </div>

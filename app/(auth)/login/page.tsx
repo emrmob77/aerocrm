@@ -2,61 +2,81 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/auth'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import toast from 'react-hot-toast'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn, signInWithGoogle, isAuthenticated, loading: authLoading } = useAuth()
+  const searchParams = useSearchParams()
+  const { signIn, signInWithGoogle, user, loading: authLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push('/dashboard')
+    if (!authLoading && user) {
+      const redirect = searchParams.get('redirect') || '/dashboard'
+      router.push(redirect)
     }
-  }, [isAuthenticated, authLoading, router])
+  }, [user, authLoading, router, searchParams])
+
+  // Check for error or success messages from URL
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    const messageParam = searchParams.get('message')
+
+    if (errorParam === 'auth_callback_error') {
+      setError('Kimlik doğrulama hatası oluştu. Lütfen tekrar deneyin.')
+    }
+    if (messageParam === 'password_reset') {
+      toast.success('Şifreniz başarıyla güncellendi. Şimdi giriş yapabilirsiniz.')
+    }
+    if (messageParam === 'email_verified') {
+      toast.success('E-postanız doğrulandı. Şimdi giriş yapabilirsiniz.')
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsLoading(true)
 
-    const { error: signInError } = await signIn(email, password)
+    const { error } = await signIn(email, password, rememberMe)
 
-    if (signInError) {
-      setError(signInError.message === 'Invalid login credentials'
-        ? 'E-posta veya şifre hatalı'
-        : signInError.message)
+    if (error) {
+      if (error.message.includes('Invalid login credentials')) {
+        setError('Geçersiz e-posta veya şifre')
+      } else if (error.message.includes('Email not confirmed')) {
+        setError('E-posta adresiniz doğrulanmamış. Lütfen e-postanızı kontrol edin.')
+      } else {
+        setError(error.message)
+      }
       setIsLoading(false)
     } else {
-      router.push('/dashboard')
+      // Redirect handled by AuthContext
+      const redirect = searchParams.get('redirect') || '/dashboard'
+      router.push(redirect)
     }
   }
 
   const handleGoogleSignIn = async () => {
     setError('')
-    const { error: googleError } = await signInWithGoogle()
-    if (googleError) {
+    const { error } = await signInWithGoogle(rememberMe)
+
+    if (error) {
       setError('Google ile giriş yapılırken bir hata oluştu')
     }
   }
 
-  // Show loading while checking auth
   if (authLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f5f6f8] dark:bg-[#101722]">
-        <div className="flex flex-col items-center gap-4">
-          <svg className="animate-spin h-8 w-8 text-primary" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-          <p className="text-[#48679d] dark:text-gray-400">Yükleniyor...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -68,7 +88,7 @@ export default function LoginPage() {
         {/* Decorative Background Elements */}
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 bg-black/10 rounded-full blur-3xl"></div>
-        
+
         <div className="relative z-10 w-full max-w-lg">
           <div className="mb-12">
             <h1 className="text-white text-7xl font-extrabold tracking-tighter mb-4">AERO</h1>
@@ -139,6 +159,7 @@ export default function LoginPage() {
                   placeholder="e-posta@adresiniz.com"
                   className="flex w-full min-w-0 flex-1 rounded-l-lg text-[#0d121c] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] h-14 placeholder:text-[#48679d]/50 p-[15px] border-r-0 pr-2 text-base font-normal leading-normal transition-colors"
                   required
+                  autoComplete="email"
                 />
                 <div className="text-[#48679d] flex border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] items-center justify-center pr-[15px] rounded-r-lg border-l-0">
                   <span className="material-symbols-outlined">mail</span>
@@ -153,16 +174,23 @@ export default function LoginPage() {
               </label>
               <div className="flex w-full items-stretch rounded-lg shadow-sm">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="flex w-full min-w-0 flex-1 rounded-l-lg text-[#0d121c] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] h-14 placeholder:text-[#48679d]/50 p-[15px] border-r-0 pr-2 text-base font-normal leading-normal transition-colors"
                   required
+                  autoComplete="current-password"
                 />
-                <div className="text-[#48679d] flex border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] items-center justify-center pr-[15px] rounded-r-lg border-l-0">
-                  <span className="material-symbols-outlined">lock</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-[#48679d] flex border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] items-center justify-center pr-[15px] rounded-r-lg border-l-0 hover:text-primary transition-colors"
+                >
+                  <span className="material-symbols-outlined">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -182,7 +210,7 @@ export default function LoginPage() {
                   Beni Hatırla
                 </label>
               </div>
-              <Link 
+              <Link
                 href="/forgot-password"
                 className="text-primary hover:text-primary/80 text-sm font-semibold transition-colors"
               >
