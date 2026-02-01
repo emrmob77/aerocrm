@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
 
@@ -224,6 +225,7 @@ const parseCsv = (content: string): ParsedCsv => {
 }
 
 export default function ImportExportPage() {
+  const searchParams = useSearchParams()
   const [entity, setEntity] = useState<EntityId>('contacts')
   const [exportEntity, setExportEntity] = useState<EntityId>('contacts')
   const [exportFormat, setExportFormat] = useState<'csv' | 'excel'>('csv')
@@ -280,6 +282,17 @@ export default function ImportExportPage() {
   useEffect(() => {
     loadLogs()
   }, [])
+
+  useEffect(() => {
+    const paramEntity = searchParams.get('entity')
+    if (
+      paramEntity &&
+      ['contacts', 'deals', 'proposals', 'sales'].includes(paramEntity)
+    ) {
+      setEntity(paramEntity as EntityId)
+      setExportEntity(paramEntity as EntityId)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (!parsedCsv) return
