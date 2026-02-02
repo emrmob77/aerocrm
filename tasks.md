@@ -270,13 +270,17 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 18: Şablon Oluşturma Esnekliği**
   - **Doğrular: Gereksinim 15.2**
 
-- [ ] 21. Anlaşma Detay Sistemi
+- [x] 21. Anlaşma Detay Sistemi
   - Anlaşma detay sayfası (SSR)
   - Sekmeli arayüz (Ürünler, Teklifler, Notlar, Aktivite, Dosyalar)
   - Zengin metin editörü (React Quill)
   - Dosya yükleme sistemi (React Dropzone)
   - Anlaşma geçmişi timeline'ı
   - _Gereksinimler: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6_
+
+- [ ] 21.2 Deal dosyaları için Storage policy'leri
+  - Storage bucket `deal-files` için read/insert/delete politikalarını ekle (dashboard üzerinden)
+  - _Gereksinimler: 16.4_
 
 - [ ]* 21.1 Anlaşma detay property testleri
   - **Property 19: Anlaşma Aşama Güncelleme Tutarlılığı**
