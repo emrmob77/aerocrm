@@ -16,18 +16,22 @@ const daysToMs = (days: number) => days * 24 * 60 * 60 * 1000
 
 const buildUsage = (params: {
   used: number
-  limit: number
+  limit: number | null
   label: string
   unit?: string
   t: (key: string, vars?: Record<string, string | number>) => string
 }) => {
+  const unlimitedLabel = params.t('billing.unlimited')
+  const limitLabel = params.limit === null ? unlimitedLabel : params.limit
   const valueLabel = params.unit
-    ? `${params.used} ${params.unit} / ${params.limit} ${params.unit}`
-    : `${params.used} / ${params.limit}`
+    ? `${params.used} ${params.unit} / ${limitLabel} ${params.unit}`
+    : `${params.used} / ${limitLabel}`
   const percent =
-    params.limit > 0 ? Math.min(100, Math.round((params.used / params.limit) * 100)) : 0
+    params.limit && params.limit > 0
+      ? Math.min(100, Math.round((params.used / params.limit) * 100))
+      : 0
   const hint =
-    params.limit > 0
+    params.limit && params.limit > 0
       ? params.t('api.billing.usageHintActive', { value: `${percent}%` })
       : params.t('api.billing.usageEmptyHint')
   return {

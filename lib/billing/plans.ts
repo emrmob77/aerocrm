@@ -1,9 +1,9 @@
 export type PlanId = 'starter' | 'growth' | 'scale'
 
 export type PlanLimits = {
-  users: number
-  proposals: number
-  storageGb: number
+  users: number | null
+  proposals: number | null
+  storageGb: number | null
 }
 
 export type PlanDefinition = {
@@ -23,20 +23,20 @@ export const planDefinitions: PlanDefinition[] = [
     id: 'starter',
     priceMonthly: 29,
     currency: 'USD',
-    limits: { users: 3, proposals: 50, storageGb: 5 },
+    limits: { users: 3, proposals: 10, storageGb: 5 },
   },
   {
     id: 'growth',
     priceMonthly: 79,
     currency: 'USD',
     recommended: true,
-    limits: { users: 10, proposals: 250, storageGb: 50 },
+    limits: { users: 10, proposals: 200, storageGb: 50 },
   },
   {
     id: 'scale',
     priceMonthly: 149,
     currency: 'USD',
-    limits: { users: 25, proposals: 1000, storageGb: 200 },
+    limits: { users: 25, proposals: null, storageGb: 200 },
   },
 ]
 

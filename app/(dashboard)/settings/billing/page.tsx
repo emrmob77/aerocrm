@@ -191,6 +191,9 @@ export default function BillingSettingsPage() {
                 currency: plan.currency,
                 maximumFractionDigits: 0,
               })
+              const usersLimit = plan.limits.users ?? t('billing.unlimited')
+              const proposalsLimit = plan.limits.proposals ?? t('billing.unlimited')
+              const storageLimit = plan.limits.storageGb ?? t('billing.unlimited')
               return (
                 <div
                   key={plan.id}
@@ -218,9 +221,9 @@ export default function BillingSettingsPage() {
                   </div>
 
                   <div className="space-y-1 text-xs text-[#48679d] dark:text-gray-400">
-                    <p>{t('billing.limits.users', { count: plan.limits.users })}</p>
-                    <p>{t('billing.limits.proposals', { count: plan.limits.proposals })}</p>
-                    <p>{t('billing.limits.storage', { count: plan.limits.storageGb })}</p>
+                    <p>{t('billing.limits.users', { count: usersLimit })}</p>
+                    <p>{t('billing.limits.proposals', { count: proposalsLimit })}</p>
+                    <p>{t('billing.limits.storage', { count: storageLimit })}</p>
                   </div>
 
                   <div className="border-t border-dashed border-[#e7ebf4] dark:border-gray-800 pt-3 space-y-2">

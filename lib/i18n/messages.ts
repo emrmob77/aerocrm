@@ -717,15 +717,17 @@ export const messages = {
         proposals: '{count} teklif / ay',
         storage: '{count} GB depolama',
       },
+      unlimited: 'Sınırsız',
       plans: {
         starter: {
           name: 'Starter',
           description: 'Küçük ekipler için temel CRM ve teklif yönetimi.',
           features: [
             'CRM pipeline, kişi ve anlaşma yönetimi',
-            'Teklif editörü, şablonlar ve e-imza',
-            'Temel raporlar ve bildirim merkezi',
-            'E-posta gönderimi ve teklif linkleri',
+            'Ürün kataloğu ve teklif blok editörü',
+            'Teklif linki + e‑imza (public)',
+            'E‑posta ile teklif gönderimi',
+            'Bildirim merkezi',
           ],
         },
         growth: {
@@ -733,10 +735,11 @@ export const messages = {
           description: 'Büyüyen ekipler için gelişmiş otomasyonlar.',
           features: [
             'Starter içindeki tüm özellikler',
-            'Spyglass analytics ve gelişmiş raporlar',
-            'Webhook entegrasyonları ve API kullanım logları',
-            'Twilio SMS/WhatsApp gönderimleri',
-            'CSV içe/dışa aktarma ve takım rolleri',
+            'Takım yönetimi (davet, rol, atama)',
+            'Spyglass analytics ve raporlar',
+            'CSV içe/dışa aktarma',
+            'Webhook ve Twilio SMS/WhatsApp',
+            'Gelişmiş arama ve kayıtlı aramalar',
           ],
         },
         scale: {
@@ -744,10 +747,10 @@ export const messages = {
           description: 'Kurumsal ekipler için genişletilmiş limitler.',
           features: [
             'Growth içindeki tüm özellikler',
-            'Gelişmiş monitoring ve hata logları',
-            'Özel SLA ve öncelikli destek',
+            'Sistem sağlık ve monitoring paneli',
+            'Webhook + API kullanım logları',
             'Daha yüksek teklif ve depolama limitleri',
-            'Geniş ekip yönetimi ve güvenlik kontrolleri',
+            'Öncelikli destek',
           ],
         },
       },
@@ -3154,15 +3157,17 @@ export const messages = {
         proposals: '{count} proposals / mo',
         storage: '{count} GB storage',
       },
+      unlimited: 'Unlimited',
       plans: {
         starter: {
           name: 'Starter',
           description: 'Core CRM and proposal management for small teams.',
           features: [
             'CRM pipeline, contacts, and deals',
-            'Proposal editor, templates, and e-signature',
-            'Basic reports and notification center',
-            'Email delivery and proposal links',
+            'Product catalog and proposal block editor',
+            'Proposal link + e‑signature (public)',
+            'Email proposal delivery',
+            'Notification center',
           ],
         },
         growth: {
@@ -3170,10 +3175,11 @@ export const messages = {
           description: 'Advanced automation for scaling teams.',
           features: [
             'Everything in Starter',
-            'Spyglass analytics and advanced reports',
-            'Webhook integrations and API usage logs',
-            'Twilio SMS/WhatsApp delivery',
-            'CSV import/export and team roles',
+            'Team management (invites, roles, assignment)',
+            'Spyglass analytics and reports',
+            'CSV import/export',
+            'Webhooks and Twilio SMS/WhatsApp',
+            'Advanced search and saved searches',
           ],
         },
         scale: {
@@ -3181,10 +3187,10 @@ export const messages = {
           description: 'Extended limits for enterprise teams.',
           features: [
             'Everything in Growth',
-            'Advanced monitoring and error logs',
-            'Priority support with custom SLA',
+            'System health & monitoring dashboard',
+            'Webhook + API usage logs',
             'Higher proposal and storage limits',
-            'Expanded team management and security controls',
+            'Priority support',
           ],
         },
       },
