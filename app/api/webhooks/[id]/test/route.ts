@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { sendWebhookTest } from '@/lib/webhooks/dispatch'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
-export async function POST(_: Request, { params }: { params: { id: string } }) {
+export const POST = withApiLogging(async (_: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   if (!params.id) {
     return NextResponse.json({ error: t('api.webhooks.idRequired') }, { status: 400 })
@@ -47,4 +48,4 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
   }
 
   return NextResponse.json({ webhook: updated ?? webhook })
-}
+})

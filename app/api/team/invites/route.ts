@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { buildTeamInviteEmail } from '@/lib/notifications/email-templates'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 const allowedRoles = ['admin', 'member', 'viewer']
 
@@ -36,7 +37,7 @@ const sendInviteEmail = async (params: { to: string; link: string; inviter: stri
   return response.ok
 }
 
-export async function GET(request: Request) {
+export const GET = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {
@@ -69,9 +70,9 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({ invites: data ?? [] })
-}
+})
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as { email?: string; role?: string } | null
   const email = normalizeEmail(payload?.email)
@@ -133,4 +134,4 @@ export async function POST(request: Request) {
   })
 
   return NextResponse.json({ invite: data, inviteLink })
-}
+})

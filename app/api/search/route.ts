@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type SearchFilters = {
   types?: string[]
@@ -23,7 +24,7 @@ const buildDateFrom = (range?: SearchFilters['dateRange']) => {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 }
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as SearchPayload | null
   const query = payload?.query?.trim() ?? ''
@@ -180,4 +181,4 @@ export async function POST(request: Request) {
     query: sanitized,
     results,
   })
-}
+})

@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type ViewPayload = {
   slug?: string
 }
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as ViewPayload | null
   const slug = payload?.slug?.trim()
@@ -74,4 +75,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ tracked: true })
-}
+})

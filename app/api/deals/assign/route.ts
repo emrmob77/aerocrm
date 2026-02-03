@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as { dealId?: string; ownerId?: string } | null
 
@@ -56,4 +57,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ deal })
-}
+})

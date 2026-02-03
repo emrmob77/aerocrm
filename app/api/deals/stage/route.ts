@@ -3,13 +3,14 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { getDbStage, normalizeStage, type StageId } from '@/components/deals/stage-utils'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type StageUpdatePayload = {
   dealId?: string
   stage?: StageId | string
 }
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as StageUpdatePayload | null
 
@@ -91,4 +92,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ deal: updated })
-}
+})

@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { getCredentialsFromEnv } from '@/lib/integrations/stripe'
 import type { StripeCredentials } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -40,7 +41,7 @@ const resolvePlanFromPrice = (priceId?: string | null) => {
   return mapping[priceId] || null
 }
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = await request.text()
   const signature = request.headers.get('stripe-signature')
@@ -150,4 +151,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ received: true })
-}
+})

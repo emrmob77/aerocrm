@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Json } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type ImportEntity = 'contacts' | 'deals' | 'proposals' | 'sales'
 
@@ -51,7 +52,7 @@ const normalizeText = (value?: string | null) => value?.toString().trim() || nul
 
 const getContactNameFromEmail = (email: string, fallback: string) => email.split('@')[0] || fallback
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as ImportPayload | null
   const entity = payload?.entity
@@ -325,4 +326,4 @@ export async function POST(request: Request) {
       { status: 400 }
     )
   }
-}
+})

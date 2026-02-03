@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
-export async function GET() {
+export const GET = withApiLogging(async () => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {
@@ -43,4 +44,4 @@ export async function GET() {
     imports: importsResponse.data ?? [],
     exports: exportsResponse.data ?? [],
   })
-}
+})

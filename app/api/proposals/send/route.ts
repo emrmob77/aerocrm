@@ -5,6 +5,7 @@ import { buildProposalDeliveryEmail, getProposalDefaults } from '@/lib/notificat
 import { sendTwilioMessage, getCredentialsFromEnv } from '@/lib/integrations/twilio'
 import type { TwilioCredentials } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type SendProposalPayload = {
   title?: string
@@ -113,7 +114,7 @@ const getTwilioCredentials = async (
   return getCredentialsFromEnv()
 }
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as SendProposalPayload | null
 
@@ -334,4 +335,4 @@ export async function POST(request: Request) {
     publicUrl: proposal.public_url,
     expiresAt: proposal.expires_at,
   })
-}
+})

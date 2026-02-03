@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Json } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type LogPayload = {
   level: 'error' | 'warning' | 'info'
@@ -10,7 +11,7 @@ type LogPayload = {
   context?: Json
 }
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as LogPayload | null
 
@@ -48,4 +49,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ success: true })
-}
+}, { skipUsageLog: true })

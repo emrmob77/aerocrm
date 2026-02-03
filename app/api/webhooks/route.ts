@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type WebhookPayload = {
   url?: string
@@ -10,7 +11,7 @@ type WebhookPayload = {
 
 const normalizeUrl = (value?: string | null) => value?.trim() || ''
 
-export async function GET() {
+export const GET = withApiLogging(async () => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {
@@ -43,9 +44,9 @@ export async function GET() {
   }
 
   return NextResponse.json({ webhooks: data ?? [] })
-}
+})
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as WebhookPayload | null
   const url = normalizeUrl(payload?.url)
@@ -99,4 +100,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ webhook: data })
-}
+})

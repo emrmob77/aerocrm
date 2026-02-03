@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 const parseStatusFilter = (value: string | null) => {
   if (value === 'success') return true
@@ -8,7 +9,7 @@ const parseStatusFilter = (value: string | null) => {
   return null
 }
 
-export async function GET(request: Request) {
+export const GET = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {
@@ -69,4 +70,4 @@ export async function GET(request: Request) {
   })
 
   return NextResponse.json({ logs })
-}
+})

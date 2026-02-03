@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const supabase = await createServerSupabaseClient()
 
   const {
@@ -18,14 +19,23 @@ export async function POST(request: Request) {
     teamId = profile?.team_id ?? null
   }
 
-  const path = request.headers.get('x-aero-path') || 'unknown'
-  const method = request.headers.get('x-aero-method') || request.method
+  const payload = (await request.json().catch(() => null)) as
+    | { path?: string; method?: string; status?: number; duration_ms?: number }
+    | null
+  const path = payload?.path || request.headers.get('x-aero-path') || 'unknown'
+  const method = payload?.method || request.headers.get('x-aero-method') || request.method
   const userAgent = request.headers.get('x-aero-user-agent')
   const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
+  const status = Number.isFinite(payload?.status) ? Number(payload?.status) : null
+  const durationMs = Number.isFinite(payload?.duration_ms)
+    ? Math.round(Number(payload?.duration_ms))
+    : null
 
   const { error } = await supabase.from('api_usage_logs').insert({
     path,
     method,
+    status,
+    duration_ms: durationMs,
     team_id: teamId,
     user_id: user?.id ?? null,
     user_agent: userAgent,
@@ -37,4 +47,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ success: true })
-}
+}, { skipUsageLog: true })

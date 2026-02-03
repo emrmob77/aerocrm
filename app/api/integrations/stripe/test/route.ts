@@ -3,8 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getCredentialsFromEnv, testConnection } from '@/lib/integrations/stripe'
 import type { StripeCredentials } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
-export async function POST() {
+export const POST = withApiLogging(async () => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
 
@@ -85,4 +86,4 @@ export async function POST() {
       ? t('api.integrations.stripeVerifiedWithAccount', { account: result.accountName })
       : t('api.integrations.stripeVerified'),
   })
-}
+})

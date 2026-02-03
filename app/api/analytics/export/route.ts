@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { messages } from '@/lib/i18n/messages'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 const rangeOptions = [7, 30, 90, 180]
 
@@ -34,7 +35,7 @@ const formatDate = (value: string | null | undefined, locale: string) => {
   return date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-export async function GET(request: Request) {
+export const GET = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const locale = getServerLocale()
   const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
@@ -144,4 +145,4 @@ export async function GET(request: Request) {
       'Content-Disposition': `attachment; filename=\"${filename}\"`,
     },
   })
-}
+})

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type TemplatePayload = {
   name?: string
@@ -10,7 +11,7 @@ type TemplatePayload = {
   blocks?: unknown
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export const PATCH = withApiLogging(async (request: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as TemplatePayload | null
   const supabase = await createServerSupabaseClient()
@@ -45,9 +46,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   return NextResponse.json({ template: data })
-}
+})
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export const GET = withApiLogging(async (_: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {
@@ -66,9 +67,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   }
 
   return NextResponse.json({ template: data })
-}
+})
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export const DELETE = withApiLogging(async (_: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {
@@ -87,4 +88,4 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
   }
 
   return NextResponse.json({ success: true })
-}
+})

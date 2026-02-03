@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`
 
@@ -15,7 +16,7 @@ const buildDailyBuckets = (days: number, locale: string) => {
   return buckets
 }
 
-export async function GET() {
+export const GET = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const locale = getServerLocale()
   const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
@@ -53,10 +54,12 @@ export async function GET() {
     webhookIds.length
       ? supabase
           .from('webhook_logs')
-          .select('success, created_at')
+          .select('success, created_at, duration_ms')
           .in('webhook_id', webhookIds)
           .gte('created_at', since)
-      : Promise.resolve({ data: [] as Array<{ success: boolean; created_at: string | null }> }),
+      : Promise.resolve({
+          data: [] as Array<{ success: boolean; created_at: string | null; duration_ms: number | null }>,
+        }),
     supabase
       .from('system_logs')
       .select('id, level, message, created_at, source')
@@ -65,7 +68,7 @@ export async function GET() {
       .limit(10),
     supabase
       .from('api_usage_logs')
-      .select('path, created_at')
+      .select('path, created_at, status, duration_ms')
       .eq('team_id', profile.team_id)
       .gte('created_at', since)
       .order('created_at', { ascending: false })
@@ -75,6 +78,13 @@ export async function GET() {
   const webhookTotal = webhookLogs.data?.length ?? 0
   const webhookSuccess = webhookLogs.data?.filter((log) => log.success).length ?? 0
   const webhookRate = webhookTotal === 0 ? null : formatPercent(webhookSuccess / webhookTotal)
+  const webhookDurations = (webhookLogs.data ?? [])
+    .map((log) => log.duration_ms)
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+  const webhookAvgDurationMs =
+    webhookDurations.length > 0
+      ? Math.round(webhookDurations.reduce((sum, value) => sum + value, 0) / webhookDurations.length)
+      : null
 
   const apiRequests = apiUsage.data ?? []
   const apiByPath = apiRequests.reduce<Record<string, number>>((acc, item) => {
@@ -120,17 +130,38 @@ export async function GET() {
   })
 
   const uptimeSeconds = Math.floor(process.uptime())
+  const apiErrorCount = apiRequests.filter((req) => (req.status ?? 0) >= 500).length
+  const apiErrorRate = apiRequests.length === 0 ? null : formatPercent(apiErrorCount / apiRequests.length)
+  const apiDurations = apiRequests
+    .map((req) => req.duration_ms)
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+  const apiAvgDurationMs =
+    apiDurations.length > 0
+      ? Math.round(apiDurations.reduce((sum, value) => sum + value, 0) / apiDurations.length)
+      : null
+
+  const rateLimitMax = Number(process.env.AERO_RATE_LIMIT_MAX ?? '')
+  const rateLimitWindow = Number(process.env.AERO_RATE_LIMIT_WINDOW ?? '')
+  const rateLimit = {
+    enabled: Number.isFinite(rateLimitMax) && rateLimitMax > 0,
+    max: Number.isFinite(rateLimitMax) && rateLimitMax > 0 ? rateLimitMax : null,
+    windowSeconds: Number.isFinite(rateLimitWindow) && rateLimitWindow > 0 ? rateLimitWindow : null,
+  }
 
   return NextResponse.json({
     uptimeSeconds,
     webhookRate,
     webhookTotal,
+    webhookAvgDurationMs,
     errorCount: systemLogs.data?.filter((log) => log.level === 'error').length ?? 0,
     recentErrors: systemLogs.data ?? [],
     apiRequestsCount: apiRequests.length,
+    apiErrorRate,
+    apiAvgDurationMs,
     topEndpoints,
     apiSeries,
     webhookSeries,
+    rateLimit,
     since,
   })
-}
+})

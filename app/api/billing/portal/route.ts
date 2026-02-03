@@ -3,12 +3,13 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createPortalSession, createCustomer, getCredentialsFromEnv } from '@/lib/integrations/stripe'
 import type { StripeCredentials } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type PortalPayload = {
   return_url?: string
 }
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as PortalPayload | null
 
@@ -107,4 +108,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ url: portalResult.url })
-}
+})

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 const allowedRoles = ['admin', 'member', 'viewer']
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export const PATCH = withApiLogging(async (request: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   if (!params.id) {
     return NextResponse.json({ error: t('api.team.memberIdRequired') }, { status: 400 })
@@ -64,9 +65,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   return NextResponse.json({ member: updated })
-}
+})
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export const DELETE = withApiLogging(async (_: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   if (!params.id) {
     return NextResponse.json({ error: t('api.team.memberIdRequired') }, { status: 400 })
@@ -122,4 +123,4 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
   }
 
   return NextResponse.json({ success: true })
-}
+})

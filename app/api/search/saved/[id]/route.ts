@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
-export async function DELETE(_: Request, context: { params: { id?: string } }) {
+export const DELETE = withApiLogging(async (_: Request, context: { params: { id?: string } }) => {
   const t = getServerT()
   const id = context.params.id
   if (!id) {
@@ -26,4 +27,4 @@ export async function DELETE(_: Request, context: { params: { id?: string } }) {
   }
 
   return NextResponse.json({ success: true })
-}
+})

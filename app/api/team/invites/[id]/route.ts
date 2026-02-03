@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { buildTeamInviteEmail } from '@/lib/notifications/email-templates'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 const allowedRoles = ['admin', 'member', 'viewer']
 
@@ -41,7 +42,7 @@ const sendInviteEmail = async (params: { to: string; link: string; inviter: stri
   return response.ok
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export const PATCH = withApiLogging(async (request: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   if (!params.id) {
     return NextResponse.json({ error: t('api.team.inviteIdRequired') }, { status: 400 })
@@ -119,9 +120,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   })
 
   return NextResponse.json({ invite: updated, inviteLink })
-}
+})
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export const DELETE = withApiLogging(async (_: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   if (!params.id) {
     return NextResponse.json({ error: t('api.team.inviteIdRequired') }, { status: 400 })
@@ -158,4 +159,4 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
   }
 
   return NextResponse.json({ success: true })
-}
+})

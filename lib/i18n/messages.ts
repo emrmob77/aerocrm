@@ -145,6 +145,7 @@ export const messages = {
         recordNotFound: 'Kayıt bulunamadı.',
         recordDeleteFailed: 'Kayıt silinemedi.',
         invalidDataType: 'Geçerli bir veri türü seçin.',
+        unexpected: 'Beklenmeyen bir hata oluştu.',
       },
       settings: {
         languageReadFailed: 'Dil bilgisi okunamadı.',
@@ -662,13 +663,33 @@ export const messages = {
       cards: {
         uptime: 'Uptime',
         webhookSuccess: 'Webhook Başarı',
+        webhookLatency: 'Webhook Yanıt Süresi',
         apiRequests: 'API İsteği',
+        apiAvgResponse: 'API Ortalama Yanıt',
+        apiErrorRate: 'API Hata Oranı',
         errorLogs: 'Hata Kaydı',
       },
       hints: {
         last7Days: 'Son 7 gün',
         attempts: '{count} deneme',
         last10Errors: 'Son 10 hata',
+      },
+      actions: {
+        export: 'Raporu İndir',
+        exporting: 'Rapor Hazırlanıyor...',
+      },
+      errors: {
+        exportFailed: 'Rapor dışa aktarılamadı.',
+      },
+      labels: {
+        requests: '{count} istek',
+      },
+      units: {
+        ms: 'ms',
+      },
+      rateLimit: {
+        limited: 'İstek limiti: {count} istek / {window}',
+        unlimited: 'İstek limiti: Sınırsız',
       },
       charts: {
         apiTrend: 'API Kullanım Trend',
@@ -2585,6 +2606,7 @@ export const messages = {
         recordNotFound: 'Record not found.',
         recordDeleteFailed: 'Record could not be deleted.',
         invalidDataType: 'Select a valid data type.',
+        unexpected: 'An unexpected error occurred.',
       },
       settings: {
         languageReadFailed: 'Language could not be read.',
@@ -3102,13 +3124,33 @@ export const messages = {
       cards: {
         uptime: 'Uptime',
         webhookSuccess: 'Webhook Success',
+        webhookLatency: 'Webhook Response Time',
         apiRequests: 'API Requests',
+        apiAvgResponse: 'API Avg Response',
+        apiErrorRate: 'API Error Rate',
         errorLogs: 'Error Logs',
       },
       hints: {
         last7Days: 'Last 7 days',
         attempts: '{count} attempts',
         last10Errors: 'Last 10 errors',
+      },
+      actions: {
+        export: 'Download Report',
+        exporting: 'Preparing Report...',
+      },
+      errors: {
+        exportFailed: 'Report export failed.',
+      },
+      labels: {
+        requests: '{count} requests',
+      },
+      units: {
+        ms: 'ms',
+      },
+      rateLimit: {
+        limited: 'Rate limit: {count} requests / {window}',
+        unlimited: 'Rate limit: Unlimited',
       },
       charts: {
         apiTrend: 'API Usage Trend',

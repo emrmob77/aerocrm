@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type SignPayload = {
   slug?: string
@@ -21,7 +22,7 @@ type SignatureBlock = {
   }
 }
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as SignPayload | null
   const slug = payload?.slug?.trim()
@@ -110,4 +111,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ success: true, signedAt })
-}
+})

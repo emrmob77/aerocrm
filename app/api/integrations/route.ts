@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Integration, IntegrationProvider } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 // Available integration providers
 const AVAILABLE_PROVIDERS: IntegrationProvider[] = [
@@ -13,7 +14,7 @@ const AVAILABLE_PROVIDERS: IntegrationProvider[] = [
   'stripe',
 ]
 
-export async function GET() {
+export const GET = withApiLogging(async () => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
 
@@ -71,4 +72,4 @@ export async function GET() {
   })
 
   return NextResponse.json({ integrations: result })
-}
+})

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
-export async function POST(_: Request, { params }: { params: { id: string } }) {
+export const POST = withApiLogging(async (_: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {
@@ -28,4 +29,4 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
   await supabase.from('templates').update({ usage_count: nextCount }).eq('id', params.id)
 
   return NextResponse.json({ usageCount: nextCount })
-}
+})

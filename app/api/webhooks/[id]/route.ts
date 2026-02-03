@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type WebhookPayload = {
   url?: string
@@ -10,7 +11,7 @@ type WebhookPayload = {
 
 const normalizeUrl = (value?: string | null) => value?.trim() || ''
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export const PATCH = withApiLogging(async (request: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as WebhookPayload | null
   const url = normalizeUrl(payload?.url)
@@ -66,9 +67,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   return NextResponse.json({ webhook: data })
-}
+})
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export const DELETE = withApiLogging(async (_: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   if (!params.id) {
     return NextResponse.json({ error: t('api.webhooks.idRequired') }, { status: 400 })
@@ -101,4 +102,4 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
   }
 
   return NextResponse.json({ success: true })
-}
+})

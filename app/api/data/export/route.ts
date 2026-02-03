@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type ExportEntity = 'contacts' | 'deals' | 'proposals' | 'sales'
 type ExportFormat = 'csv' | 'excel'
@@ -30,7 +31,7 @@ const toExcel = (headers: string[], rows: string[][]) => {
   return `<!DOCTYPE html><html><head><meta charset="utf-8" /></head><body><table>${headerRow}${bodyRows}</table></body></html>`
 }
 
-export async function GET(request: Request) {
+export const GET = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const { searchParams } = new URL(request.url)
   const entity = searchParams.get('entity') as ExportEntity | null
@@ -206,4 +207,4 @@ export async function GET(request: Request) {
       'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${encodedFileName}`,
     },
   })
-}
+})

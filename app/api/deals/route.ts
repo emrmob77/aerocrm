@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { getDbStage, normalizeStage, type StageId } from '@/components/deals/stage-utils'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type CreateDealPayload = {
   title?: string
@@ -16,7 +17,7 @@ type CreateDealPayload = {
 
 const normalizeText = (value?: string | null) => value?.trim() || ''
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as CreateDealPayload | null
 
@@ -93,4 +94,4 @@ export async function POST(request: Request) {
   })
 
   return NextResponse.json({ deal })
-}
+})

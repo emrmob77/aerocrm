@@ -11,6 +11,7 @@ import type { StripeCredentials } from '@/types/database'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { getPlanCatalog, normalizePlanId } from '@/lib/billing/plans'
 import { messages } from '@/lib/i18n/messages'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 const daysToMs = (days: number) => days * 24 * 60 * 60 * 1000
 
@@ -41,7 +42,7 @@ const buildUsage = (params: {
   }
 }
 
-export async function GET() {
+export const GET = withApiLogging(async () => {
   const t = getServerT()
   const locale = getServerLocale()
   const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
@@ -267,4 +268,4 @@ export async function GET() {
     customer,
     plans: planCards,
   })
-}
+})

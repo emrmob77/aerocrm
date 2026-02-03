@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { testConnection } from '@/lib/integrations/twilio'
 import type { TwilioCredentials } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type TwilioPayload = {
   account_sid: string
@@ -12,7 +13,7 @@ type TwilioPayload = {
 }
 
 // GET - Retrieve Twilio integration (credentials masked)
-export async function GET() {
+export const GET = withApiLogging(async () => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
 
@@ -74,10 +75,10 @@ export async function GET() {
       last_error: integration.last_error,
     },
   })
-}
+})
 
 // POST - Save/Update Twilio credentials
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as TwilioPayload | null
 
@@ -175,10 +176,10 @@ export async function POST(request: Request) {
     integration: result.data,
     accountName: testResult.accountName,
   })
-}
+})
 
 // DELETE - Disconnect Twilio integration
-export async function DELETE() {
+export const DELETE = withApiLogging(async () => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
 
@@ -215,4 +216,4 @@ export async function DELETE() {
   }
 
   return NextResponse.json({ success: true })
-}
+})

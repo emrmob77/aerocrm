@@ -316,7 +316,7 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - Kullanım metriklerini gerçek verilere bağla (kullanıcı sayısı, teklif gönderimi, depolama)
   - _Gereksinimler: 18.1, 18.3, 18.4, 18.5_
 
-- [ ] 24. Sistem Sağlığı ve Monitoring
+- [x] 24. Sistem Sağlığı ve Monitoring
   - Sistem sağlığı dashboard'u
   - Hata logları ve monitoring
   - Performans metrikleri
@@ -328,7 +328,7 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 22: Otomatik Hata Raporlaması**
   - **Doğrular: Gereksinim 19.4**
 
-- [ ] 24.2 Sistem sağlığı geliştirmeleri
+- [x] 24.2 Sistem sağlığı geliştirmeleri
   - API kullanım loglarına `status` ve `duration_ms` ekle
   - Monitoring dashboard'a hata oranı ve ortalama yanıt süresi kartları ekle
   - _Gereksinimler: 19.2, 19.3, 19.5_

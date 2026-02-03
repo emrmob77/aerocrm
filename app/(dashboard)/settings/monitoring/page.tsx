@@ -18,12 +18,16 @@ type MonitoringOverview = {
   uptimeSeconds: number
   webhookRate: string | null
   webhookTotal: number
+  webhookAvgDurationMs: number | null
   errorCount: number
   recentErrors: Array<{ id: string; level: string; message: string; created_at: string | null; source: string | null }>
   apiRequestsCount: number
+  apiErrorRate: string | null
+  apiAvgDurationMs: number | null
   topEndpoints: Array<{ path: string; count: number }>
   apiSeries: Array<{ date: string; count: number }>
   webhookSeries: Array<{ date: string; successRate: number }>
+  rateLimit: { enabled: boolean; max: number | null; windowSeconds: number | null }
   since: string
 }
 
@@ -39,6 +43,7 @@ export default function MonitoringSettingsPage() {
   const [overview, setOverview] = useState<MonitoringOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     const loadOverview = async () => {
@@ -59,8 +64,38 @@ export default function MonitoringSettingsPage() {
     loadOverview()
   }, [])
 
+  const handleExport = async () => {
+    setExporting(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/monitoring/export')
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        throw new Error(payload?.error || t('monitoring.errors.exportFailed'))
+      }
+      const blob = await response.blob()
+      const disposition = response.headers.get('Content-Disposition')
+      const match = disposition?.match(/filename=\"(.+)\"/)
+      const filename = match?.[1] || 'system-health.csv'
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('monitoring.errors.exportFailed'))
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const cards = useMemo(() => {
     if (!overview) return []
+    const formatMs = (value: number | null) =>
+      value === null ? t('monitoring.empty.noData') : `${value} ${t('monitoring.units.ms')}`
     return [
       {
         label: t('monitoring.cards.uptime'),
@@ -73,8 +108,23 @@ export default function MonitoringSettingsPage() {
         hint: t('monitoring.hints.attempts', { count: overview.webhookTotal }),
       },
       {
+        label: t('monitoring.cards.webhookLatency'),
+        value: formatMs(overview.webhookAvgDurationMs),
+        hint: t('monitoring.hints.last7Days'),
+      },
+      {
         label: t('monitoring.cards.apiRequests'),
         value: overview.apiRequestsCount.toString(),
+        hint: t('monitoring.hints.last7Days'),
+      },
+      {
+        label: t('monitoring.cards.apiAvgResponse'),
+        value: formatMs(overview.apiAvgDurationMs),
+        hint: t('monitoring.hints.last7Days'),
+      },
+      {
+        label: t('monitoring.cards.apiErrorRate'),
+        value: overview.apiErrorRate || t('monitoring.empty.noData'),
         hint: t('monitoring.hints.last7Days'),
       },
       {
@@ -95,9 +145,19 @@ export default function MonitoringSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">{t('monitoring.title')}</h1>
-        <p className="text-[#48679d] dark:text-gray-400">{t('monitoring.subtitle')}</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">{t('monitoring.title')}</h1>
+          <p className="text-[#48679d] dark:text-gray-400">{t('monitoring.subtitle')}</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting}
+          className="btn-secondary btn-md"
+        >
+          {exporting ? t('monitoring.actions.exporting') : t('monitoring.actions.export')}
+        </button>
       </div>
 
       {error && (
@@ -134,6 +194,18 @@ export default function MonitoringSettingsPage() {
           ) : (
             <p className="text-sm text-[#48679d]">{t('monitoring.empty.noData')}</p>
           )}
+          {overview?.rateLimit && (
+            <p className="text-xs text-[#93a1b8] mt-4">
+              {overview.rateLimit.enabled && overview.rateLimit.max && overview.rateLimit.windowSeconds
+                ? t('monitoring.rateLimit.limited', {
+                    count: overview.rateLimit.max,
+                    window: overview.rateLimit.windowSeconds >= 60
+                      ? `${Math.round(overview.rateLimit.windowSeconds / 60)}m`
+                      : `${overview.rateLimit.windowSeconds}s`,
+                  })
+                : t('monitoring.rateLimit.unlimited')}
+            </p>
+          )}
         </div>
 
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
@@ -164,7 +236,9 @@ export default function MonitoringSettingsPage() {
               overview.topEndpoints.map((item) => (
                 <div key={item.path} className="flex items-center justify-between text-sm">
                   <span className="text-[#0d121c] dark:text-white">{item.path}</span>
-                  <span className="text-[#48679d] dark:text-gray-400">{item.count} istek</span>
+                  <span className="text-[#48679d] dark:text-gray-400">
+                    {t('monitoring.labels.requests', { count: item.count })}
+                  </span>
                 </div>
               ))
             ) : (

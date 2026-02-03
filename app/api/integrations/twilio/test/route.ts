@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { sendSMS, sendWhatsApp, getCredentialsFromEnv } from '@/lib/integrations/twilio'
 import type { TwilioCredentials } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type TestPayload = {
   to: string
@@ -10,7 +11,7 @@ type TestPayload = {
   method: 'sms' | 'whatsapp'
 }
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as TestPayload | null
 
@@ -110,4 +111,4 @@ export async function POST(request: Request) {
           : t('api.integrations.methods.sms'),
     }),
   })
-}
+})

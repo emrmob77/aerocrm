@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 const normalizeLanguage = (value?: string | null) => (value === 'en' ? 'en' : 'tr')
 
-export async function GET() {
+export const GET = withApiLogging(async () => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {
@@ -32,9 +33,9 @@ export async function GET() {
     maxAge: 60 * 60 * 24 * 365,
   })
   return response
-}
+})
 
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as { language?: string } | null
   const next = normalizeLanguage(payload?.language)
@@ -64,4 +65,4 @@ export async function POST(request: Request) {
     maxAge: 60 * 60 * 24 * 365,
   })
   return response
-}
+})

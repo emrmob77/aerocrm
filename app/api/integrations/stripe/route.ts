@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { testConnection } from '@/lib/integrations/stripe'
 import type { StripeCredentials } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
+import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type StripePayload = {
   secret_key: string
@@ -10,7 +11,7 @@ type StripePayload = {
 }
 
 // GET - Retrieve Stripe integration (credentials masked)
-export async function GET() {
+export const GET = withApiLogging(async () => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
 
@@ -71,10 +72,10 @@ export async function GET() {
       last_error: integration.last_error,
     },
   })
-}
+})
 
 // POST - Save/Update Stripe credentials
-export async function POST(request: Request) {
+export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as StripePayload | null
 
@@ -160,10 +161,10 @@ export async function POST(request: Request) {
     integration: result.data,
     accountName: testResult.accountName,
   })
-}
+})
 
 // DELETE - Disconnect Stripe integration
-export async function DELETE() {
+export const DELETE = withApiLogging(async () => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
 
@@ -197,4 +198,4 @@ export async function DELETE() {
   }
 
   return NextResponse.json({ success: true })
-}
+})
