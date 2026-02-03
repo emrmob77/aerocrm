@@ -6,13 +6,14 @@ import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useI18n } from '@/lib/i18n'
+import { planDefinitions, type PlanId } from '@/lib/billing/plans'
 
-type Plan = 'solo' | 'pro'
+type Plan = PlanId
 
 export default function RegisterPage() {
   const { signUp, signInWithGoogle, loading: authLoading } = useAuth()
-  const { t, get } = useI18n()
-  const [selectedPlan, setSelectedPlan] = useState<Plan>('pro')
+  const { t, get, formatNumber } = useI18n()
+  const [selectedPlan, setSelectedPlan] = useState<Plan>('starter')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -176,25 +177,15 @@ export default function RegisterPage() {
           </div>
 
           {/* Plan Selection */}
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            {[
-              {
-                id: 'solo' as Plan,
-                name: t('auth.register.planSoloName'),
-                price: '$29',
-                period: t('auth.register.planPeriod'),
-                features: (get('auth.register.planSoloFeatures') as string[]) ?? [],
-                popular: false,
-              },
-              {
-                id: 'pro' as Plan,
-                name: t('auth.register.planProName'),
-                price: '$49',
-                period: t('auth.register.planPeriod'),
-                features: (get('auth.register.planProFeatures') as string[]) ?? [],
-                popular: true,
-              },
-            ].map((plan) => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            {planDefinitions.map((plan) => {
+              const features = (get(`billing.plans.${plan.id}.features`) as string[]) ?? []
+              const price = formatNumber(plan.priceMonthly, {
+                style: 'currency',
+                currency: plan.currency,
+                maximumFractionDigits: 0,
+              })
+              return (
               <button
                 key={plan.id}
                 type="button"
@@ -206,18 +197,20 @@ export default function RegisterPage() {
                     : 'border-aero-slate-200 dark:border-aero-slate-700 hover:border-aero-slate-300 dark:hover:border-aero-slate-600'
                 )}
               >
-                {plan.popular && (
+                {plan.recommended && (
                   <span className="absolute -top-2.5 left-4 px-2 py-0.5 bg-aero-amber-500 text-white text-xs font-medium rounded-full">
                     {t('auth.register.popular')}
                   </span>
                 )}
-                <h3 className="font-semibold text-aero-slate-900 dark:text-white">{plan.name}</h3>
+                <h3 className="font-semibold text-aero-slate-900 dark:text-white">
+                  {t(`billing.plans.${plan.id}.name`)}
+                </h3>
                 <div className="flex items-baseline gap-1 mt-1">
-                  <span className="text-2xl font-bold text-aero-blue-500">{plan.price}</span>
-                  <span className="text-sm text-aero-slate-500">{plan.period}</span>
+                  <span className="text-2xl font-bold text-aero-blue-500">{price}</span>
+                  <span className="text-sm text-aero-slate-500">{t('billing.perMonth')}</span>
                 </div>
                 <ul className="mt-3 space-y-1">
-                  {plan.features.slice(0, 3).map((feature, index) => (
+                  {features.slice(0, 3).map((feature, index) => (
                     <li key={index} className="flex items-center gap-2 text-xs text-aero-slate-600 dark:text-aero-slate-400">
                       <span className="material-symbols-outlined text-sm text-aero-green-500">check</span>
                       {feature}
@@ -225,7 +218,8 @@ export default function RegisterPage() {
                   ))}
                 </ul>
               </button>
-            ))}
+              )
+            })}
           </div>
 
           {/* Error Message */}

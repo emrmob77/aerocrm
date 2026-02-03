@@ -122,7 +122,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     email: string,
     password: string,
     fullName: string,
-    plan: string = 'solo'
+    plan: string = 'starter'
   ): Promise<{ error: Error | null }> => {
     try {
       // First, create the auth user

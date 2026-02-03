@@ -9,18 +9,32 @@ import {
 } from '@/lib/integrations/stripe'
 import type { StripeCredentials } from '@/types/database'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
+import { getPlanCatalog, normalizePlanId } from '@/lib/billing/plans'
+import { messages } from '@/lib/i18n/messages'
 
-const buildPlanCatalog = () => {
-  const plans = [] as Array<{ id: string; name: string; priceId: string }>
-  const starter = process.env.STRIPE_PRICE_STARTER
-  const growth = process.env.STRIPE_PRICE_GROWTH
-  const scale = process.env.STRIPE_PRICE_SCALE
+const daysToMs = (days: number) => days * 24 * 60 * 60 * 1000
 
-  if (starter) plans.push({ id: 'starter', name: 'Starter', priceId: starter })
-  if (growth) plans.push({ id: 'growth', name: 'Growth', priceId: growth })
-  if (scale) plans.push({ id: 'scale', name: 'Scale', priceId: scale })
-
-  return plans
+const buildUsage = (params: {
+  used: number
+  limit: number
+  label: string
+  unit?: string
+  t: (key: string, vars?: Record<string, string | number>) => string
+}) => {
+  const valueLabel = params.unit
+    ? `${params.used} ${params.unit} / ${params.limit} ${params.unit}`
+    : `${params.used} / ${params.limit}`
+  const percent =
+    params.limit > 0 ? Math.min(100, Math.round((params.used / params.limit) * 100)) : 0
+  const hint =
+    params.limit > 0
+      ? params.t('api.billing.usageHintActive', { value: `${percent}%` })
+      : params.t('api.billing.usageEmptyHint')
+  return {
+    label: params.label,
+    value: valueLabel,
+    hint,
+  }
 }
 
 export async function GET() {
@@ -28,6 +42,7 @@ export async function GET() {
   const locale = getServerLocale()
   const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
   const supabase = await createServerSupabaseClient()
+  const planCatalog = getPlanCatalog()
 
   const {
     data: { user },
@@ -54,6 +69,98 @@ export async function GET() {
     .eq('id', profile.team_id)
     .maybeSingle()
 
+  const planId = normalizePlanId(team?.plan)
+  const plan = planCatalog.find((item) => item.id === planId) ?? planCatalog[0]
+  const planLimits = plan?.limits ?? { users: 0, proposals: 0, storageGb: 0 }
+
+  const since = new Date(Date.now() - daysToMs(30)).toISOString()
+
+  const [dealsResponse, proposalsResponse, contactsResponse] = await Promise.all([
+    supabase
+      .from('deals')
+      .select('user_id')
+      .eq('team_id', profile.team_id)
+      .gte('created_at', since),
+    supabase
+      .from('proposals')
+      .select('user_id, status')
+      .eq('team_id', profile.team_id)
+      .gte('created_at', since),
+    supabase
+      .from('contacts')
+      .select('user_id')
+      .eq('team_id', profile.team_id)
+      .gte('created_at', since),
+  ])
+
+  const activeUserIds = new Set<string>()
+  const dealsUsers = dealsResponse.data ?? []
+  const proposalUsers = proposalsResponse.data ?? []
+  const contactUsers = contactsResponse.data ?? []
+  dealsUsers.forEach((item) => item.user_id && activeUserIds.add(item.user_id))
+  proposalUsers.forEach((item) => item.user_id && activeUserIds.add(item.user_id))
+  contactUsers.forEach((item) => item.user_id && activeUserIds.add(item.user_id))
+
+  const activeUsers = activeUserIds.size
+  const proposalCount = (proposalsResponse.data ?? []).filter(
+    (item) => item.status && item.status !== 'draft'
+  ).length
+
+  const { data: dealIds } = await supabase
+    .from('deals')
+    .select('id')
+    .eq('team_id', profile.team_id)
+
+  let storageBytes = 0
+  const ids = (dealIds ?? []).map((deal) => deal.id)
+  if (ids.length > 0) {
+    const { data: files } = await supabase
+      .from('deal_files')
+      .select('file_size')
+      .in('deal_id', ids)
+      .gte('created_at', since)
+
+    storageBytes =
+      files?.reduce((sum, file) => sum + (file.file_size ?? 0), 0) ?? 0
+  }
+
+  const storageGb = Math.round((storageBytes / (1024 * 1024 * 1024)) * 10) / 10
+
+  const usage = [
+    buildUsage({
+      used: activeUsers,
+      limit: planLimits.users,
+      label: t('api.billing.usageActiveUsers'),
+      t,
+    }),
+    buildUsage({
+      used: proposalCount,
+      limit: planLimits.proposals,
+      label: t('api.billing.usageProposals'),
+      t,
+    }),
+    buildUsage({
+      used: storageGb,
+      limit: planLimits.storageGb,
+      label: t('api.billing.usageStorage'),
+      unit: 'GB',
+      t,
+    }),
+  ]
+
+  const planFeatures = messages[locale]?.billing?.plans ?? {}
+  const planCards = planCatalog.map((item) => ({
+    id: item.id,
+    name: t(`billing.plans.${item.id}.name`),
+    description: t(`billing.plans.${item.id}.description`),
+    priceMonthly: item.priceMonthly,
+    currency: item.currency,
+    priceId: item.priceId,
+    features: (planFeatures as Record<string, any>)?.[item.id]?.features ?? [],
+    limits: item.limits,
+    recommended: item.recommended ?? false,
+  }))
+
   const { data: integration } = await supabase
     .from('integrations')
     .select('*')
@@ -64,28 +171,14 @@ export async function GET() {
   if (!integration || integration.status !== 'connected') {
     return NextResponse.json({
       status: 'disconnected',
-      plan: team?.plan ?? 'free',
-      usage: [
-        {
-          label: t('api.billing.usageActiveUsers'),
-          value: t('api.billing.usageEmptyValue'),
-          hint: t('api.billing.usageEmptyHint'),
-        },
-        {
-          label: t('api.billing.usageProposals'),
-          value: t('api.billing.usageEmptyValue'),
-          hint: t('api.billing.usageEmptyHint'),
-        },
-        {
-          label: t('api.billing.usageStorage'),
-          value: t('api.billing.usageEmptyStorageValue'),
-          hint: t('api.billing.usageEmptyHint'),
-        },
-      ],
+      planId,
+      planName: t(`billing.plans.${planId}.name`),
+      usage,
+      usagePeriod: t('billing.usagePeriod'),
       invoices: [],
       subscription: null,
       customer: null,
-      plans: buildPlanCatalog(),
+      plans: planCards,
     })
   }
 
@@ -161,27 +254,13 @@ export async function GET() {
 
   return NextResponse.json({
     status: integration.status,
-    plan: team?.plan ?? 'free',
-    usage: [
-      {
-        label: t('api.billing.usageActiveUsers'),
-        value: '12 / 20',
-        hint: t('api.billing.usageHintActive', { value: '60%' }),
-      },
-      {
-        label: t('api.billing.usageProposals'),
-        value: '148 / 500',
-        hint: t('api.billing.usageHintActive', { value: '29%' }),
-      },
-      {
-        label: t('api.billing.usageStorage'),
-        value: '3.2 GB / 10 GB',
-        hint: t('api.billing.usageHintActive', { value: '32%' }),
-      },
-    ],
+    planId,
+    planName: t(`billing.plans.${planId}.name`),
+    usage,
+    usagePeriod: t('billing.usagePeriod'),
     invoices: mappedInvoices,
     subscription,
     customer,
-    plans: buildPlanCatalog(),
+    plans: planCards,
   })
 }
