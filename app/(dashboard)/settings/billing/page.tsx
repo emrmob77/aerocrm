@@ -163,7 +163,7 @@ export default function BillingSettingsPage() {
               disabled={portalLoading || overview?.status !== 'connected'}
               className="bg-[#0d121c] dark:bg-white text-white dark:text-[#0d121c] font-semibold px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
             >
-              {portalLoading ? 'Acilıyor...' : t('billing.stripePortal')}
+              {portalLoading ? t('billing.redirecting') : t('billing.stripePortal')}
             </button>
           </div>
         </div>

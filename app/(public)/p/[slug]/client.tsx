@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import SignatureCanvas from 'react-signature-canvas'
 import toast from 'react-hot-toast'
+import { useI18n } from '@/lib/i18n'
 
 type CountdownTimerProps = {
   days: number
@@ -14,6 +15,7 @@ type CountdownTimerProps = {
 const pad = (value: number) => value.toString().padStart(2, '0')
 
 export function CountdownTimer({ days, hours, minutes, label }: CountdownTimerProps) {
+  const { t } = useI18n()
   const totalSeconds = Math.max(0, (days * 24 * 60 + hours * 60 + minutes) * 60)
   const [remaining, setRemaining] = useState(totalSeconds)
 
@@ -48,10 +50,10 @@ export function CountdownTimer({ days, hours, minutes, label }: CountdownTimerPr
       {label && <p className="text-xs font-semibold text-[#48679d] mb-3">{label}</p>}
       <div className="grid grid-cols-4 gap-3 text-center">
         {[
-          { label: 'Gün', value: segments.days },
-          { label: 'Saat', value: segments.hours },
-          { label: 'Dakika', value: segments.minutes },
-          { label: 'Saniye', value: segments.seconds },
+          { label: t('publicProposal.countdown.days'), value: segments.days },
+          { label: t('publicProposal.countdown.hours'), value: segments.hours },
+          { label: t('publicProposal.countdown.minutes'), value: segments.minutes },
+          { label: t('publicProposal.countdown.seconds'), value: segments.seconds },
         ].map((item) => (
           <div key={item.label} className="rounded-xl bg-[#f6f7fb] px-3 py-2">
             <p className="text-xl font-extrabold text-[#0d121c]">{pad(item.value)}</p>
@@ -75,6 +77,7 @@ type SignatureBlockProps = {
 }
 
 export function SignatureBlock({ slug, label, required, existingSignature }: SignatureBlockProps) {
+  const { t, formatDate } = useI18n()
   const signatureRef = useRef<SignatureCanvas | null>(null)
   const [signerName, setSignerName] = useState(existingSignature?.name ?? '')
   const [signatureImage, setSignatureImage] = useState(existingSignature?.image ?? '')
@@ -90,11 +93,11 @@ export function SignatureBlock({ slug, label, required, existingSignature }: Sig
   const handleSign = async () => {
     if (isSigning) return
     if (!signerName.trim()) {
-      toast.error('Lütfen ad soyad girin.')
+      toast.error(t('publicProposal.signature.errors.nameRequired'))
       return
     }
     if (!signatureRef.current || signatureRef.current.isEmpty()) {
-      toast.error('Lütfen imzanızı ekleyin.')
+      toast.error(t('publicProposal.signature.errors.signatureRequired'))
       return
     }
 
@@ -112,17 +115,17 @@ export function SignatureBlock({ slug, label, required, existingSignature }: Sig
       })
 
       if (!response.ok) {
-        const payload = await response.json().catch(() => null)
-        throw new Error(payload?.error || 'İmza kaydedilemedi.')
+        throw new Error(t('publicProposal.signature.errors.saveFailed'))
       }
 
       const payload = await response.json().catch(() => null)
       const signedStamp = payload?.signedAt || new Date().toISOString()
       setSignatureImage(dataUrl)
       setSignedAt(signedStamp)
-      toast.success('İmzanız alındı.')
+      toast.success(t('publicProposal.signature.success'))
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'İmza kaydedilemedi.'
+      const messageText =
+        error instanceof Error ? error.message : t('publicProposal.signature.errors.saveFailed')
       toast.error(messageText)
     } finally {
       setIsSigning(false)
@@ -131,7 +134,7 @@ export function SignatureBlock({ slug, label, required, existingSignature }: Sig
 
   const signedLabel =
     signedAt && !Number.isNaN(Date.parse(signedAt))
-      ? new Date(signedAt).toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' })
+      ? formatDate(new Date(signedAt), { dateStyle: 'medium', timeStyle: 'short' })
       : signedAt
 
   return (
@@ -140,12 +143,12 @@ export function SignatureBlock({ slug, label, required, existingSignature }: Sig
         <div>
           <h3 className="text-sm font-bold text-[#0d121c]">{label}</h3>
           <p className="text-xs text-gray-500">
-            {required ? 'Bu teklifin onaylanması için imza gereklidir.' : 'İsteğe bağlı imza alanı.'}
+            {required ? t('publicProposal.signature.requiredHint') : t('publicProposal.signature.optionalHint')}
           </p>
         </div>
         {hasSignature && (
           <span className="px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase">
-            İmzalandı
+            {t('publicProposal.signature.signed')}
           </span>
         )}
       </div>
@@ -153,7 +156,7 @@ export function SignatureBlock({ slug, label, required, existingSignature }: Sig
       {hasSignature ? (
         <div className="mt-4 space-y-3">
           <div className="rounded-xl border border-dashed border-gray-200 bg-white p-4">
-            <img src={signatureImage} alt="İmza" className="max-h-28" />
+            <img src={signatureImage} alt={t('publicProposal.signature.imageAlt')} className="max-h-28" />
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
             <span className="font-semibold text-[#0d121c]">{signerName}</span>
@@ -162,11 +165,11 @@ export function SignatureBlock({ slug, label, required, existingSignature }: Sig
         </div>
       ) : (
         <div className="mt-4 space-y-4">
-          <label className="block text-xs font-semibold text-[#48679d]">Ad Soyad</label>
+          <label className="block text-xs font-semibold text-[#48679d]">{t('publicProposal.signature.nameLabel')}</label>
           <input
             value={signerName}
             onChange={(event) => setSignerName(event.target.value)}
-            placeholder="Ad Soyad"
+            placeholder={t('publicProposal.signature.namePlaceholder')}
             className="w-full rounded-lg border border-[#e7ebf4] px-3 py-2 text-sm outline-none focus:border-primary"
           />
           <div className="rounded-xl border border-dashed border-[#e7ebf4] bg-[#f8fafc] p-3">
@@ -182,7 +185,7 @@ export function SignatureBlock({ slug, label, required, existingSignature }: Sig
               onClick={clearSignature}
               className="px-4 py-2 rounded-lg border border-[#e7ebf4] text-xs font-semibold text-gray-500 hover:border-primary/40 hover:text-primary"
             >
-              Temizle
+              {t('publicProposal.signature.clear')}
             </button>
             <button
               type="button"
@@ -195,7 +198,7 @@ export function SignatureBlock({ slug, label, required, existingSignature }: Sig
               ) : (
                 <span className="material-symbols-outlined text-[18px]">draw</span>
               )}
-              İmzala ve Gönder
+              {t('publicProposal.signature.sign')}
             </button>
           </div>
         </div>

@@ -1,20 +1,24 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerLocale, getServerT } from '@/lib/i18n/server'
 
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`
 
-const buildDailyBuckets = (days: number) => {
+const buildDailyBuckets = (days: number, locale: string) => {
   const buckets: Array<{ key: string; label: string }> = []
   for (let i = days - 1; i >= 0; i -= 1) {
     const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
     const key = date.toISOString().slice(0, 10)
-    const label = date.toLocaleDateString('tr-TR', { month: 'short', day: 'numeric' })
+    const label = date.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
     buckets.push({ key, label })
   }
   return buckets
 }
 
 export async function GET() {
+  const t = getServerT()
+  const locale = getServerLocale()
+  const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
   const supabase = await createServerSupabaseClient()
 
   const {
@@ -23,7 +27,7 @@ export async function GET() {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -33,7 +37,7 @@ export async function GET() {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -84,7 +88,7 @@ export async function GET() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
 
-  const dailyBuckets = buildDailyBuckets(7)
+  const dailyBuckets = buildDailyBuckets(7, formatLocale)
   const apiSeries = dailyBuckets.map((bucket) => ({ date: bucket.label, count: 0 }))
   const webhookSeries = dailyBuckets.map((bucket) => ({ date: bucket.label, successRate: 0 }))
 

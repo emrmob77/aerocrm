@@ -172,7 +172,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
     wonDeals.forEach((deal) => {
       if (!deal.contact_id) return
       const label =
-        deal.contacts?.full_name || deal.contacts?.company || deal.contacts?.email || 'Müşteri'
+        deal.contacts?.full_name || deal.contacts?.company || deal.contacts?.email || t('header.customerFallback')
       if (!map.has(deal.contact_id)) {
         map.set(deal.contact_id, label)
       }

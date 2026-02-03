@@ -35,7 +35,7 @@ export function MetricsGrid({ metrics }: MetricsGridProps) {
           <h3 className="text-sm font-medium text-[#48679d] dark:text-gray-400">{metric.label}</h3>
           <div className="flex items-baseline gap-2 mt-1">
             <p className="text-2xl font-bold text-[#0d121c] dark:text-white">{metric.value}</p>
-            {metric.badge && metric.badgeType === 'Aktif' && (
+            {metric.badge && (
               <span className={`text-xs ${metric.badgeColor ?? ''} font-bold`}>{metric.badge}</span>
             )}
           </div>

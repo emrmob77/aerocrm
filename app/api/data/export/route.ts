@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerT } from '@/lib/i18n/server'
 
 type ExportEntity = 'contacts' | 'deals' | 'proposals' | 'sales'
 type ExportFormat = 'csv' | 'excel'
@@ -30,13 +31,14 @@ const toExcel = (headers: string[], rows: string[][]) => {
 }
 
 export async function GET(request: Request) {
+  const t = getServerT()
   const { searchParams } = new URL(request.url)
   const entity = searchParams.get('entity') as ExportEntity | null
   const format = (searchParams.get('format') as ExportFormat | null) ?? 'csv'
   const delimiterParam = (searchParams.get('delimiter') as CsvDelimiter | null) ?? 'semicolon'
 
   if (!entity || !['contacts', 'deals', 'proposals', 'sales'].includes(entity)) {
-    return NextResponse.json({ error: 'Geçerli bir veri türü seçin.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.invalidDataType') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()
@@ -46,7 +48,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -56,7 +58,7 @@ export async function GET(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   let headers: string[] = []

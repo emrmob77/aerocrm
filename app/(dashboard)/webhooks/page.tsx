@@ -261,7 +261,7 @@ export default function WebhooksPage() {
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-[#e2e8f0] dark:border-slate-600 text-[#0f172a] dark:text-white text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
               >
                 <span className="material-symbols-outlined text-[20px]">history</span>
-                {t('webhooks.logs')}
+                {t('webhooks.logsLabel')}
               </Link>
               <button
                 onClick={resetForm}

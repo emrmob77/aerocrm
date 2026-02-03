@@ -327,8 +327,14 @@ export function ContactsDirectory({
     if (selected.length === 0) return
 
     const header =
-      (get('contacts.export.headers') as string[] | null) ??
-      ['Ad Soyad', 'E-posta', 'Telefon', 'Şirket', 'Toplam Değer', 'Son Aktivite']
+      (get('contacts.export.headers') as string[] | null) ?? [
+        t('contacts.table.name'),
+        t('contacts.table.email'),
+        t('contacts.table.phone'),
+        t('contacts.table.company'),
+        t('contacts.table.totalValue'),
+        t('contacts.table.lastActivity'),
+      ]
     const rows = selected.map((contact) => [
       contact.fullName,
       contact.email ?? '',

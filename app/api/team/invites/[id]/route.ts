@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { buildTeamInviteEmail } from '@/lib/notifications/email-templates'
+import { getServerT } from '@/lib/i18n/server'
 
 const allowedRoles = ['admin', 'member', 'viewer']
 
@@ -41,8 +42,9 @@ const sendInviteEmail = async (params: { to: string; link: string; inviter: stri
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const t = getServerT()
   if (!params.id) {
-    return NextResponse.json({ error: 'Davet ID zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.team.inviteIdRequired') }, { status: 400 })
   }
 
   const payload = (await request.json().catch(() => null)) as { role?: string; email?: string } | null
@@ -54,7 +56,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -64,7 +66,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const { data: invite, error: inviteError } = await supabase
@@ -75,11 +77,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .single()
 
   if (inviteError || !invite) {
-    return NextResponse.json({ error: 'Davet bulunamadı.' }, { status: 404 })
+    return NextResponse.json({ error: t('api.team.inviteNotFound') }, { status: 404 })
   }
 
   if (invite.status === 'accepted') {
-    return NextResponse.json({ error: 'Davet zaten kabul edilmiş.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.team.inviteAlreadyAccepted') }, { status: 400 })
   }
 
   const role = allowedRoles.includes(payload?.role ?? '') ? payload?.role : invite.role
@@ -104,7 +106,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .single()
 
   if (error || !updated) {
-    return NextResponse.json({ error: 'Davet güncellenemedi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.team.inviteUpdateFailed') }, { status: 400 })
   }
 
   const origin = new URL(request.url).origin
@@ -112,7 +114,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   await sendInviteEmail({
     to: updated.email,
     link: inviteLink,
-    inviter: profile.full_name || 'AERO CRM ekibi',
+    inviter: profile.full_name || t('api.team.inviteDefaultInviter'),
     locale: profile.language === 'en' ? 'en' : 'tr',
   })
 
@@ -120,8 +122,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+  const t = getServerT()
   if (!params.id) {
-    return NextResponse.json({ error: 'Davet ID zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.team.inviteIdRequired') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()
@@ -131,7 +134,7 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -141,7 +144,7 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const { error } = await supabase
@@ -151,7 +154,7 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
     .eq('team_id', profile.team_id)
 
   if (error) {
-    return NextResponse.json({ error: 'Davet iptal edilemedi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.team.inviteRevokeFailed') }, { status: 400 })
   }
 
   return NextResponse.json({ success: true })

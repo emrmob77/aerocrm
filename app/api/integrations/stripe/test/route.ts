@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getCredentialsFromEnv, testConnection } from '@/lib/integrations/stripe'
 import type { StripeCredentials } from '@/types/database'
+import { getServerT } from '@/lib/i18n/server'
 
 export async function POST() {
+  const t = getServerT()
   const supabase = await createServerSupabaseClient()
 
   const {
@@ -12,7 +14,7 @@ export async function POST() {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -22,7 +24,7 @@ export async function POST() {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   let credentials: StripeCredentials | null = null
@@ -43,7 +45,7 @@ export async function POST() {
 
   if (!credentials) {
     return NextResponse.json(
-      { error: 'Stripe yapılandırması bulunamadı. Lütfen önce bağlantı kurun.' },
+      { error: t('api.integrations.stripeConfigMissing') },
       { status: 400 }
     )
   }
@@ -60,7 +62,7 @@ export async function POST() {
     }
 
     return NextResponse.json(
-      { error: result.error || 'Stripe bağlantısı doğrulanamadı.' },
+      { error: result.error || t('api.integrations.stripeVerifyFailed') },
       { status: 400 }
     )
   }
@@ -80,7 +82,7 @@ export async function POST() {
   return NextResponse.json({
     success: true,
     message: result.accountName
-      ? `Stripe baglantisi dogrulandi (${result.accountName}).`
-      : 'Stripe baglantisi dogrulandi.',
+      ? t('api.integrations.stripeVerifiedWithAccount', { account: result.accountName })
+      : t('api.integrations.stripeVerified'),
   })
 }

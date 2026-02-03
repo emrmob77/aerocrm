@@ -1,4 +1,4 @@
-import { useI18n } from '@/lib/i18n'
+import { getServerT } from '@/lib/i18n/server'
 
 const webhookActivities = [
   {
@@ -30,7 +30,7 @@ const webhookActivities = [
 ]
 
 export function WebhookActivity() {
-  const { t } = useI18n()
+  const t = getServerT()
   return (
     <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-[#e7ebf4] dark:border-gray-800 flex justify-between items-center">

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerT } from '@/lib/i18n/server'
 
 type SearchFilters = {
   types?: string[]
@@ -23,6 +24,7 @@ const buildDateFrom = (range?: SearchFilters['dateRange']) => {
 }
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as SearchPayload | null
   const query = payload?.query?.trim() ?? ''
   const sanitized = sanitizeQuery(query)
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   if (!sanitized || sanitized.length < 2) {

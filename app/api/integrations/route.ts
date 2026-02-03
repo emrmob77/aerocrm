@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Integration, IntegrationProvider } from '@/types/database'
+import { getServerT } from '@/lib/i18n/server'
 
 // Available integration providers
 const AVAILABLE_PROVIDERS: IntegrationProvider[] = [
@@ -13,6 +14,7 @@ const AVAILABLE_PROVIDERS: IntegrationProvider[] = [
 ]
 
 export async function GET() {
+  const t = getServerT()
   const supabase = await createServerSupabaseClient()
 
   const {
@@ -21,7 +23,7 @@ export async function GET() {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -31,7 +33,7 @@ export async function GET() {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   // Get existing integrations from DB
@@ -41,7 +43,7 @@ export async function GET() {
     .eq('team_id', profile.team_id)
 
   if (integrationsError) {
-    return NextResponse.json({ error: 'Entegrasyonlar yüklenemedi.' }, { status: 500 })
+    return NextResponse.json({ error: t('api.integrations.fetchFailed') }, { status: 500 })
   }
 
   // Map integrations by provider for easy lookup

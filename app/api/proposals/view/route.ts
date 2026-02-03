@@ -1,17 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
+import { getServerT } from '@/lib/i18n/server'
 
 type ViewPayload = {
   slug?: string
 }
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as ViewPayload | null
   const slug = payload?.slug?.trim()
 
   if (!slug) {
-    return NextResponse.json({ error: 'Slug zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.proposals.slugRequired') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()
@@ -42,11 +44,12 @@ export async function POST(request: Request) {
   }
 
   if (shouldNotify && proposal.user_id) {
+    const title = proposal.title ?? t('api.proposals.fallbackTitle')
     await supabase.from('notifications').insert({
       user_id: proposal.user_id,
       type: 'proposal_viewed',
-      title: 'Teklif görüntülendi',
-      message: `${proposal.title ?? 'Teklif'} görüntülendi.`,
+      title: t('api.proposals.notifications.viewedTitle'),
+      message: t('api.proposals.notifications.viewedMessage', { title }),
       read: false,
       action_url: `/proposals/${proposal.id}`,
       metadata: {

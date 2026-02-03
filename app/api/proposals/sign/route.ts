@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
+import { getServerT } from '@/lib/i18n/server'
 
 type SignPayload = {
   slug?: string
@@ -21,13 +22,14 @@ type SignatureBlock = {
 }
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as SignPayload | null
   const slug = payload?.slug?.trim()
   const signature = payload?.signature?.trim()
   const name = payload?.name?.trim()
 
   if (!slug || !signature || !name) {
-    return NextResponse.json({ error: 'Eksik imza bilgisi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.proposals.signatureMissing') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()
@@ -38,7 +40,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (error || !proposal?.id) {
-    return NextResponse.json({ error: 'Teklif bulunamadı.' }, { status: 404 })
+    return NextResponse.json({ error: t('api.proposals.notFound') }, { status: 404 })
   }
 
   const signedAt = new Date().toISOString()
@@ -73,15 +75,16 @@ export async function POST(request: Request) {
     .eq('id', proposal.id)
 
   if (updateError) {
-    return NextResponse.json({ error: 'İmza kaydedilemedi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.proposals.signFailed') }, { status: 400 })
   }
 
   if (proposal.status !== 'signed' && proposal.user_id) {
+    const title = proposal.title ?? t('api.proposals.fallbackTitle')
     await supabase.from('notifications').insert({
       user_id: proposal.user_id,
       type: 'proposal_signed',
-      title: 'Teklif imzalandı',
-      message: `${proposal.title ?? 'Teklif'} imzalandı.`,
+      title: t('api.proposals.notifications.signedTitle'),
+      message: t('api.proposals.notifications.signedMessage', { title }),
       read: false,
       action_url: `/proposals/${proposal.id}`,
       metadata: {

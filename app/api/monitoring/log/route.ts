@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Json } from '@/types/database'
+import { getServerT } from '@/lib/i18n/server'
 
 type LogPayload = {
   level: 'error' | 'warning' | 'info'
@@ -10,10 +11,11 @@ type LogPayload = {
 }
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as LogPayload | null
 
   if (!payload?.level || !payload?.message) {
-    return NextResponse.json({ error: 'Log seviyesi ve mesaj zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.monitoring.logRequired') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()

@@ -18,8 +18,7 @@ import {
 import { SortableContext, arrayMove, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useSupabase, useUser } from '@/hooks'
-
-const smartVariables = ['{{Müşteri_Adı}}', '{{Teklif_No}}', '{{Tarih}}', '{{Toplam_Tutar}}']
+import { useI18n } from '@/lib/i18n'
 
 type BlockType =
   | 'hero'
@@ -150,20 +149,6 @@ type PaletteItem = {
   group: 'basic' | 'content' | 'action'
 }
 
-const paletteItems: PaletteItem[] = [
-  { id: 'hero', label: 'Hero', icon: 'image', group: 'basic' },
-  { id: 'heading', label: 'Başlık', icon: 'title', group: 'basic' },
-  { id: 'text', label: 'Metin', icon: 'notes', group: 'basic' },
-  { id: 'pricing', label: 'Fiyat Tablosu', icon: 'payments', group: 'content' },
-  { id: 'video', label: 'Video', icon: 'play_circle', group: 'content' },
-  { id: 'gallery', label: 'Galeri', icon: 'photo_library', group: 'content' },
-  { id: 'testimonial', label: 'Referans', icon: 'format_quote', group: 'content' },
-  { id: 'timeline', label: 'Timeline', icon: 'timeline', group: 'content' },
-  { id: 'countdown', label: 'Geri Sayım', icon: 'timer', group: 'action' },
-  { id: 'cta', label: 'CTA Butonu', icon: 'ads_click', group: 'action' },
-  { id: 'signature', label: 'E-İmza', icon: 'draw', group: 'action' },
-]
-
 type TemplatePreset = {
   id: string
   name: string
@@ -196,391 +181,6 @@ const updateBlock = <T extends ProposalBlock>(block: T, data: Partial<T['data']>
   data: { ...block.data, ...data },
 })
 
-const templatePresets: TemplatePreset[] = [
-  {
-    id: 'web',
-    name: 'Web Tasarım',
-    description: 'Kurumsal web sitesi ve UX odaklı',
-    title: 'Web Sitesi Tasarım Teklifi',
-    design: {
-      background: '#ffffff',
-      text: '#0d121c',
-      accent: '#2563eb',
-      radius: 12,
-      fontScale: 100,
-    },
-    build: () => [
-      updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
-        title: 'Yeni Nesil Web Deneyimi',
-        subtitle: 'Markanız için ölçeklenebilir, hızlı ve modern tasarım.',
-        backgroundUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200',
-      }),
-      updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
-        text: 'Proje Kapsamı',
-        level: 'h2',
-        align: 'left',
-      }),
-      updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
-        content:
-          'Bu teklif; kurumsal kimliğinize uygun arayüz tasarımı, içerik mimarisi ve hızlı teslimat planını kapsar.',
-      }),
-      updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
-        columns: 3,
-      }),
-      updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
-        items: [
-          { id: crypto.randomUUID(), name: 'UI/UX Tasarım', qty: 1, price: 38000 },
-          { id: crypto.randomUUID(), name: 'Frontend Geliştirme', qty: 1, price: 52000 },
-        ],
-      }),
-      updateBlock(createBlock('testimonial') as Extract<ProposalBlock, { type: 'testimonial' }>, {
-        quote: 'Tasarım sürecinde beklentimizin çok üstünde bir iş çıktı.',
-        author: 'Selin Aksoy',
-        role: 'Marketing Lead, Orion',
-      }),
-      updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
-        label: 'Demo Toplantısı Planla',
-        url: 'https://cal.com/aero/demo',
-        variant: 'primary',
-      }),
-      createBlock('signature'),
-    ],
-  },
-  {
-    id: 'seo',
-    name: 'SEO Paketi',
-    description: 'Organik büyüme ve teknik iyileştirme',
-    title: 'SEO Hizmet Teklifi',
-    design: {
-      background: '#ffffff',
-      text: '#0f172a',
-      accent: '#10b981',
-      radius: 12,
-      fontScale: 100,
-    },
-    build: () => [
-      updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
-        title: 'Arama Motorlarında Zirve',
-        subtitle: 'Teknik SEO + içerik stratejisi ile sürdürülebilir büyüme.',
-        backgroundUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200',
-      }),
-      updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
-        text: 'Hızlı Kazanımlar',
-        level: 'h2',
-        align: 'left',
-      }),
-      updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
-        content: 'İlk 30 günde teknik iyileştirme + içerik denetimi planı uygulanacaktır.',
-      }),
-      updateBlock(createBlock('timeline') as Extract<ProposalBlock, { type: 'timeline' }>, {
-        items: [
-          { id: crypto.randomUUID(), title: 'Denetim', description: 'Teknik analiz', date: 'Hafta 1' },
-          { id: crypto.randomUUID(), title: 'Optimizasyon', description: 'Hız + yapı', date: 'Hafta 2' },
-          { id: crypto.randomUUID(), title: 'İçerik', description: 'Yeni içerik planı', date: 'Hafta 3-4' },
-        ],
-      }),
-      updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
-        items: [
-          { id: crypto.randomUUID(), name: 'Teknik SEO', qty: 1, price: 18000 },
-          { id: crypto.randomUUID(), name: 'İçerik Optimizasyonu', qty: 1, price: 12000 },
-        ],
-      }),
-      updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
-        label: 'SEO Yol Haritasını İndir',
-        url: 'https://aero-crm.app/seo',
-        variant: 'secondary',
-      }),
-      createBlock('signature'),
-    ],
-  },
-  {
-    id: 'social',
-    name: 'Sosyal Medya',
-    description: 'İçerik üretimi ve performans planı',
-    title: 'Sosyal Medya Yönetim Teklifi',
-    design: {
-      background: '#ffffff',
-      text: '#111827',
-      accent: '#f97316',
-      radius: 12,
-      fontScale: 100,
-    },
-    build: () => [
-      updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
-        title: 'Markanızın Sosyal Gücü',
-        subtitle: 'Planlı içerik üretimi + performans optimizasyonu.',
-        backgroundUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200',
-      }),
-      updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
-        content: 'Aylık içerik planı, üretim ve yayın takvimiyle sürekli etkileşim hedeflenir.',
-      }),
-      updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
-        columns: 3,
-      }),
-      updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
-        items: [
-          { id: crypto.randomUUID(), name: 'İçerik Üretimi', qty: 1, price: 15000 },
-          { id: crypto.randomUUID(), name: 'Reklam Yönetimi', qty: 1, price: 9000 },
-        ],
-      }),
-      updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
-        label: 'Örnek İçerikleri Gör',
-        url: 'https://aero-crm.app/social',
-        variant: 'primary',
-      }),
-      createBlock('signature'),
-    ],
-  },
-  {
-    id: 'real-estate',
-    name: 'Emlakçı',
-    description: 'Portföy sunumu ve satış planı',
-    title: 'Emlak Portföy Teklifi',
-    design: {
-      background: '#ffffff',
-      text: '#0f172a',
-      accent: '#ef4444',
-      radius: 12,
-      fontScale: 100,
-    },
-    build: () => [
-      updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
-        title: 'Premium Portföy Sunumu',
-        subtitle: 'Doğru alıcıya hızlı ulaşım ve satış planı.',
-        backgroundUrl: 'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?w=1200',
-      }),
-      updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
-        columns: 3,
-      }),
-      updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
-        content: 'Portföyünüz için hedef kitle analizi, ilan optimizasyonu ve saha desteği.',
-      }),
-      updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
-        items: [
-          { id: crypto.randomUUID(), name: 'Portföy Yönetimi', qty: 1, price: 14000 },
-          { id: crypto.randomUUID(), name: 'Pazarlama Desteği', qty: 1, price: 8000 },
-        ],
-      }),
-      updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
-        label: 'Portföy Raporunu Paylaş',
-        url: 'https://aero-crm.app/real-estate',
-        variant: 'outline',
-      }),
-      createBlock('signature'),
-    ],
-  },
-  {
-    id: 'logistics',
-    name: 'Lojistik',
-    description: 'Operasyon ve teslimat planı',
-    title: 'Lojistik Operasyon Teklifi',
-    design: {
-      background: '#ffffff',
-      text: '#0f172a',
-      accent: '#0ea5e9',
-      radius: 12,
-      fontScale: 100,
-    },
-    build: () => [
-      updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
-        title: 'Hızlı ve Şeffaf Lojistik',
-        subtitle: 'Maliyetleri düşüren operasyon modeli.',
-        backgroundUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200',
-      }),
-      updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
-        text: 'Operasyon Akışı',
-        level: 'h2',
-        align: 'left',
-      }),
-      updateBlock(createBlock('timeline') as Extract<ProposalBlock, { type: 'timeline' }>, {
-        items: [
-          { id: crypto.randomUUID(), title: 'Analiz', description: 'Rota + depo', date: 'Hafta 1' },
-          { id: crypto.randomUUID(), title: 'Pilot', description: 'Örnek sevkiyat', date: 'Hafta 2' },
-          { id: crypto.randomUUID(), title: 'Yaygınlaştırma', description: 'Tam geçiş', date: 'Hafta 3' },
-        ],
-      }),
-      updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
-        items: [
-          { id: crypto.randomUUID(), name: 'Operasyon Yönetimi', qty: 1, price: 24000 },
-          { id: crypto.randomUUID(), name: 'Sevkiyat Takibi', qty: 1, price: 11000 },
-        ],
-      }),
-      updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
-        label: 'Operasyon Raporunu Gör',
-        url: 'https://aero-crm.app/logistics',
-        variant: 'primary',
-      }),
-      createBlock('signature'),
-    ],
-  },
-]
-
-const createBlock = (type: BlockType): ProposalBlock => {
-  const id = crypto.randomUUID()
-
-  if (type === 'hero') {
-    return {
-      id,
-      type,
-      data: {
-        title: 'Modern Çözümler ile {{Müşteri_Adı}}',
-        subtitle: 'Dijital dönüşüm için özel hazırlanmış teklifiniz.',
-        backgroundUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200',
-      },
-    }
-  }
-
-  if (type === 'heading') {
-    return {
-      id,
-      type,
-      data: {
-        text: 'Stratejik Yol Haritası',
-        level: 'h2',
-        align: 'left',
-      },
-    }
-  }
-
-  if (type === 'pricing') {
-    return {
-      id,
-      type,
-      data: {
-        source: 'crm',
-        columns: {
-          description: true,
-          quantity: true,
-          unitPrice: true,
-          total: true,
-        },
-        items: [
-          { id: crypto.randomUUID(), name: 'Enterprise CRM Lisans', qty: 25, price: 1200, currency: 'TRY' },
-          { id: crypto.randomUUID(), name: 'Onboarding & Eğitim', qty: 1, price: 5000, currency: 'TRY' },
-        ],
-      },
-    }
-  }
-
-  if (type === 'video') {
-    return {
-      id,
-      type,
-      data: {
-        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-        title: 'Platform demosu',
-      },
-    }
-  }
-
-  if (type === 'gallery') {
-    return {
-      id,
-      type,
-      data: {
-        columns: 3,
-        images: [
-          {
-            id: crypto.randomUUID(),
-            url: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800',
-            caption: 'Takım işbirliği',
-          },
-          {
-            id: crypto.randomUUID(),
-            url: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800',
-            caption: 'Anlık raporlar',
-          },
-          {
-            id: crypto.randomUUID(),
-            url: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800',
-            caption: 'Mobil uyumlu',
-          },
-        ],
-      },
-    }
-  }
-
-  if (type === 'testimonial') {
-    return {
-      id,
-      type,
-      data: {
-        quote: 'AERO CRM sayesinde teklif süremiz %40 kısaldı ve ekip daha odaklı çalışıyor.',
-        author: 'Zeynep Kaya',
-        role: 'Satış Direktörü, NovaTech',
-        avatarUrl: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=200',
-      },
-    }
-  }
-
-  if (type === 'timeline') {
-    return {
-      id,
-      type,
-      data: {
-        items: [
-          { id: crypto.randomUUID(), title: 'Kickoff', description: 'Hedef ve kapsam netleştirme.', date: 'Hafta 1' },
-          { id: crypto.randomUUID(), title: 'Kurulum', description: 'CRM + teklif şablonları.', date: 'Hafta 2' },
-          { id: crypto.randomUUID(), title: 'Canlıya geçiş', description: 'Ekip eğitimi ve optimizasyon.', date: 'Hafta 3' },
-        ],
-      },
-    }
-  }
-
-  if (type === 'countdown') {
-    return {
-      id,
-      type,
-      data: {
-        label: 'Teklifin bitmesine kalan süre',
-        days: 5,
-        hours: 12,
-        minutes: 30,
-      },
-    }
-  }
-
-  if (type === 'cta') {
-    return {
-      id,
-      type,
-      data: {
-        label: 'Toplantı Planla',
-        url: 'https://cal.com/aero/demo',
-        variant: 'primary',
-      },
-    }
-  }
-
-  if (type === 'signature') {
-    return {
-      id,
-      type,
-      data: {
-        label: 'Yetkili İmza',
-        required: true,
-      },
-    }
-  }
-
-  return {
-    id,
-    type,
-    data: {
-      content:
-        'Merhaba {{Müşteri_Adı}}, bu teklif iş akışlarınızı hızlandırmak için hazırlandı. Detayları aşağıda bulabilirsiniz.',
-    },
-  }
-}
-
-const formatCurrency = (value: number, currency = 'TRY') => {
-  try {
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value)
-  } catch {
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(value)
-  }
-}
-
 const getEmbedUrl = (url: string) => {
   if (!url) return ''
   try {
@@ -612,10 +212,468 @@ export default function ProposalEditorPage() {
   const { user, authUser, loading: userLoading } = useUser()
   const searchParams = useSearchParams()
   const templateId = searchParams.get('templateId')
+  const { t, get, locale } = useI18n()
+  const localeCode = locale === 'en' ? 'en-US' : 'tr-TR'
+
+  const formatCurrency = useCallback(
+    (value: number, currency = 'TRY') => {
+      try {
+        return new Intl.NumberFormat(localeCode, { style: 'currency', currency, maximumFractionDigits: 0 }).format(value)
+      } catch {
+        return new Intl.NumberFormat(localeCode, { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(value)
+      }
+    },
+    [localeCode]
+  )
+
+  const smartVariables = useMemo(
+    () => (get('proposalEditor.smartVariables.items') as string[]) ?? [],
+    [get]
+  )
+
+  const paletteItems = useMemo<PaletteItem[]>(
+    () => [
+      { id: 'hero', label: t('proposalEditor.palette.hero'), icon: 'image', group: 'basic' },
+      { id: 'heading', label: t('proposalEditor.palette.heading'), icon: 'title', group: 'basic' },
+      { id: 'text', label: t('proposalEditor.palette.text'), icon: 'notes', group: 'basic' },
+      { id: 'pricing', label: t('proposalEditor.palette.pricing'), icon: 'payments', group: 'content' },
+      { id: 'video', label: t('proposalEditor.palette.video'), icon: 'play_circle', group: 'content' },
+      { id: 'gallery', label: t('proposalEditor.palette.gallery'), icon: 'photo_library', group: 'content' },
+      { id: 'testimonial', label: t('proposalEditor.palette.testimonial'), icon: 'format_quote', group: 'content' },
+      { id: 'timeline', label: t('proposalEditor.palette.timeline'), icon: 'timeline', group: 'content' },
+      { id: 'countdown', label: t('proposalEditor.palette.countdown'), icon: 'timer', group: 'action' },
+      { id: 'cta', label: t('proposalEditor.palette.cta'), icon: 'ads_click', group: 'action' },
+      { id: 'signature', label: t('proposalEditor.palette.signature'), icon: 'draw', group: 'action' },
+    ],
+    [t]
+  )
+
+  const createBlock = useCallback((type: BlockType): ProposalBlock => {
+    const id = crypto.randomUUID()
+
+    if (type === 'hero') {
+      return {
+        id,
+        type,
+        data: {
+          title: t('proposalEditor.defaults.heroTitle'),
+          subtitle: t('proposalEditor.defaults.heroSubtitle'),
+          backgroundUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200',
+        },
+      }
+    }
+
+    if (type === 'heading') {
+      return {
+        id,
+        type,
+        data: {
+          text: t('proposalEditor.defaults.headingText'),
+          level: 'h2',
+          align: 'left',
+        },
+      }
+    }
+
+    if (type === 'pricing') {
+      return {
+        id,
+        type,
+        data: {
+          source: 'crm',
+          columns: {
+            description: true,
+            quantity: true,
+            unitPrice: true,
+            total: true,
+          },
+          items: [
+            { id: crypto.randomUUID(), name: t('proposalEditor.defaults.pricing.primary'), qty: 25, price: 1200, currency: 'TRY' },
+            { id: crypto.randomUUID(), name: t('proposalEditor.defaults.pricing.secondary'), qty: 1, price: 5000, currency: 'TRY' },
+          ],
+        },
+      }
+    }
+
+    if (type === 'video') {
+      return {
+        id,
+        type,
+        data: {
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          title: t('proposalEditor.defaults.videoTitle'),
+        },
+      }
+    }
+
+    if (type === 'gallery') {
+      return {
+        id,
+        type,
+        data: {
+          columns: 3,
+          images: [
+            {
+              id: crypto.randomUUID(),
+              url: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800',
+              caption: t('proposalEditor.defaults.galleryCaptions.team'),
+            },
+            {
+              id: crypto.randomUUID(),
+              url: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800',
+              caption: t('proposalEditor.defaults.galleryCaptions.insights'),
+            },
+            {
+              id: crypto.randomUUID(),
+              url: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800',
+              caption: t('proposalEditor.defaults.galleryCaptions.mobile'),
+            },
+          ],
+        },
+      }
+    }
+
+    if (type === 'testimonial') {
+      return {
+        id,
+        type,
+        data: {
+          quote: t('proposalEditor.defaults.testimonial.quote'),
+          author: t('proposalEditor.defaults.testimonial.author'),
+          role: t('proposalEditor.defaults.testimonial.role'),
+          avatarUrl: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=200',
+        },
+      }
+    }
+
+    if (type === 'timeline') {
+      return {
+        id,
+        type,
+        data: {
+          items: [
+            {
+              id: crypto.randomUUID(),
+              title: t('proposalEditor.defaults.timeline.items.0.title'),
+              description: t('proposalEditor.defaults.timeline.items.0.description'),
+              date: t('proposalEditor.defaults.timeline.items.0.date'),
+            },
+            {
+              id: crypto.randomUUID(),
+              title: t('proposalEditor.defaults.timeline.items.1.title'),
+              description: t('proposalEditor.defaults.timeline.items.1.description'),
+              date: t('proposalEditor.defaults.timeline.items.1.date'),
+            },
+            {
+              id: crypto.randomUUID(),
+              title: t('proposalEditor.defaults.timeline.items.2.title'),
+              description: t('proposalEditor.defaults.timeline.items.2.description'),
+              date: t('proposalEditor.defaults.timeline.items.2.date'),
+            },
+          ],
+        },
+      }
+    }
+
+    if (type === 'countdown') {
+      return {
+        id,
+        type,
+        data: {
+          label: t('proposalEditor.defaults.countdownLabel'),
+          days: 5,
+          hours: 12,
+          minutes: 30,
+        },
+      }
+    }
+
+    if (type === 'cta') {
+      return {
+        id,
+        type,
+        data: {
+          label: t('proposalEditor.defaults.ctaLabel'),
+          url: 'https://cal.com/aero/demo',
+          variant: 'primary',
+        },
+      }
+    }
+
+    if (type === 'signature') {
+      return {
+        id,
+        type,
+        data: {
+          label: t('proposalEditor.defaults.signatureLabel'),
+          required: true,
+        },
+      }
+    }
+
+    return {
+      id,
+      type,
+      data: {
+        content: t('proposalEditor.defaults.textContent'),
+      },
+    }
+  }, [t])
+
+  const templatePresets = useMemo<TemplatePreset[]>(
+    () => [
+      {
+        id: 'web',
+        name: t('proposalEditor.templates.web.name'),
+        description: t('proposalEditor.templates.web.description'),
+        title: t('proposalEditor.templates.web.title'),
+        design: {
+          background: '#ffffff',
+          text: '#0d121c',
+          accent: '#2563eb',
+          radius: 12,
+          fontScale: 100,
+        },
+        build: () => [
+          updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
+            title: t('proposalEditor.templates.web.heroTitle'),
+            subtitle: t('proposalEditor.templates.web.heroSubtitle'),
+            backgroundUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200',
+          }),
+          updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
+            text: t('proposalEditor.templates.web.scopeTitle'),
+            level: 'h2',
+            align: 'left',
+          }),
+          updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
+            content: t('proposalEditor.templates.web.scopeBody'),
+          }),
+          updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
+            columns: 3,
+          }),
+          updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
+            items: [
+              { id: crypto.randomUUID(), name: t('proposalEditor.templates.web.pricing.0'), qty: 1, price: 38000 },
+              { id: crypto.randomUUID(), name: t('proposalEditor.templates.web.pricing.1'), qty: 1, price: 52000 },
+            ],
+          }),
+          updateBlock(createBlock('testimonial') as Extract<ProposalBlock, { type: 'testimonial' }>, {
+            quote: t('proposalEditor.templates.web.testimonial.quote'),
+            author: t('proposalEditor.templates.web.testimonial.author'),
+            role: t('proposalEditor.templates.web.testimonial.role'),
+          }),
+          updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
+            label: t('proposalEditor.templates.web.ctaLabel'),
+            url: 'https://cal.com/aero/demo',
+            variant: 'primary',
+          }),
+          createBlock('signature'),
+        ],
+      },
+      {
+        id: 'seo',
+        name: t('proposalEditor.templates.seo.name'),
+        description: t('proposalEditor.templates.seo.description'),
+        title: t('proposalEditor.templates.seo.title'),
+        design: {
+          background: '#ffffff',
+          text: '#0f172a',
+          accent: '#10b981',
+          radius: 12,
+          fontScale: 100,
+        },
+        build: () => [
+          updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
+            title: t('proposalEditor.templates.seo.heroTitle'),
+            subtitle: t('proposalEditor.templates.seo.heroSubtitle'),
+            backgroundUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200',
+          }),
+          updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
+            text: t('proposalEditor.templates.seo.quickWinsTitle'),
+            level: 'h2',
+            align: 'left',
+          }),
+          updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
+            content: t('proposalEditor.templates.seo.quickWinsBody'),
+          }),
+          updateBlock(createBlock('timeline') as Extract<ProposalBlock, { type: 'timeline' }>, {
+            items: [
+              {
+                id: crypto.randomUUID(),
+                title: t('proposalEditor.templates.seo.timeline.0.title'),
+                description: t('proposalEditor.templates.seo.timeline.0.description'),
+                date: t('proposalEditor.templates.seo.timeline.0.date'),
+              },
+              {
+                id: crypto.randomUUID(),
+                title: t('proposalEditor.templates.seo.timeline.1.title'),
+                description: t('proposalEditor.templates.seo.timeline.1.description'),
+                date: t('proposalEditor.templates.seo.timeline.1.date'),
+              },
+              {
+                id: crypto.randomUUID(),
+                title: t('proposalEditor.templates.seo.timeline.2.title'),
+                description: t('proposalEditor.templates.seo.timeline.2.description'),
+                date: t('proposalEditor.templates.seo.timeline.2.date'),
+              },
+            ],
+          }),
+          updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
+            items: [
+              { id: crypto.randomUUID(), name: t('proposalEditor.templates.seo.pricing.0'), qty: 1, price: 18000 },
+              { id: crypto.randomUUID(), name: t('proposalEditor.templates.seo.pricing.1'), qty: 1, price: 12000 },
+            ],
+          }),
+          updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
+            label: t('proposalEditor.templates.seo.ctaLabel'),
+            url: 'https://aero-crm.app/seo',
+            variant: 'secondary',
+          }),
+          createBlock('signature'),
+        ],
+      },
+      {
+        id: 'social',
+        name: t('proposalEditor.templates.social.name'),
+        description: t('proposalEditor.templates.social.description'),
+        title: t('proposalEditor.templates.social.title'),
+        design: {
+          background: '#ffffff',
+          text: '#111827',
+          accent: '#f97316',
+          radius: 12,
+          fontScale: 100,
+        },
+        build: () => [
+          updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
+            title: t('proposalEditor.templates.social.heroTitle'),
+            subtitle: t('proposalEditor.templates.social.heroSubtitle'),
+            backgroundUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200',
+          }),
+          updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
+            content: t('proposalEditor.templates.social.body'),
+          }),
+          updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
+            columns: 3,
+          }),
+          updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
+            items: [
+              { id: crypto.randomUUID(), name: t('proposalEditor.templates.social.pricing.0'), qty: 1, price: 15000 },
+              { id: crypto.randomUUID(), name: t('proposalEditor.templates.social.pricing.1'), qty: 1, price: 9000 },
+            ],
+          }),
+          updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
+            label: t('proposalEditor.templates.social.ctaLabel'),
+            url: 'https://aero-crm.app/social',
+            variant: 'primary',
+          }),
+          createBlock('signature'),
+        ],
+      },
+      {
+        id: 'real-estate',
+        name: t('proposalEditor.templates.realEstate.name'),
+        description: t('proposalEditor.templates.realEstate.description'),
+        title: t('proposalEditor.templates.realEstate.title'),
+        design: {
+          background: '#ffffff',
+          text: '#0f172a',
+          accent: '#ef4444',
+          radius: 12,
+          fontScale: 100,
+        },
+        build: () => [
+          updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
+            title: t('proposalEditor.templates.realEstate.heroTitle'),
+            subtitle: t('proposalEditor.templates.realEstate.heroSubtitle'),
+            backgroundUrl: 'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?w=1200',
+          }),
+          updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
+            columns: 3,
+          }),
+          updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
+            content: t('proposalEditor.templates.realEstate.body'),
+          }),
+          updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
+            items: [
+              { id: crypto.randomUUID(), name: t('proposalEditor.templates.realEstate.pricing.0'), qty: 1, price: 14000 },
+              { id: crypto.randomUUID(), name: t('proposalEditor.templates.realEstate.pricing.1'), qty: 1, price: 8000 },
+            ],
+          }),
+          updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
+            label: t('proposalEditor.templates.realEstate.ctaLabel'),
+            url: 'https://aero-crm.app/real-estate',
+            variant: 'outline',
+          }),
+          createBlock('signature'),
+        ],
+      },
+      {
+        id: 'logistics',
+        name: t('proposalEditor.templates.logistics.name'),
+        description: t('proposalEditor.templates.logistics.description'),
+        title: t('proposalEditor.templates.logistics.title'),
+        design: {
+          background: '#ffffff',
+          text: '#0f172a',
+          accent: '#0ea5e9',
+          radius: 12,
+          fontScale: 100,
+        },
+        build: () => [
+          updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
+            title: t('proposalEditor.templates.logistics.heroTitle'),
+            subtitle: t('proposalEditor.templates.logistics.heroSubtitle'),
+            backgroundUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200',
+          }),
+          updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
+            text: t('proposalEditor.templates.logistics.flowTitle'),
+            level: 'h2',
+            align: 'left',
+          }),
+          updateBlock(createBlock('timeline') as Extract<ProposalBlock, { type: 'timeline' }>, {
+            items: [
+              {
+                id: crypto.randomUUID(),
+                title: t('proposalEditor.templates.logistics.timeline.0.title'),
+                description: t('proposalEditor.templates.logistics.timeline.0.description'),
+                date: t('proposalEditor.templates.logistics.timeline.0.date'),
+              },
+              {
+                id: crypto.randomUUID(),
+                title: t('proposalEditor.templates.logistics.timeline.1.title'),
+                description: t('proposalEditor.templates.logistics.timeline.1.description'),
+                date: t('proposalEditor.templates.logistics.timeline.1.date'),
+              },
+              {
+                id: crypto.randomUUID(),
+                title: t('proposalEditor.templates.logistics.timeline.2.title'),
+                description: t('proposalEditor.templates.logistics.timeline.2.description'),
+                date: t('proposalEditor.templates.logistics.timeline.2.date'),
+              },
+            ],
+          }),
+          updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
+            items: [
+              { id: crypto.randomUUID(), name: t('proposalEditor.templates.logistics.pricing.0'), qty: 1, price: 24000 },
+              { id: crypto.randomUUID(), name: t('proposalEditor.templates.logistics.pricing.1'), qty: 1, price: 11000 },
+            ],
+          }),
+          updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
+            label: t('proposalEditor.templates.logistics.ctaLabel'),
+            url: 'https://aero-crm.app/logistics',
+            variant: 'primary',
+          }),
+          createBlock('signature'),
+        ],
+      },
+    ],
+    [createBlock, t]
+  )
   const [productOptions, setProductOptions] = useState<ProductOption[]>([])
   const [productSearch, setProductSearch] = useState('')
   const [productsLoading, setProductsLoading] = useState(false)
-  const [documentTitle, setDocumentTitle] = useState('ABC Şirketi Teklifi')
+  const [documentTitle, setDocumentTitle] = useState(() => t('proposalEditor.defaults.documentTitle'))
   const [activePanel, setActivePanel] = useState<'content' | 'design'>('content')
   const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
   const [blocks, setBlocks] = useState<ProposalBlock[]>(() => [
@@ -647,11 +705,11 @@ export default function ProposalEditorPage() {
 
   const proposalMeta = useMemo(
     () => ({
-      clientName: 'ABC Şirketi',
+      clientName: t('proposalEditor.defaults.clientName'),
       contactEmail: 'info@abc.com',
       contactPhone: '+90 532 000 00 00',
     }),
-    []
+    [t]
   )
 
   useEffect(() => {
@@ -692,13 +750,13 @@ export default function ProposalEditorPage() {
     const response = await fetch(`/api/templates?scope=${scope}`)
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      toast.error(payload?.error || 'Şablonlar yüklenemedi.')
+      toast.error(payload?.error || t('proposalEditor.toasts.templatesFetchFailed'))
       setTemplatesLoading(false)
       return
     }
     setSavedTemplates((payload?.templates ?? []) as SavedTemplate[])
     setTemplatesLoading(false)
-  }, [])
+  }, [paletteItems])
 
   useEffect(() => {
     if (userLoading) return
@@ -760,7 +818,7 @@ export default function ProposalEditorPage() {
       }
     }
     if (nextBlocks.length === 0) {
-      toast.error('Şablon blokları bulunamadı. Şablonu düzenleyip blok ekleyin.')
+      toast.error(t('proposalEditor.toasts.templateBlocksMissing'))
       return
     }
     if (trackUsage) {
@@ -783,11 +841,11 @@ export default function ProposalEditorPage() {
   const handleSaveTemplate = async () => {
     if (templateSaving) return
     if (!templateName.trim()) {
-      toast.error('Şablon adı zorunludur.')
+      toast.error(t('proposalEditor.toasts.templateNameRequired'))
       return
     }
     if (blocks.length === 0) {
-      toast.error('Şablon kaydetmek için en az bir blok gerekir.')
+      toast.error(t('proposalEditor.toasts.templateBlocksRequired'))
       return
     }
 
@@ -807,12 +865,12 @@ export default function ProposalEditorPage() {
     })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      toast.error(payload?.error || 'Şablon kaydedilemedi.')
+      toast.error(payload?.error || t('proposalEditor.toasts.templateSaveFailed'))
       setTemplateSaving(false)
       return
     }
 
-    toast.success('Şablon kaydedildi.')
+    toast.success(t('proposalEditor.toasts.templateSaved'))
     setTemplateSaving(false)
     setTemplateModalOpen(false)
     setLeftPanel('templates')
@@ -825,12 +883,12 @@ export default function ProposalEditorPage() {
       const response = await fetch(`/api/templates/${templateId}`)
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        toast.error(payload?.error || 'Şablon yüklenemedi.')
+        toast.error(payload?.error || t('proposalEditor.toasts.templateLoadFailed'))
         return
       }
       const template = payload?.template as SavedTemplate | undefined
       if (!template) {
-        toast.error('Şablon bulunamadı.')
+        toast.error(t('proposalEditor.toasts.templateNotFound'))
         return
       }
       applySavedTemplate(template, true)
@@ -857,7 +915,7 @@ export default function ProposalEditorPage() {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null)
-        throw new Error(payload?.error || 'Taslak kaydedilemedi.')
+        throw new Error(payload?.error || t('proposalEditor.toasts.draftSaveFailed'))
       }
 
       const payload = await response.json().catch(() => null)
@@ -875,9 +933,9 @@ export default function ProposalEditorPage() {
         const next = [{ id: versionId, savedAt, title: documentTitle }, ...prev]
         return next.slice(0, 8)
       })
-      toast.success('Taslak kaydedildi.')
+      toast.success(t('proposalEditor.toasts.draftSaved'))
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'Taslak kaydedilemedi.'
+      const messageText = error instanceof Error ? error.message : t('proposalEditor.toasts.draftSaveFailed')
       toast.error(messageText)
     } finally {
       setIsSavingDraft(false)
@@ -1052,7 +1110,7 @@ export default function ProposalEditorPage() {
               {
                 id: crypto.randomUUID(),
                 url: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800',
-                caption: 'Yeni görsel',
+                caption: t('proposalEditor.defaults.newImageCaption'),
               },
             ],
           },
@@ -1103,9 +1161,9 @@ export default function ProposalEditorPage() {
               ...block.data.items,
               {
                 id: crypto.randomUUID(),
-                title: 'Yeni Adım',
-                description: 'Aşamayı burada tanımlayın.',
-                date: 'Hafta 4',
+                title: t('proposalEditor.defaults.newTimeline.title'),
+                description: t('proposalEditor.defaults.newTimeline.description'),
+                date: t('proposalEditor.defaults.newTimeline.date'),
               },
             ],
           },
@@ -1243,11 +1301,11 @@ export default function ProposalEditorPage() {
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
             >
               <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-              Düzenlemeye dön
+              {t('proposalEditor.actions.backToEdit')}
             </button>
             <div className="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
             <div>
-              <p className="text-xs text-gray-500">Teklifi Gönder</p>
+              <p className="text-xs text-gray-500">{t('proposalEditor.actions.sendTitle')}</p>
               <h2 className="text-sm font-semibold text-[#0d121c] dark:text-white">{documentTitle}</h2>
             </div>
           </div>
@@ -1260,7 +1318,7 @@ export default function ProposalEditorPage() {
             }}
             className="flex h-10 px-4 items-center justify-center rounded-lg bg-[#e7ebf4] dark:bg-gray-800 text-[#0d121c] dark:text-white text-sm font-bold hover:bg-opacity-80"
           >
-            Önizle
+            {t('proposalEditor.actions.preview')}
           </button>
         </header>
 
@@ -1294,11 +1352,11 @@ export default function ProposalEditorPage() {
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
             >
               <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-              Düzenlemeye dön
+              {t('proposalEditor.actions.backToEdit')}
             </button>
             <div className="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
             <div>
-              <p className="text-xs text-gray-500">Önizleme</p>
+              <p className="text-xs text-gray-500">{t('proposalEditor.actions.previewTitle')}</p>
               <h2 className="text-sm font-semibold text-[#0d121c] dark:text-white">{documentTitle}</h2>
             </div>
           </div>
@@ -1311,7 +1369,7 @@ export default function ProposalEditorPage() {
             }}
             className="flex h-10 px-4 items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90"
           >
-            Gönder
+            {t('proposalEditor.actions.send')}
           </button>
         </header>
 
@@ -1348,7 +1406,7 @@ export default function ProposalEditorPage() {
             <span className="material-symbols-outlined">arrow_back</span>
           </Link>
           <div className="flex flex-col">
-            <span className="text-xs text-[#48679d] dark:text-gray-400">Teklif Editörü</span>
+            <span className="text-xs text-[#48679d] dark:text-gray-400">{t('proposalEditor.header.title')}</span>
             <div className="flex items-center gap-2">
               <input
                 value={documentTitle}
@@ -1356,7 +1414,7 @@ export default function ProposalEditorPage() {
                 className="text-sm font-bold text-[#0d121c] dark:text-white bg-transparent border-b border-transparent focus:border-primary outline-none"
               />
               <span className="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] rounded uppercase font-bold">
-                Taslak
+                {t('proposals.status.draft')}
               </span>
             </div>
           </div>
@@ -1370,20 +1428,20 @@ export default function ProposalEditorPage() {
             className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
           >
             <span className="material-symbols-outlined text-[20px]">history</span>
-            Sürüm Geçmişi
+            {t('proposalEditor.history.title')}
           </button>
           <button
             onClick={openTemplateModal}
-            title="Şablon olarak kaydet"
-            aria-label="Şablon olarak kaydet"
+            title={t('proposalEditor.actions.saveTemplate')}
+            aria-label={t('proposalEditor.actions.saveTemplate')}
             className="flex size-10 items-center justify-center rounded-lg border border-[#e7ebf4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <span className="material-symbols-outlined text-[20px]">bookmark_add</span>
           </button>
           <button
             onClick={handleSaveDraft}
-            title="Taslak olarak kaydet"
-            aria-label="Taslak olarak kaydet"
+            title={t('proposalEditor.actions.saveDraft')}
+            aria-label={t('proposalEditor.actions.saveDraft')}
             disabled={isSavingDraft}
             className="flex size-10 items-center justify-center rounded-lg border border-[#e7ebf4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60"
           >
@@ -1398,13 +1456,13 @@ export default function ProposalEditorPage() {
             onClick={() => setEditorMode('preview')}
             className="flex h-10 px-4 items-center justify-center rounded-lg bg-[#e7ebf4] dark:bg-gray-800 text-[#0d121c] dark:text-white text-sm font-bold hover:bg-opacity-80"
           >
-            Önizle
+            {t('proposalEditor.actions.preview')}
           </button>
           <button
             onClick={() => setEditorMode('send')}
             className="flex h-10 px-4 items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90"
           >
-            Gönder
+            {t('proposalEditor.actions.send')}
           </button>
         </div>
       </header>
@@ -1438,8 +1496,8 @@ export default function ProposalEditorPage() {
         <div className="flex flex-1 overflow-hidden">
           <aside className="w-72 flex flex-col border-r border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#101722] overflow-y-auto">
             <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-[#48679d] dark:text-gray-400">Bloklar</h2>
-              <p className="text-xs text-gray-500 mt-1">Sürükle & bırak veya tıkla</p>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[#48679d] dark:text-gray-400">{t('proposalEditor.sidebar.blocks')}</h2>
+              <p className="text-xs text-gray-500 mt-1">{t('proposalEditor.sidebar.dragHint')}</p>
             </div>
             <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e7ebf4] dark:border-gray-800">
               <button
@@ -1448,7 +1506,7 @@ export default function ProposalEditorPage() {
                   leftPanel === 'blocks' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
-                Bloklar
+                {t('proposalEditor.tabs.blocks')}
               </button>
               <button
                 onClick={() => setLeftPanel('templates')}
@@ -1456,7 +1514,7 @@ export default function ProposalEditorPage() {
                   leftPanel === 'templates' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
-                Şablonlar
+                {t('proposalEditor.tabs.templates')}
               </button>
               <button
                 onClick={() => setLeftPanel('order')}
@@ -1464,7 +1522,7 @@ export default function ProposalEditorPage() {
                   leftPanel === 'order' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
-                Sıralama
+                {t('proposalEditor.tabs.order')}
               </button>
             </div>
             <div className="p-4 space-y-6">
@@ -1472,16 +1530,16 @@ export default function ProposalEditorPage() {
                 <div className="space-y-6">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400">KAYITLI ŞABLONLAR</h3>
+                      <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400">{t('proposalEditor.templates.savedTitle')}</h3>
                       <Link href="/templates" className="text-xs font-semibold text-primary hover:underline">
-                        Yönet
+                        {t('proposalEditor.templates.manage')}
                       </Link>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {([
-                        { id: 'team', label: 'Takım' },
-                        { id: 'public', label: 'Genel' },
-                        { id: 'all', label: 'Tümü' },
+                        { id: 'team', label: t('templatesPage.scopes.team') },
+                        { id: 'public', label: t('templatesPage.scopes.public') },
+                        { id: 'all', label: t('templatesPage.scopes.all') },
                       ] as { id: TemplateScope; label: string }[]).map((item) => (
                         <button
                           key={item.id}
@@ -1498,13 +1556,13 @@ export default function ProposalEditorPage() {
                     </div>
                     {templatesLoading ? (
                       <div className="rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-3 text-xs text-gray-500">
-                        Şablonlar yükleniyor...
+                        {t('templatesPage.loading')}
                       </div>
                     ) : savedTemplates.length === 0 ? (
                       <div className="rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-3 text-xs text-gray-500">
-                        Şablon bulunamadı.{' '}
+                        {t('templatesPage.empty')}{' '}
                         <Link href="/templates/new" className="text-primary font-semibold hover:underline">
-                          Yeni şablon oluştur
+                          {t('proposalEditor.templates.createNew')}
                         </Link>
                       </div>
                     ) : (
@@ -1519,7 +1577,7 @@ export default function ProposalEditorPage() {
                               <div>
                                 <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{template.name}</p>
                                 <p className="text-xs text-gray-500">
-                                  {template.description || 'Açıklama eklenmedi.'}
+                                  {template.description || t('templatesPage.descriptionEmpty')}
                                 </p>
                               </div>
                               <span
@@ -1529,15 +1587,15 @@ export default function ProposalEditorPage() {
                                     : 'bg-slate-100 text-slate-600'
                                 }`}
                               >
-                                {template.is_public ? 'Genel' : 'Takım'}
+                                {template.is_public ? t('templatesPage.public') : t('templatesPage.team')}
                               </span>
                             </div>
                             <div className="mt-3 flex items-center gap-2 text-[10px] text-gray-400">
-                              <span>{template.category || 'Genel'}</span>
+                              <span>{template.category || t('templatesPage.categoryDefault')}</span>
                               <span>•</span>
-                              <span>{Array.isArray(template.blocks) ? template.blocks.length : 0} blok</span>
+                              <span>{Array.isArray(template.blocks) ? template.blocks.length : 0} {t('templatesPage.blocks')}</span>
                               <span>•</span>
-                              <span>{template.usage_count ?? 0} kullanım</span>
+                              <span>{template.usage_count ?? 0} {t('templatesPage.usage')}</span>
                             </div>
                           </button>
                         ))}
@@ -1545,8 +1603,8 @@ export default function ProposalEditorPage() {
                     )}
                   </div>
 
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400">HAZIR ŞABLONLAR</h3>
+                <div className="space-y-3">
+                    <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400">{t('proposalEditor.templates.readyTitle')}</h3>
                     <div className="space-y-2">
                       {templatePresets.map((template) => (
                         <button
@@ -1577,23 +1635,23 @@ export default function ProposalEditorPage() {
               {leftPanel === 'blocks' && (
                 <div className="space-y-6">
                   <PaletteGroup
-                    title="Temel"
+                    title={t('proposalEditor.paletteGroups.basic')}
                     items={paletteItems.filter((item) => item.group === 'basic')}
                     onAdd={handleAddBlock}
                   />
                   <PaletteGroup
-                    title="İçerik"
+                    title={t('proposalEditor.paletteGroups.content')}
                     items={paletteItems.filter((item) => item.group === 'content')}
                     onAdd={handleAddBlock}
                   />
                   <PaletteGroup
-                    title="Aksiyon"
+                    title={t('proposalEditor.paletteGroups.action')}
                     items={paletteItems.filter((item) => item.group === 'action')}
                     onAdd={handleAddBlock}
                   />
 
                   <div className="pt-4 mt-4 border-t border-[#e7ebf4] dark:border-gray-800">
-                    <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400 mb-3">AKILLI DEĞİŞKENLER</h3>
+                    <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400 mb-3">{t('proposalEditor.smartVariables.title')}</h3>
                     <div className="flex flex-wrap gap-2">
                       {smartVariables.map((variable) => (
                         <button
@@ -1612,8 +1670,8 @@ export default function ProposalEditorPage() {
               {leftPanel === 'order' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400">BLOK SIRALAMASI</h3>
-                    <span className="text-[10px] text-gray-400">Sürükle & bırak</span>
+                    <h3 className="text-xs font-bold text-[#48679d] dark:text-gray-400">{t('proposalEditor.order.title')}</h3>
+                    <span className="text-[10px] text-gray-400">{t('proposalEditor.dragShort')}</span>
                   </div>
                   <SortableContext items={blocks.map((block) => `order-${block.id}`)}>
                     <div className="space-y-2">
@@ -1674,7 +1732,7 @@ export default function ProposalEditorPage() {
                     className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 rounded-lg hover:border-primary hover:text-primary transition-all group"
                   >
                     <span className="material-symbols-outlined">add_circle</span>
-                    <span className="text-sm font-semibold">Yeni Blok Ekle</span>
+                    <span className="text-sm font-semibold">{t('proposalEditor.actions.addBlock')}</span>
                   </button>
                 </div>
               </div>
@@ -1707,7 +1765,7 @@ export default function ProposalEditorPage() {
                   <span className="material-symbols-outlined text-sm">zoom_in</span> 100%
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">pages</span> Sayfa 1/1
+                  <span className="material-symbols-outlined text-sm">pages</span> {t('proposalEditor.canvas.pageCount', { current: 1, total: 1 })}
                 </span>
               </div>
             </div>
@@ -1719,18 +1777,18 @@ export default function ProposalEditorPage() {
                 onClick={() => setActivePanel('content')}
                 className={`flex-1 py-4 text-sm font-bold ${activePanel === 'content' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
-                İçerik
+                {t('proposalEditor.panels.content')}
               </button>
               <button
                 onClick={() => setActivePanel('design')}
                 className={`flex-1 py-4 text-sm font-medium ${activePanel === 'design' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
-                Tasarım
+                {t('proposalEditor.panels.design')}
               </button>
             </div>
             <div className="p-6 space-y-6">
               {activePanel === 'content' && !selectedBlock && (
-                <div className="text-sm text-gray-500">Bir blok seçerek ayarlarını düzenleyin.</div>
+                <div className="text-sm text-gray-500">{t('proposalEditor.panels.empty')}</div>
               )}
 
               {activePanel === 'content' && selectedBlock && (
@@ -1738,10 +1796,10 @@ export default function ProposalEditorPage() {
                   {selectedBlock.type === 'hero' && (
                     <div className="space-y-4">
                       <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                        Hero Ayarları
+                        {t('proposalEditor.blocks.heroSettings')}
                       </label>
                       <div>
-                        <label className="text-[11px] text-gray-500 block mb-1">Başlık</label>
+                        <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.title')}</label>
                         <input
                           value={selectedBlock.data.title}
                           onChange={(event) => updateBlockData(selectedBlock.id, { title: event.target.value })}
@@ -1749,7 +1807,7 @@ export default function ProposalEditorPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-[11px] text-gray-500 block mb-1">Alt Başlık</label>
+                        <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.subtitle')}</label>
                         <textarea
                           value={selectedBlock.data.subtitle}
                           onChange={(event) => updateBlockData(selectedBlock.id, { subtitle: event.target.value })}
@@ -1758,7 +1816,7 @@ export default function ProposalEditorPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-[11px] text-gray-500 block mb-1">Arka Plan URL</label>
+                        <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.backgroundUrl')}</label>
                         <input
                           value={selectedBlock.data.backgroundUrl}
                           onChange={(event) => updateBlockData(selectedBlock.id, { backgroundUrl: event.target.value })}
@@ -1771,10 +1829,10 @@ export default function ProposalEditorPage() {
                 {selectedBlock.type === 'heading' && (
                   <div className="space-y-4">
                     <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      Başlık
+                      {t('proposalEditor.fields.title')}
                     </label>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Başlık Metni</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.headingText')}</label>
                       <input
                         value={selectedBlock.data.text}
                         onChange={(event) => updateBlockData(selectedBlock.id, { text: event.target.value })}
@@ -1783,7 +1841,7 @@ export default function ProposalEditorPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[11px] text-gray-500 block mb-1">Seviye</label>
+                        <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.level')}</label>
                         <select
                           value={selectedBlock.data.level}
                           onChange={(event) =>
@@ -1797,7 +1855,7 @@ export default function ProposalEditorPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-[11px] text-gray-500 block mb-1">Hizalama</label>
+                        <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.align')}</label>
                         <select
                           value={selectedBlock.data.align}
                           onChange={(event) =>
@@ -1805,9 +1863,9 @@ export default function ProposalEditorPage() {
                           }
                           className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                         >
-                          <option value="left">Sol</option>
-                          <option value="center">Orta</option>
-                          <option value="right">Sağ</option>
+                          <option value="left">{t('proposalEditor.align.left')}</option>
+                          <option value="center">{t('proposalEditor.align.center')}</option>
+                          <option value="right">{t('proposalEditor.align.right')}</option>
                         </select>
                       </div>
                     </div>
@@ -1817,7 +1875,7 @@ export default function ProposalEditorPage() {
                 {selectedBlock.type === 'text' && (
                   <div className="space-y-4">
                     <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      Metin İçeriği
+                      {t('proposalEditor.blocks.textContent')}
                     </label>
                     <textarea
                       value={selectedBlock.data.content}
@@ -1830,10 +1888,10 @@ export default function ProposalEditorPage() {
                 {selectedBlock.type === 'pricing' && (
                   <div className="space-y-4">
                     <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      Fiyat Tablosu
+                      {t('proposalEditor.blocks.pricingTable')}
                     </label>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Kaynak</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.source')}</label>
                       <select
                         value={selectedBlock.data.source}
                         onChange={(event) =>
@@ -1841,12 +1899,12 @@ export default function ProposalEditorPage() {
                         }
                         className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                       >
-                        <option value="crm">Ürün Kataloğu</option>
-                        <option value="manual">Manuel</option>
+                        <option value="crm">{t('proposalEditor.fields.productCatalog')}</option>
+                        <option value="manual">{t('proposalEditor.fields.manual')}</option>
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[11px] text-gray-500 block">Kolonlar</label>
+                      <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.columns')}</label>
                       {Object.entries(selectedBlock.data.columns).map(([key, value]) => (
                         <label key={key} className="flex items-center gap-2 text-sm">
                           <input
@@ -1864,7 +1922,7 @@ export default function ProposalEditorPage() {
                       ))}
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[11px] text-gray-500 block">Ürün Kataloğu</label>
+                      <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.productCatalog')}</label>
                       <div className="relative">
                         <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[16px] text-gray-400">
                           search
@@ -1872,15 +1930,15 @@ export default function ProposalEditorPage() {
                         <input
                           value={productSearch}
                           onChange={(event) => setProductSearch(event.target.value)}
-                          placeholder="Ürün ara..."
+                          placeholder={t('proposalEditor.placeholders.productSearch')}
                           className="w-full pl-7 pr-2 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
                         />
                       </div>
                       <div className="max-h-40 overflow-y-auto space-y-2 rounded border border-dashed border-gray-200 dark:border-gray-700 p-2">
                         {productsLoading ? (
-                          <p className="text-[11px] text-gray-400">Ürünler yükleniyor...</p>
+                          <p className="text-[11px] text-gray-400">{t('proposalEditor.loading.products')}</p>
                         ) : filteredProductOptions.length === 0 ? (
-                          <p className="text-[11px] text-gray-400">Ürün bulunamadı.</p>
+                          <p className="text-[11px] text-gray-400">{t('proposalEditor.empty.products')}</p>
                         ) : (
                           filteredProductOptions.map((product) => (
                             <button
@@ -1903,7 +1961,7 @@ export default function ProposalEditorPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[11px] text-gray-500 block">Kalemler</label>
+                      <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.lineItems')}</label>
                       <div className="space-y-2">
                         {selectedBlock.data.items.map((item) => (
                           <div key={item.id} className="grid grid-cols-[1fr_64px_90px_auto] gap-2 items-center">
@@ -1945,7 +2003,7 @@ export default function ProposalEditorPage() {
                               onClick={() => removePricingItem(selectedBlock.id, item.id)}
                               className="text-xs text-red-500 hover:text-red-600"
                             >
-                              Kaldır
+                              {t('proposalEditor.actions.removeItem')}
                             </button>
                           </div>
                         ))}
@@ -1954,7 +2012,7 @@ export default function ProposalEditorPage() {
                         onClick={() => addPricingItem(selectedBlock.id)}
                         className="w-full py-2 rounded-lg border border-dashed border-gray-200 text-xs text-gray-500 hover:border-primary"
                       >
-                        Yeni kalem ekle
+                        {t('proposalEditor.actions.addLineItem')}
                       </button>
                     </div>
                   </div>
@@ -1963,10 +2021,10 @@ export default function ProposalEditorPage() {
                 {selectedBlock.type === 'video' && (
                   <div className="space-y-4">
                     <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      Video
+                      {t('proposalEditor.blocks.video')}
                     </label>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Başlık</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.title')}</label>
                       <input
                         value={selectedBlock.data.title}
                         onChange={(event) => updateBlockData(selectedBlock.id, { title: event.target.value })}
@@ -1974,7 +2032,7 @@ export default function ProposalEditorPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Video URL</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.videoUrl')}</label>
                       <input
                         value={selectedBlock.data.url}
                         onChange={(event) => updateBlockData(selectedBlock.id, { url: event.target.value })}
@@ -1987,10 +2045,10 @@ export default function ProposalEditorPage() {
                 {selectedBlock.type === 'gallery' && (
                   <div className="space-y-4">
                     <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      Galeri
+                      {t('proposalEditor.blocks.gallery')}
                     </label>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Kolon Sayısı</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.columnCount')}</label>
                       <select
                         value={selectedBlock.data.columns}
                         onChange={(event) =>
@@ -1998,8 +2056,8 @@ export default function ProposalEditorPage() {
                         }
                         className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                       >
-                        <option value={2}>2 Kolon</option>
-                        <option value={3}>3 Kolon</option>
+                        <option value={2}>{t('proposalEditor.options.columns.2')}</option>
+                        <option value={3}>{t('proposalEditor.options.columns.3')}</option>
                       </select>
                     </div>
                     <div className="space-y-3">
@@ -2009,7 +2067,7 @@ export default function ProposalEditorPage() {
                             value={image.url}
                             onChange={(event) => updateGalleryImage(selectedBlock.id, image.id, { url: event.target.value })}
                             className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
-                            placeholder="Görsel URL"
+                            placeholder={t('proposalEditor.placeholders.imageUrl')}
                           />
                           <input
                             value={image.caption}
@@ -2017,13 +2075,13 @@ export default function ProposalEditorPage() {
                               updateGalleryImage(selectedBlock.id, image.id, { caption: event.target.value })
                             }
                             className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
-                            placeholder="Başlık"
+                            placeholder={t('proposalEditor.placeholders.caption')}
                           />
                           <button
                             onClick={() => removeGalleryImage(selectedBlock.id, image.id)}
                             className="text-xs text-red-500"
                           >
-                            Görseli kaldır
+                            {t('proposalEditor.actions.removeImage')}
                           </button>
                         </div>
                       ))}
@@ -2032,7 +2090,7 @@ export default function ProposalEditorPage() {
                       onClick={() => addGalleryImage(selectedBlock.id)}
                       className="w-full py-2 rounded-lg border border-dashed border-gray-200 text-sm text-gray-500 hover:border-primary"
                     >
-                      Yeni görsel ekle
+                      {t('proposalEditor.actions.addImage')}
                     </button>
                   </div>
                 )}
@@ -2040,10 +2098,10 @@ export default function ProposalEditorPage() {
                 {selectedBlock.type === 'testimonial' && (
                   <div className="space-y-4">
                     <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      Referans
+                      {t('proposalEditor.blocks.testimonial')}
                     </label>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Alıntı</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.quote')}</label>
                       <textarea
                         value={selectedBlock.data.quote}
                         onChange={(event) => updateBlockData(selectedBlock.id, { quote: event.target.value })}
@@ -2052,7 +2110,7 @@ export default function ProposalEditorPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">İsim</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.name')}</label>
                       <input
                         value={selectedBlock.data.author}
                         onChange={(event) => updateBlockData(selectedBlock.id, { author: event.target.value })}
@@ -2060,7 +2118,7 @@ export default function ProposalEditorPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Ünvan</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.role')}</label>
                       <input
                         value={selectedBlock.data.role}
                         onChange={(event) => updateBlockData(selectedBlock.id, { role: event.target.value })}
@@ -2068,7 +2126,7 @@ export default function ProposalEditorPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Avatar URL</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.avatarUrl')}</label>
                       <input
                         value={selectedBlock.data.avatarUrl}
                         onChange={(event) => updateBlockData(selectedBlock.id, { avatarUrl: event.target.value })}
@@ -2081,7 +2139,7 @@ export default function ProposalEditorPage() {
                 {selectedBlock.type === 'timeline' && (
                   <div className="space-y-4">
                     <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      Timeline
+                      {t('proposalEditor.blocks.timeline')}
                     </label>
                     <div className="space-y-3">
                       {selectedBlock.data.items.map((item) => (
@@ -2090,13 +2148,13 @@ export default function ProposalEditorPage() {
                             value={item.title}
                             onChange={(event) => updateTimelineItem(selectedBlock.id, item.id, { title: event.target.value })}
                             className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
-                            placeholder="Başlık"
+                            placeholder={t('proposalEditor.placeholders.title')}
                           />
                           <input
                             value={item.date}
                             onChange={(event) => updateTimelineItem(selectedBlock.id, item.id, { date: event.target.value })}
                             className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
-                            placeholder="Tarih"
+                            placeholder={t('proposalEditor.placeholders.date')}
                           />
                           <textarea
                             value={item.description}
@@ -2105,13 +2163,13 @@ export default function ProposalEditorPage() {
                             }
                             className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
                             rows={3}
-                            placeholder="Açıklama"
+                            placeholder={t('proposalEditor.placeholders.description')}
                           />
                           <button
                             onClick={() => removeTimelineItem(selectedBlock.id, item.id)}
                             className="text-xs text-red-500"
                           >
-                            Adımı kaldır
+                            {t('proposalEditor.actions.removeStep')}
                           </button>
                         </div>
                       ))}
@@ -2120,7 +2178,7 @@ export default function ProposalEditorPage() {
                       onClick={() => addTimelineItem(selectedBlock.id)}
                       className="w-full py-2 rounded-lg border border-dashed border-gray-200 text-sm text-gray-500 hover:border-primary"
                     >
-                      Yeni adım ekle
+                      {t('proposalEditor.actions.addStep')}
                     </button>
                   </div>
                 )}
@@ -2128,10 +2186,10 @@ export default function ProposalEditorPage() {
                 {selectedBlock.type === 'countdown' && (
                   <div className="space-y-4">
                     <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      Geri Sayım
+                      {t('proposalEditor.blocks.countdown')}
                     </label>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Başlık</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.title')}</label>
                       <input
                         value={selectedBlock.data.label}
                         onChange={(event) => updateBlockData(selectedBlock.id, { label: event.target.value })}
@@ -2140,7 +2198,7 @@ export default function ProposalEditorPage() {
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="text-[11px] text-gray-500 block mb-1">Gün</label>
+                        <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.days')}</label>
                         <input
                           type="number"
                           min={0}
@@ -2152,7 +2210,7 @@ export default function ProposalEditorPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-[11px] text-gray-500 block mb-1">Saat</label>
+                        <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.hours')}</label>
                         <input
                           type="number"
                           min={0}
@@ -2164,7 +2222,7 @@ export default function ProposalEditorPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-[11px] text-gray-500 block mb-1">Dakika</label>
+                        <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.minutes')}</label>
                         <input
                           type="number"
                           min={0}
@@ -2182,10 +2240,10 @@ export default function ProposalEditorPage() {
                 {selectedBlock.type === 'cta' && (
                   <div className="space-y-4">
                     <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      CTA Butonu
+                      {t('proposalEditor.blocks.cta')}
                     </label>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Buton Metni</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.buttonText')}</label>
                       <input
                         value={selectedBlock.data.label}
                         onChange={(event) => updateBlockData(selectedBlock.id, { label: event.target.value })}
@@ -2193,7 +2251,7 @@ export default function ProposalEditorPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Link</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.link')}</label>
                       <input
                         value={selectedBlock.data.url}
                         onChange={(event) => updateBlockData(selectedBlock.id, { url: event.target.value })}
@@ -2201,7 +2259,7 @@ export default function ProposalEditorPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Stil</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.style')}</label>
                       <select
                         value={selectedBlock.data.variant}
                         onChange={(event) =>
@@ -2209,9 +2267,9 @@ export default function ProposalEditorPage() {
                         }
                         className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                       >
-                        <option value="primary">Primary</option>
-                        <option value="secondary">Secondary</option>
-                        <option value="outline">Outline</option>
+                        <option value="primary">{t('proposalEditor.ctaStyles.primary')}</option>
+                        <option value="secondary">{t('proposalEditor.ctaStyles.secondary')}</option>
+                        <option value="outline">{t('proposalEditor.ctaStyles.outline')}</option>
                       </select>
                     </div>
                   </div>
@@ -2220,10 +2278,10 @@ export default function ProposalEditorPage() {
                 {selectedBlock.type === 'signature' && (
                   <div className="space-y-4">
                     <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      İmza Ayarları
+                      {t('proposalEditor.blocks.signatureSettings')}
                     </label>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Etiket</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.label')}</label>
                       <input
                         value={selectedBlock.data.label}
                         onChange={(event) => updateBlockData(selectedBlock.id, { label: event.target.value })}
@@ -2237,7 +2295,7 @@ export default function ProposalEditorPage() {
                         onChange={() => updateBlockData(selectedBlock.id, { required: !selectedBlock.data.required })}
                         className="rounded text-primary focus:ring-primary size-4"
                       />
-                      <span>Zorunlu imza</span>
+                      <span>{t('proposalEditor.fields.signatureRequired')}</span>
                     </label>
                   </div>
                 )}
@@ -2247,7 +2305,7 @@ export default function ProposalEditorPage() {
                   className="w-full mt-4 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
                 >
                   <span className="material-symbols-outlined text-[18px]">delete_forever</span>
-                  Bloğu Sil
+                  {t('proposalEditor.actions.deleteBlock')}
                 </button>
               </>
             )}
@@ -2255,12 +2313,12 @@ export default function ProposalEditorPage() {
             {activePanel === 'design' && (
               <div className="pt-6 border-t border-[#e7ebf4] dark:border-gray-800">
                 <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide mb-3">
-                  Tasarım
+                  {t('proposalEditor.design.title')}
                 </label>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Metin Rengi</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.textColor')}</label>
                       <div className="flex items-center gap-2 p-2 rounded border border-gray-200 dark:border-gray-700">
                         <input
                           type="color"
@@ -2276,7 +2334,7 @@ export default function ProposalEditorPage() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">Vurgu Rengi</label>
+                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.accentColor')}</label>
                       <div className="flex items-center gap-2 p-2 rounded border border-gray-200 dark:border-gray-700">
                         <input
                           type="color"
@@ -2294,7 +2352,7 @@ export default function ProposalEditorPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] text-gray-500 block mb-1">Arka Plan</label>
+                    <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.backgroundColor')}</label>
                     <div className="flex items-center gap-2 p-2 rounded border border-gray-200 dark:border-gray-700">
                       <input
                         type="color"
@@ -2311,7 +2369,7 @@ export default function ProposalEditorPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] text-gray-500 block mb-1">Köşe Yuvarlaklığı</label>
+                    <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.cornerRadius')}</label>
                     <input
                       type="range"
                       min={0}
@@ -2325,7 +2383,7 @@ export default function ProposalEditorPage() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] text-gray-500 block mb-1">Font Ölçeği (%)</label>
+                    <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.fontScale')}</label>
                     <input
                       type="range"
                       min={90}
@@ -2342,7 +2400,7 @@ export default function ProposalEditorPage() {
             )}
 
             <div className="pt-6 border-t border-[#e7ebf4] dark:border-gray-800 text-xs text-gray-400">
-              Toplam: <span className="font-bold text-[#0d121c] dark:text-white">{formatCurrency(subtotal)}</span>
+              {t('proposalEditor.summary.total')}: <span className="font-bold text-[#0d121c] dark:text-white">{formatCurrency(subtotal)}</span>
             </div>
           </div>
         </aside>
@@ -2350,7 +2408,7 @@ export default function ProposalEditorPage() {
       <DragOverlay>
         {activePaletteId ? (
           <div className="bg-white dark:bg-gray-900 border border-primary/30 rounded-lg px-4 py-2 shadow-xl text-sm font-semibold text-primary">
-            Blok ekle
+            {t('proposalEditor.actions.addBlock')}
           </div>
         ) : null}
       </DragOverlay>
@@ -2414,6 +2472,7 @@ function OrderListItem({
   onMove: (direction: 'up' | 'down') => void
   meta?: { label: string; icon: string }
 }) {
+  const { t } = useI18n()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `order-${block.id}`,
   })
@@ -2450,14 +2509,14 @@ function OrderListItem({
         <button
           onClick={() => onMove('up')}
           className="size-6 rounded-md border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-primary"
-          aria-label="Yukarı taşı"
+          aria-label={t('proposalEditor.order.moveUp')}
         >
           <span className="material-symbols-outlined text-[16px]">expand_less</span>
         </button>
         <button
           onClick={() => onMove('down')}
           className="size-6 rounded-md border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-primary"
-          aria-label="Aşağı taşı"
+          aria-label={t('proposalEditor.order.moveDown')}
         >
           <span className="material-symbols-outlined text-[16px]">expand_more</span>
         </button>
@@ -2481,12 +2540,6 @@ function CanvasDropZone({ children }: { children: React.ReactNode }) {
   )
 }
 
-const editorSteps: { id: 'edit' | 'preview' | 'send'; label: string }[] = [
-  { id: 'edit', label: 'Düzenleme' },
-  { id: 'preview', label: 'Önizleme' },
-  { id: 'send', label: 'Gönder' },
-]
-
 type DraftVersion = {
   id: string
   savedAt: string
@@ -2500,9 +2553,15 @@ function StepNav({
   mode: 'edit' | 'preview' | 'send'
   onChange: (mode: 'edit' | 'preview' | 'send') => void
 }) {
+  const { t } = useI18n()
+  const steps: { id: 'edit' | 'preview' | 'send'; label: string }[] = [
+    { id: 'edit', label: t('proposalEditor.steps.edit') },
+    { id: 'preview', label: t('proposalEditor.steps.preview') },
+    { id: 'send', label: t('proposalEditor.steps.send') },
+  ]
   return (
     <div className="flex items-center gap-2 text-xs font-semibold text-[#48679d]">
-      {editorSteps.map((step, index) => (
+      {steps.map((step, index) => (
         <div key={step.id} className="flex items-center gap-2">
           <button
             onClick={() => onChange(step.id)}
@@ -2514,7 +2573,7 @@ function StepNav({
           >
             {step.label}
           </button>
-          {index < editorSteps.length - 1 && (
+          {index < steps.length - 1 && (
             <span className="material-symbols-outlined text-[16px] text-gray-400">chevron_right</span>
           )}
         </div>
@@ -2532,6 +2591,8 @@ function HistoryModal({
   onClose: () => void
   versions: DraftVersion[]
 }) {
+  const { t, locale } = useI18n()
+  const localeCode = locale === 'en' ? 'en-US' : 'tr-TR'
   if (!isOpen) return null
 
   return (
@@ -2545,8 +2606,8 @@ function HistoryModal({
       >
         <div className="px-6 py-4 border-b border-[#e7ebf4] dark:border-gray-800 flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-[#0d121c] dark:text-white">Sürüm Geçmişi</h2>
-            <p className="text-sm text-[#48679d] dark:text-gray-400">Son kaydedilen taslaklar</p>
+            <h2 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('proposalEditor.history.title')}</h2>
+            <p className="text-sm text-[#48679d] dark:text-gray-400">{t('proposalEditor.history.subtitle')}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <span className="material-symbols-outlined">close</span>
@@ -2555,14 +2616,14 @@ function HistoryModal({
         <div className="p-6">
           {versions.length === 0 ? (
             <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 p-6 text-center text-sm text-gray-500">
-              Henüz taslak kaydı yok.
+              {t('proposalEditor.history.empty')}
             </div>
           ) : (
             <div className="space-y-3">
               {versions.map((version, index) => {
                 const formatted =
                   version.savedAt && !Number.isNaN(Date.parse(version.savedAt))
-                    ? new Date(version.savedAt).toLocaleString('tr-TR', {
+                    ? new Date(version.savedAt).toLocaleString(localeCode, {
                         dateStyle: 'medium',
                         timeStyle: 'short',
                       })
@@ -2578,7 +2639,7 @@ function HistoryModal({
                     </div>
                     {index === 0 && (
                       <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
-                        Son kayıt
+                        {t('proposalEditor.history.latest')}
                       </span>
                     )}
                   </div>
@@ -2623,6 +2684,7 @@ function TemplateSaveModal({
   isSaving,
   blockCount,
 }: TemplateSaveModalProps) {
+  const { t } = useI18n()
   if (!isOpen) return null
 
   return (
@@ -2636,9 +2698,9 @@ function TemplateSaveModal({
       >
         <div className="px-6 py-4 border-b border-[#e7ebf4] dark:border-gray-800 flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-[#0d121c] dark:text-white">Şablon olarak kaydet</h2>
+            <h2 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('proposalEditor.saveTemplate.title')}</h2>
             <p className="text-sm text-[#48679d] dark:text-gray-400">
-              Mevcut blok yapısını şablon olarak kaydedin.
+              {t('proposalEditor.saveTemplate.subtitle')}
             </p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -2647,36 +2709,36 @@ function TemplateSaveModal({
         </div>
         <div className="p-6 space-y-4">
           <div>
-            <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Şablon Adı</label>
+            <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('templatesNew.fields.name')}</label>
             <input
               value={name}
               onChange={(event) => onNameChange(event.target.value)}
-              placeholder="Örn: Ajans Teklifi"
+              placeholder={t('templatesNew.placeholders.name')}
               className="mt-2 w-full px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Açıklama</label>
+            <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('templatesNew.fields.description')}</label>
             <textarea
               value={description}
               onChange={(event) => onDescriptionChange(event.target.value)}
-              placeholder="Şablonun kullanım amacını yazın."
+              placeholder={t('templatesNew.placeholders.description')}
               className="mt-2 w-full px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm min-h-[110px]"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Kategori</label>
+            <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('templatesNew.fields.category')}</label>
             <input
               value={category}
               onChange={(event) => onCategoryChange(event.target.value)}
-              placeholder="Örn: SaaS, Ajans, Emlak"
+              placeholder={t('templatesNew.placeholders.category')}
               className="mt-2 w-full px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm"
             />
           </div>
           <div className="flex items-center justify-between rounded-lg border border-[#e7ebf4] dark:border-gray-800 px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-[#0d121c] dark:text-white">Şablonu paylaş</p>
-              <p className="text-xs text-[#48679d]">Şablon ekibiniz veya herkese açık olur.</p>
+              <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{t('templatesNew.share.title')}</p>
+              <p className="text-xs text-[#48679d]">{t('templatesNew.share.subtitle')}</p>
             </div>
             <button
               onClick={onPublicToggle}
@@ -2684,11 +2746,11 @@ function TemplateSaveModal({
                 isPublic ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
               }`}
             >
-              {isPublic ? 'Genel' : 'Takım'}
+              {isPublic ? t('templatesNew.share.public') : t('templatesNew.share.team')}
             </button>
           </div>
           <div className="rounded-lg border border-dashed border-[#e7ebf4] dark:border-gray-800 px-4 py-3 text-xs text-gray-500">
-            Bu şablon {blockCount} blok içeriyor.
+            {t('proposalEditor.saveTemplate.blockCount', { count: blockCount })}
           </div>
         </div>
         <div className="px-6 py-4 border-t border-[#e7ebf4] dark:border-gray-800 flex items-center justify-end gap-2">
@@ -2696,14 +2758,14 @@ function TemplateSaveModal({
             onClick={onClose}
             className="px-4 py-2 rounded-lg border border-[#e7ebf4] text-sm font-semibold text-[#48679d]"
           >
-            Vazgeç
+            {t('common.cancel')}
           </button>
           <button
             onClick={onSave}
             disabled={isSaving}
             className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-70"
           >
-            {isSaving ? 'Kaydediliyor' : 'Şablonu Kaydet'}
+            {isSaving ? t('templatesNew.saving') : t('templatesNew.save')}
           </button>
         </div>
       </div>
@@ -2712,6 +2774,15 @@ function TemplateSaveModal({
 }
 
 function BlockContent({ block }: { block: ProposalBlock }) {
+  const { t, locale } = useI18n()
+  const localeCode = locale === 'en' ? 'en-US' : 'tr-TR'
+  const formatCurrency = (value: number, currency = 'TRY') => {
+    try {
+      return new Intl.NumberFormat(localeCode, { style: 'currency', currency, maximumFractionDigits: 0 }).format(value)
+    } catch {
+      return new Intl.NumberFormat(localeCode, { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(value)
+    }
+  }
   const headingSizeMap: Record<HeadingData['level'], string> = {
     h1: 'text-3xl',
     h2: 'text-2xl',
@@ -2756,7 +2827,7 @@ function BlockContent({ block }: { block: ProposalBlock }) {
         <div className="p-8 bg-gray-50 dark:bg-gray-900/50 rounded-b-lg">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-[color:var(--proposal-text)]">
             <span className="material-symbols-outlined text-[color:var(--proposal-accent)]">shopping_cart</span>
-            Yatırım Özeti
+            {t('proposalEditor.pricing.title')}
           </h3>
           {(() => {
             const subtotalCurrency = block.data.items.find((item) => item.currency)?.currency ?? 'TRY'
@@ -2764,10 +2835,10 @@ function BlockContent({ block }: { block: ProposalBlock }) {
           <table className="w-full text-sm text-left">
             <thead className="text-xs uppercase text-gray-500 border-b border-gray-200 dark:border-gray-800">
               <tr>
-                {block.data.columns.description && <th className="pb-3 font-semibold">Hizmet / Ürün</th>}
-                {block.data.columns.quantity && <th className="pb-3 font-semibold text-center">Adet</th>}
-                {block.data.columns.unitPrice && <th className="pb-3 font-semibold text-right">Birim</th>}
-                {block.data.columns.total && <th className="pb-3 font-semibold text-right">Toplam</th>}
+                {block.data.columns.description && <th className="pb-3 font-semibold">{t('proposalEditor.pricing.columns.description')}</th>}
+                {block.data.columns.quantity && <th className="pb-3 font-semibold text-center">{t('proposalEditor.pricing.columns.quantity')}</th>}
+                {block.data.columns.unitPrice && <th className="pb-3 font-semibold text-right">{t('proposalEditor.pricing.columns.unitPrice')}</th>}
+                {block.data.columns.total && <th className="pb-3 font-semibold text-right">{t('proposalEditor.pricing.columns.total')}</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -2790,7 +2861,7 @@ function BlockContent({ block }: { block: ProposalBlock }) {
               })}
               <tr className="bg-primary/5">
                 <td className="py-4 text-right font-bold text-gray-500" colSpan={3}>
-                  Ara Toplam
+                  {t('proposalEditor.pricing.subtotal')}
                 </td>
                 <td className="py-4 text-right font-bold text-[color:var(--proposal-accent)] text-lg">
                   {formatCurrency(block.data.items.reduce((sum, item) => sum + item.qty * item.price, 0), subtotalCurrency)}
@@ -2806,7 +2877,7 @@ function BlockContent({ block }: { block: ProposalBlock }) {
       {block.type === 'video' && (
         <div className="p-8 space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold">Video</h4>
+            <h4 className="text-sm font-semibold">{t('proposalEditor.blocks.video')}</h4>
             <span className="text-xs text-gray-400 truncate">{block.data.title}</span>
           </div>
           {getEmbedUrl(block.data.url) ? (
@@ -2821,7 +2892,7 @@ function BlockContent({ block }: { block: ProposalBlock }) {
             </div>
           ) : (
             <div className="aspect-video w-full rounded-lg border border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center text-sm text-gray-400">
-              Geçerli bir video URL girin
+              {t('proposalEditor.validation.invalidVideoUrl')}
             </div>
           )}
         </div>
@@ -2829,7 +2900,7 @@ function BlockContent({ block }: { block: ProposalBlock }) {
 
       {block.type === 'gallery' && (
         <div className="p-8 space-y-4">
-          <h4 className="text-sm font-semibold">Galeri</h4>
+          <h4 className="text-sm font-semibold">{t('proposalEditor.blocks.gallery')}</h4>
           <div className={`grid gap-4 ${block.data.columns === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
             {block.data.images.map((image) => (
               <div key={image.id} className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
@@ -2863,7 +2934,7 @@ function BlockContent({ block }: { block: ProposalBlock }) {
 
       {block.type === 'timeline' && (
         <div className="p-8 space-y-4">
-          <h4 className="text-sm font-semibold">Zaman Çizelgesi</h4>
+          <h4 className="text-sm font-semibold">{t('proposalEditor.blocks.timeline')}</h4>
           <div className="space-y-4">
             {block.data.items.map((item, itemIndex) => (
               <div key={item.id} className="flex gap-4">
@@ -2891,9 +2962,9 @@ function BlockContent({ block }: { block: ProposalBlock }) {
           <h4 className="text-sm font-semibold">{block.data.label}</h4>
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'Gün', value: block.data.days },
-              { label: 'Saat', value: block.data.hours },
-              { label: 'Dakika', value: block.data.minutes },
+              { label: t('proposalEditor.fields.days'), value: block.data.days },
+              { label: t('proposalEditor.fields.hours'), value: block.data.hours },
+              { label: t('proposalEditor.fields.minutes'), value: block.data.minutes },
             ].map((item) => (
               <div
                 key={item.label}
@@ -2933,7 +3004,9 @@ function BlockContent({ block }: { block: ProposalBlock }) {
           <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center text-gray-500">
             <span className="material-symbols-outlined text-3xl text-[color:var(--proposal-accent)] mb-2">draw</span>
             <p className="text-sm font-semibold">{block.data.label}</p>
-            <p className="text-xs">{block.data.required ? 'Zorunlu' : 'Opsiyonel'}</p>
+            <p className="text-xs">
+              {block.data.required ? t('proposalEditor.signature.required') : t('proposalEditor.signature.optional')}
+            </p>
           </div>
         </div>
       )}
@@ -2954,6 +3027,7 @@ function EditorBlock({
   onSelect: () => void
   onRemove: () => void
 }) {
+  const { t } = useI18n()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block.id,
   })
@@ -2972,7 +3046,7 @@ function EditorBlock({
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/60 rounded-t-lg">
         <div className="flex items-center gap-2 text-xs font-semibold text-gray-500" {...attributes} {...listeners}>
           <span className="material-symbols-outlined text-[18px]">drag_indicator</span>
-          Blok {index + 1}
+          {t('proposalEditor.blockCard.title', { index: index + 1 })}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -3007,22 +3081,6 @@ type SendProposalModalProps = {
   layout?: 'modal' | 'page'
 }
 
-const sendMethods: { id: SendMethod; label: string; description: string; icon: string }[] = [
-  { id: 'email', label: 'E-posta', description: 'E-posta gönder', icon: 'mail' },
-  { id: 'whatsapp', label: 'WhatsApp', description: 'WhatsApp mesajı', icon: 'chat' },
-  { id: 'sms', label: 'SMS', description: 'SMS gönder', icon: 'sms' },
-  { id: 'link', label: 'Link', description: 'Sadece link kopyala', icon: 'link' },
-]
-
-const expiryOptions = [
-  { value: '24h', label: '24 saat' },
-  { value: '48h', label: '48 saat' },
-  { value: '7d', label: '7 gün' },
-  { value: '14d', label: '14 gün' },
-  { value: '30d', label: '30 gün' },
-  { value: 'unlimited', label: 'Sınırsız' },
-]
-
 function SendProposalModal({
   proposalTitle,
   clientName,
@@ -3035,14 +3093,33 @@ function SendProposalModal({
   onClose,
   layout = 'modal',
 }: SendProposalModalProps) {
+  const { t } = useI18n()
   const isModal = layout === 'modal'
+  const sendMethods = useMemo<Array<{ id: SendMethod; label: string; description: string; icon: string }>>(
+    () => [
+      { id: 'email', label: t('proposalEditor.send.methods.email.label'), description: t('proposalEditor.send.methods.email.description'), icon: 'mail' },
+      { id: 'whatsapp', label: t('proposalEditor.send.methods.whatsapp.label'), description: t('proposalEditor.send.methods.whatsapp.description'), icon: 'chat' },
+      { id: 'sms', label: t('proposalEditor.send.methods.sms.label'), description: t('proposalEditor.send.methods.sms.description'), icon: 'sms' },
+      { id: 'link', label: t('proposalEditor.send.methods.link.label'), description: t('proposalEditor.send.methods.link.description'), icon: 'link' },
+    ],
+    [t]
+  )
+  const expiryOptions = useMemo(
+    () => [
+      { value: '24h', label: t('proposalEditor.send.expiry.options.24h') },
+      { value: '48h', label: t('proposalEditor.send.expiry.options.48h') },
+      { value: '7d', label: t('proposalEditor.send.expiry.options.7d') },
+      { value: '14d', label: t('proposalEditor.send.expiry.options.14d') },
+      { value: '30d', label: t('proposalEditor.send.expiry.options.30d') },
+      { value: 'unlimited', label: t('proposalEditor.send.expiry.options.unlimited') },
+    ],
+    [t]
+  )
   const [method, setMethod] = useState<SendMethod>('email')
   const [recipientEmail, setRecipientEmail] = useState(defaultEmail)
   const [recipientPhone, setRecipientPhone] = useState(defaultPhone)
-  const [subject, setSubject] = useState(`${clientName} için Teklif`)
-  const [message, setMessage] = useState(
-    `Merhaba {{Müşteri_Adı}},\n\nGörüşmemiz doğrultusunda hazırladığım teklifi ekte bulabilirsiniz.\n\nTeklifi görüntülemek için:\n\nİyi çalışmalar,\nAERO CRM`
-  )
+  const [subject, setSubject] = useState(() => t('proposalEditor.send.defaults.subject', { client: clientName }))
+  const [message, setMessage] = useState(() => t('proposalEditor.send.defaults.message'))
   const [includeLink, setIncludeLink] = useState(true)
   const [includePdf, setIncludePdf] = useState(true)
   const [expiryEnabled, setExpiryEnabled] = useState(false)
@@ -3095,7 +3172,7 @@ function SendProposalModal({
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null)
-        throw new Error(payload?.error || 'Teklif gönderimi başarısız oldu.')
+        throw new Error(payload?.error || t('proposalEditor.send.errors.failed'))
       }
 
       const payload = await response.json()
@@ -3104,7 +3181,7 @@ function SendProposalModal({
       }
       setView('success')
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'Teklif gönderimi başarısız oldu.'
+      const messageText = error instanceof Error ? error.message : t('proposalEditor.send.errors.failed')
       setErrorMessage(messageText)
     } finally {
       setIsSending(false)
@@ -3121,10 +3198,10 @@ function SendProposalModal({
     }
   }
 
-  const whatsappMessage = `Merhaba ${clientName}, teklifinizi paylaşmak istedim: ${proposalLink}`
-  const smsMessage = `Teklif linkiniz: ${proposalLink}`
+  const whatsappMessage = t('proposalEditor.send.templates.whatsapp', { client: clientName, link: proposalLink })
+  const smsMessage = t('proposalEditor.send.templates.sms', { link: proposalLink })
 
-  const linkAnchor = 'Teklifi görüntülemek için:'
+  const linkAnchor = t('email.proposalAnchor')
   const finalEmailMessage = includeLink
     ? message.includes(linkAnchor)
       ? message.replace(linkAnchor, `${linkAnchor}\n${proposalLink}`)
@@ -3150,7 +3227,7 @@ function SendProposalModal({
       >
         <div className="px-6 py-4 border-b border-[#e7ebf4] dark:border-gray-800 flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-[#0d121c] dark:text-white">Teklifi Gönder</h2>
+            <h2 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('proposalEditor.actions.sendTitle')}</h2>
             <p className="text-sm text-[#48679d] dark:text-gray-400">{clientName} - {proposalTitle}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -3186,7 +3263,7 @@ function SendProposalModal({
             {method === 'email' && (
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Alıcı</label>
+                  <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('proposalEditor.send.fields.recipient')}</label>
                   <input
                     value={recipientEmail}
                     onChange={(event) => setRecipientEmail(event.target.value)}
@@ -3194,7 +3271,7 @@ function SendProposalModal({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Konu</label>
+                  <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('proposalEditor.send.fields.subject')}</label>
                   <input
                     value={subject}
                     onChange={(event) => setSubject(event.target.value)}
@@ -3202,7 +3279,7 @@ function SendProposalModal({
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Mesaj</label>
+                  <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('proposalEditor.send.fields.message')}</label>
                   <textarea
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
@@ -3221,7 +3298,7 @@ function SendProposalModal({
                       onChange={() => setIncludeLink((prev) => !prev)}
                       className="rounded text-primary focus:ring-primary"
                     />
-                    Linki e-postaya ekle
+                    {t('proposalEditor.send.actions.includeLink')}
                   </label>
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -3230,17 +3307,17 @@ function SendProposalModal({
                       onChange={() => setIncludePdf((prev) => !prev)}
                       className="rounded text-primary focus:ring-primary"
                     />
-                    PDF kopyasını ekle
+                    {t('proposalEditor.send.actions.includePdf')}
                   </label>
                 </div>
-                <p className="text-xs text-gray-400">PDF eklendiğinde e-posta boyutu artacaktır.</p>
+                <p className="text-xs text-gray-400">{t('proposalEditor.send.hints.pdf')}</p>
               </div>
             )}
 
             {method === 'whatsapp' && (
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Telefon</label>
+                  <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('proposalEditor.send.fields.phone')}</label>
                   <input
                     value={recipientPhone}
                     onChange={(event) => setRecipientPhone(event.target.value)}
@@ -3250,14 +3327,14 @@ function SendProposalModal({
                 <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-[#48679d]">
                   {whatsappMessage}
                 </div>
-                <p className="text-xs text-gray-400">WhatsApp uygulaması açılacaktır.</p>
+                <p className="text-xs text-gray-400">{t('proposalEditor.send.hints.whatsapp')}</p>
               </div>
             )}
 
             {method === 'sms' && (
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Telefon</label>
+                  <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('proposalEditor.send.fields.phone')}</label>
                   <input
                     value={recipientPhone}
                     onChange={(event) => setRecipientPhone(event.target.value)}
@@ -3278,16 +3355,16 @@ function SendProposalModal({
                     onClick={handleCopy}
                     className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold"
                   >
-                    {copied ? 'Kopyalandı' : 'Kopyala'}
+                    {copied ? t('common.copied') : t('common.copy')}
                   </button>
                 </div>
-                <p className="text-xs text-gray-400">Linki kopyalayarak dilediğiniz kanaldan paylaşabilirsiniz.</p>
+                <p className="text-xs text-gray-400">{t('proposalEditor.send.hints.link')}</p>
               </div>
             )}
 
             <div className="border-t border-[#e7ebf4] dark:border-gray-800 pt-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">Geçerlilik süresi ekle</span>
+                <span className="text-sm font-semibold">{t('proposalEditor.send.expiry.add')}</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
@@ -3318,9 +3395,9 @@ function SendProposalModal({
                       onChange={() => setShowCountdown((prev) => !prev)}
                       className="rounded text-primary focus:ring-primary"
                     />
-                    Geri sayım göster
+                    {t('proposalEditor.send.expiry.showCountdown')}
                   </label>
-                  <p className="text-xs text-amber-500">Süre dolduğunda teklif erişilemez olacak.</p>
+                  <p className="text-xs text-amber-500">{t('proposalEditor.send.expiry.warning')}</p>
                 </div>
               )}
             </div>
@@ -3332,28 +3409,28 @@ function SendProposalModal({
             <div className="mx-auto size-14 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
               <span className="material-symbols-outlined text-3xl">check_circle</span>
             </div>
-            <h3 className="text-lg font-bold text-[#0d121c] dark:text-white">Teklif başarıyla gönderildi!</h3>
-            <p className="text-sm text-[#48679d] dark:text-gray-400">Link iletildi ve Spyglass takibi başladı.</p>
+            <h3 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('proposalEditor.send.success.title')}</h3>
+            <p className="text-sm text-[#48679d] dark:text-gray-400">{t('proposalEditor.send.success.subtitle')}</p>
             <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
               <span className="text-sm text-[#0d121c] dark:text-white truncate">{proposalLink}</span>
               <button
                 onClick={handleCopy}
                 className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold"
               >
-                {copied ? 'Kopyalandı' : 'Kopyala'}
+                {copied ? t('common.copied') : t('common.copy')}
               </button>
             </div>
             <button className="w-full mt-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold">
-              Spyglass'ta Takip Et
+              {t('proposalEditor.send.success.track')}
             </button>
             <button
               onClick={onClose}
               className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold"
             >
-              Tamam
+              {t('proposalEditor.send.success.done')}
             </button>
             <button onClick={() => setView('form')} className="text-sm text-primary underline">
-              Başka Teklif Gönder
+              {t('proposalEditor.send.success.sendAnother')}
             </button>
           </div>
         )}
@@ -3371,14 +3448,14 @@ function SendProposalModal({
               }}
               className="text-sm font-semibold text-[#48679d] hover:text-primary"
             >
-              Önizle
+              {t('proposalEditor.actions.preview')}
             </button>
             <div className="flex items-center gap-2">
               <button
                 onClick={onClose}
                 className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold"
               >
-                İptal
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleSend}
@@ -3390,7 +3467,7 @@ function SendProposalModal({
                 ) : (
                   <span className="material-symbols-outlined text-[18px]">send</span>
                 )}
-                Gönder
+                {t('proposalEditor.actions.send')}
               </button>
             </div>
           </div>

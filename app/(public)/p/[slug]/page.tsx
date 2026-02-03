@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { CountdownTimer, ProposalViewTracker, SignatureBlock } from './client'
 
 export const revalidate = 0
@@ -99,8 +100,12 @@ type ProposalBlock =
   | { id: string; type: 'cta'; data: CtaData }
   | { id: string; type: 'signature'; data: SignatureData }
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(value)
+const formatCurrency = (locale: string, value: number) =>
+  new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: locale.startsWith('en') ? 'USD' : 'TRY',
+    maximumFractionDigits: 0,
+  }).format(value)
 
 const getEmbedUrl = (url: string) => {
   if (!url) return ''
@@ -128,24 +133,26 @@ const getEmbedUrl = (url: string) => {
   return url
 }
 
-const getBadge = (status: string, isExpired: boolean) => {
+const getBadge = (t: (key: string) => string, status: string, isExpired: boolean) => {
   if (isExpired) {
-    return { label: 'Süresi doldu', className: 'bg-red-100 text-red-600' }
+    return { label: t('publicProposal.badges.expired'), className: 'bg-red-100 text-red-600' }
   }
   switch (status) {
     case 'signed':
-      return { label: 'İmzalandı', className: 'bg-green-100 text-green-700' }
+      return { label: t('publicProposal.badges.signed'), className: 'bg-green-100 text-green-700' }
     case 'viewed':
-      return { label: 'Görüntülendi', className: 'bg-blue-100 text-blue-700' }
+      return { label: t('publicProposal.badges.viewed'), className: 'bg-blue-100 text-blue-700' }
     case 'draft':
-      return { label: 'Taslak', className: 'bg-gray-100 text-gray-600' }
+      return { label: t('publicProposal.badges.draft'), className: 'bg-gray-100 text-gray-600' }
     default:
-      return { label: 'Gönderildi', className: 'bg-amber-100 text-amber-700' }
+      return { label: t('publicProposal.badges.sent'), className: 'bg-amber-100 text-amber-700' }
   }
 }
 
 export default async function PublicProposalPage({ params }: { params: { slug: string } }) {
   const supabase = await createServerSupabaseClient()
+  const t = getServerT()
+  const locale = getServerLocale() === 'en' ? 'en-US' : 'tr-TR'
   const slug = params.slug
 
   const { data: proposal, error } = await supabase
@@ -161,13 +168,13 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
   const blocks = (proposal.blocks ?? []) as ProposalBlock[]
   const expiresAt = proposal.expires_at ? new Date(proposal.expires_at) : null
   const isExpired = expiresAt ? expiresAt.getTime() < Date.now() : false
-  const contactName = (proposal.contact as { full_name?: string } | null)?.full_name ?? 'Müşteri'
+  const contactName = (proposal.contact as { full_name?: string } | null)?.full_name ?? t('header.customerFallback')
   const total = blocks
     .filter((block) => block.type === 'pricing')
     .flatMap((block) => block.data.items)
     .reduce((sum, item) => sum + item.qty * item.price, 0)
 
-  const badge = getBadge(String(proposal.status ?? 'pending'), isExpired)
+  const badge = getBadge(t, String(proposal.status ?? 'pending'), isExpired)
 
   return (
     <div className="min-h-screen bg-[#f4f6fb] text-[#0d121c]">
@@ -175,17 +182,18 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
       <header className="px-4 sm:px-6 pt-8 pb-6">
         <div className="mx-auto w-full max-w-5xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#48679d]">AERO CRM Teklifi</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#48679d]">{t('publicProposal.header.kicker')}</p>
             <h1 className="text-2xl sm:text-3xl font-extrabold">{proposal.title}</h1>
             <p className="text-sm text-gray-500">
-              {contactName} için hazırlanmıştır
+              {t('publicProposal.header.preparedFor', { name: contactName })}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <span className={`px-3 py-1 rounded-full text-xs font-bold ${badge.className}`}>{badge.label}</span>
             {expiresAt && (
               <span className="text-xs text-gray-500">
-                Son geçerlilik: {expiresAt.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                {t('publicProposal.header.expiresAt')}{' '}
+                {new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: 'numeric' }).format(expiresAt)}
               </span>
             )}
           </div>
@@ -200,9 +208,9 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
                 <div className="mx-auto size-16 rounded-full bg-red-100 text-red-500 flex items-center justify-center">
                   <span className="material-symbols-outlined text-3xl">schedule</span>
                 </div>
-                <h2 className="text-xl font-bold">Teklif süresi doldu</h2>
+                <h2 className="text-xl font-bold">{t('publicProposal.expired.title')}</h2>
                 <p className="text-sm text-gray-500">
-                  Bu teklifin görüntüleme süresi sona erdi. Yeni bir teklif için bizimle iletişime geçebilirsiniz.
+                  {t('publicProposal.expired.description')}
                 </p>
               </div>
             ) : (
@@ -217,7 +225,7 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
                 <div className="flex flex-col gap-6 py-10 px-6 sm:px-10">
                   {blocks.map((block) => (
                     <div key={block.id} className="rounded-2xl overflow-hidden">
-                      <BlockContent block={block} slug={slug} />
+                      <BlockContent block={block} slug={slug} t={t} formatCurrency={(value) => formatCurrency(locale, value)} />
                     </div>
                   ))}
                 </div>
@@ -227,10 +235,10 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
 
           <aside className="space-y-4">
             <div className="rounded-2xl border border-[#e7ebf4] bg-white p-5 shadow-sm space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#48679d]">Özet</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#48679d]">{t('publicProposal.summary.title')}</p>
               <div className="flex items-baseline justify-between">
-                <span className="text-sm text-gray-500">Toplam</span>
-                <span className="text-lg font-extrabold text-[#0d121c]">{formatCurrency(total)}</span>
+                <span className="text-sm text-gray-500">{t('publicProposal.summary.total')}</span>
+                <span className="text-lg font-extrabold text-[#0d121c]">{formatCurrency(locale, total)}</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <span className="material-symbols-outlined text-[16px]">person</span>
@@ -239,12 +247,12 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
             </div>
 
             <div className="rounded-2xl border border-[#e7ebf4] bg-white p-5 shadow-sm space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#48679d]">Sorularınız mı var?</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#48679d]">{t('publicProposal.help.title')}</p>
               <p className="text-sm text-gray-500">
-                Teklif detayları için temsilcinizle iletişime geçebilirsiniz.
+                {t('publicProposal.help.description')}
               </p>
               <button className="w-full rounded-xl bg-[#0d121c] text-white py-2 text-sm font-semibold">
-                Danışmana Yaz
+                {t('publicProposal.help.cta')}
               </button>
             </div>
           </aside>
@@ -254,7 +262,17 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
   )
 }
 
-function BlockContent({ block, slug }: { block: ProposalBlock; slug: string }) {
+function BlockContent({
+  block,
+  slug,
+  t,
+  formatCurrency,
+}: {
+  block: ProposalBlock
+  slug: string
+  t: (key: string, vars?: Record<string, string | number>) => string
+  formatCurrency: (value: number) => string
+}) {
   const headingSizeMap: Record<HeadingData['level'], string> = {
     h1: 'text-3xl',
     h2: 'text-2xl',
@@ -303,18 +321,24 @@ function BlockContent({ block, slug }: { block: ProposalBlock; slug: string }) {
       <div className="p-8">
         <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-[color:var(--proposal-text)]">
           <span className="material-symbols-outlined text-[color:var(--proposal-accent)]">shopping_cart</span>
-          Teklif Kalemleri
+          {t('publicProposal.pricing.title')}
         </h3>
         <div className="border border-gray-200 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ürün</th>
-                <th className="py-3 px-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Adet</th>
-                <th className="py-3 px-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Birim
+                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  {t('publicProposal.pricing.columns.product')}
                 </th>
-                <th className="py-3 px-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Toplam</th>
+                <th className="py-3 px-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  {t('publicProposal.pricing.columns.qty')}
+                </th>
+                <th className="py-3 px-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  {t('publicProposal.pricing.columns.unit')}
+                </th>
+                <th className="py-3 px-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  {t('publicProposal.pricing.columns.total')}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -332,7 +356,7 @@ function BlockContent({ block, slug }: { block: ProposalBlock; slug: string }) {
             <tfoot className="bg-gray-50">
               <tr>
                 <td colSpan={3} className="py-4 px-4 text-right font-semibold">
-                  Toplam
+                  {t('publicProposal.pricing.total')}
                 </td>
                 <td className="py-4 px-4 text-right font-bold text-[color:var(--proposal-accent)] text-lg">
                   {formatCurrency(total)}
@@ -359,7 +383,9 @@ function BlockContent({ block, slug }: { block: ProposalBlock; slug: string }) {
               allowFullScreen
             />
           ) : (
-            <div className="h-full w-full flex items-center justify-center text-sm text-gray-400">Video yüklenemedi</div>
+            <div className="h-full w-full flex items-center justify-center text-sm text-gray-400">
+              {t('publicProposal.videoUnavailable')}
+            </div>
           )}
         </div>
       </div>
@@ -370,11 +396,15 @@ function BlockContent({ block, slug }: { block: ProposalBlock; slug: string }) {
     const columns = Math.min(3, Math.max(1, block.data.columns))
     return (
       <div className="p-8 space-y-4">
-        <h3 className="text-lg font-bold text-[color:var(--proposal-text)]">Örnekler</h3>
+        <h3 className="text-lg font-bold text-[color:var(--proposal-text)]">{t('publicProposal.gallery.title')}</h3>
         <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
           {block.data.images.map((image) => (
             <div key={image.id} className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-              <img src={image.url} alt={image.caption || 'Galeri görseli'} className="w-full h-40 object-cover" />
+              <img
+                src={image.url}
+                alt={image.caption || t('publicProposal.gallery.imageAlt')}
+                className="w-full h-40 object-cover"
+              />
               {image.caption && (
                 <div className="px-3 py-2 text-xs text-gray-500 bg-white">{image.caption}</div>
               )}
@@ -404,7 +434,7 @@ function BlockContent({ block, slug }: { block: ProposalBlock; slug: string }) {
   if (block.type === 'timeline') {
     return (
       <div className="p-8 space-y-4">
-        <h3 className="text-lg font-bold text-[color:var(--proposal-text)]">Planlama</h3>
+        <h3 className="text-lg font-bold text-[color:var(--proposal-text)]">{t('publicProposal.timeline.title')}</h3>
         <div className="space-y-3">
           {block.data.items.map((item) => (
             <div key={item.id} className="flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-4">

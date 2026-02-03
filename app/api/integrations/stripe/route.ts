@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { testConnection } from '@/lib/integrations/stripe'
 import type { StripeCredentials } from '@/types/database'
+import { getServerT } from '@/lib/i18n/server'
 
 type StripePayload = {
   secret_key: string
@@ -10,6 +11,7 @@ type StripePayload = {
 
 // GET - Retrieve Stripe integration (credentials masked)
 export async function GET() {
+  const t = getServerT()
   const supabase = await createServerSupabaseClient()
 
   const {
@@ -18,7 +20,7 @@ export async function GET() {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -28,7 +30,7 @@ export async function GET() {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const { data: integration, error: integrationError } = await supabase
@@ -39,7 +41,7 @@ export async function GET() {
     .maybeSingle()
 
   if (integrationError) {
-    return NextResponse.json({ error: 'Entegrasyon yüklenemedi.' }, { status: 500 })
+    return NextResponse.json({ error: t('api.integrations.loadFailed') }, { status: 500 })
   }
 
   if (!integration) {
@@ -73,10 +75,11 @@ export async function GET() {
 
 // POST - Save/Update Stripe credentials
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as StripePayload | null
 
   if (!payload?.secret_key) {
-    return NextResponse.json({ error: 'Secret Key zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.integrations.stripeSecretRequired') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()
@@ -87,7 +90,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -97,7 +100,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const credentials: StripeCredentials = {
@@ -109,7 +112,7 @@ export async function POST(request: Request) {
 
   if (!testResult.success) {
     return NextResponse.json(
-      { error: testResult.error || 'Stripe bağlantısı doğrulanamadı.' },
+      { error: testResult.error || t('api.integrations.stripeVerifyFailed') },
       { status: 400 }
     )
   }
@@ -149,7 +152,7 @@ export async function POST(request: Request) {
   }
 
   if (result.error) {
-    return NextResponse.json({ error: 'Entegrasyon kaydedilemedi.' }, { status: 500 })
+    return NextResponse.json({ error: t('api.integrations.saveFailed') }, { status: 500 })
   }
 
   return NextResponse.json({
@@ -161,6 +164,7 @@ export async function POST(request: Request) {
 
 // DELETE - Disconnect Stripe integration
 export async function DELETE() {
+  const t = getServerT()
   const supabase = await createServerSupabaseClient()
 
   const {
@@ -169,7 +173,7 @@ export async function DELETE() {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -179,7 +183,7 @@ export async function DELETE() {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const { error: deleteError } = await supabase
@@ -189,7 +193,7 @@ export async function DELETE() {
     .eq('provider', 'stripe')
 
   if (deleteError) {
-    return NextResponse.json({ error: 'Entegrasyon kaldırılamadı.' }, { status: 500 })
+    return NextResponse.json({ error: t('api.integrations.removeFailed') }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

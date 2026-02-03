@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerT } from '@/lib/i18n/server'
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as { token?: string } | null
 
   if (!payload?.token) {
-    return NextResponse.json({ error: 'Davet token zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.team.inviteTokenRequired') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()
@@ -15,7 +17,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: invite, error: inviteError } = await supabase
@@ -25,19 +27,19 @@ export async function POST(request: Request) {
     .single()
 
   if (inviteError || !invite) {
-    return NextResponse.json({ error: 'Davet bulunamadı.' }, { status: 404 })
+    return NextResponse.json({ error: t('api.team.inviteNotFound') }, { status: 404 })
   }
 
   if (invite.status === 'accepted') {
-    return NextResponse.json({ error: 'Davet zaten kabul edilmiş.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.team.inviteAlreadyAccepted') }, { status: 400 })
   }
 
   if (invite.expires_at && new Date(invite.expires_at).getTime() < Date.now()) {
-    return NextResponse.json({ error: 'Davetin süresi dolmuş.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.team.inviteExpired') }, { status: 400 })
   }
 
   if (invite.email !== user.email) {
-    return NextResponse.json({ error: 'Bu davet sizin için oluşturulmamış.' }, { status: 403 })
+    return NextResponse.json({ error: t('api.team.inviteWrongUser') }, { status: 403 })
   }
 
   const { data: updatedUser, error: userError } = await supabase
@@ -51,7 +53,7 @@ export async function POST(request: Request) {
     .single()
 
   if (userError || !updatedUser) {
-    return NextResponse.json({ error: 'Takıma katılım tamamlanamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.team.joinFailed') }, { status: 400 })
   }
 
   const acceptedAt = new Date().toISOString()

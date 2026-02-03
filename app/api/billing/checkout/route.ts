@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createCheckoutSession, createCustomer, getCredentialsFromEnv } from '@/lib/integrations/stripe'
 import type { StripeCredentials } from '@/types/database'
+import { getServerT } from '@/lib/i18n/server'
 
 type CheckoutPayload = {
   price_id: string
@@ -11,10 +12,11 @@ type CheckoutPayload = {
 }
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as CheckoutPayload | null
 
   if (!payload?.price_id) {
-    return NextResponse.json({ error: 'Price ID zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.billing.priceIdRequired') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()
@@ -25,7 +27,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -35,7 +37,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const { data: team } = await supabase
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (!integration || integration.status !== 'connected') {
-    return NextResponse.json({ error: 'Stripe entegrasyonu bagli degil.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.billing.stripeNotConnected') }, { status: 400 })
   }
 
   const credentials = (integration.credentials || {}) as StripeCredentials
@@ -63,7 +65,7 @@ export async function POST(request: Request) {
   }
 
   if (!mergedCredentials.secret_key) {
-    return NextResponse.json({ error: 'Stripe anahtari bulunamadi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.billing.stripeKeyMissing') }, { status: 400 })
   }
 
   const settings = (integration.settings || {}) as Record<string, string>
@@ -78,7 +80,7 @@ export async function POST(request: Request) {
 
     if (!customerResult.success || !customerResult.customer) {
       return NextResponse.json(
-        { error: customerResult.error || 'Stripe musteri olusturulamadi.' },
+        { error: customerResult.error || t('api.billing.stripeCustomerCreateFailed') },
         { status: 400 }
       )
     }
@@ -113,7 +115,7 @@ export async function POST(request: Request) {
 
   if (!sessionResult.success || !sessionResult.url) {
     return NextResponse.json(
-      { error: sessionResult.error || 'Stripe checkout olusturulamadi.' },
+      { error: sessionResult.error || t('api.billing.stripeCheckoutFailed') },
       { status: 400 }
     )
   }

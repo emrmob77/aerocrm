@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { getCredentialsFromEnv } from '@/lib/integrations/stripe'
 import type { StripeCredentials } from '@/types/database'
+import { getServerT } from '@/lib/i18n/server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -40,6 +41,7 @@ const resolvePlanFromPrice = (priceId?: string | null) => {
 }
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = await request.text()
   const signature = request.headers.get('stripe-signature')
 
@@ -47,14 +49,14 @@ export async function POST(request: Request) {
   const webhookSecret = envCredentials?.webhook_secret || process.env.STRIPE_WEBHOOK_SECRET
 
   if (webhookSecret && !verifySignature(payload, webhookSecret, signature)) {
-    return NextResponse.json({ error: 'Gecersiz Stripe imzasi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.stripeWebhook.invalidSignature') }, { status: 400 })
   }
 
   let event: any
   try {
     event = JSON.parse(payload)
   } catch {
-    return NextResponse.json({ error: 'Webhook payload okunamadi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.stripeWebhook.payloadUnreadable') }, { status: 400 })
   }
 
   let admin
@@ -62,7 +64,7 @@ export async function POST(request: Request) {
     admin = createSupabaseAdminClient()
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Supabase admin erisimi yok.' },
+      { error: error instanceof Error ? error.message : t('api.stripeWebhook.adminAccessMissing') },
       { status: 500 }
     )
   }
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
   const integrations = (data ?? []) as Array<{ id: string; team_id: string | null; settings?: Record<string, string> | null }>
 
   if (error || integrations.length === 0) {
-    return NextResponse.json({ error: 'Entegrasyonlar bulunamadi.' }, { status: 500 })
+    return NextResponse.json({ error: t('api.stripeWebhook.integrationsMissing') }, { status: 500 })
   }
 
   const matched = integrations.find((integration) => {
@@ -133,7 +135,10 @@ export async function POST(request: Request) {
     .update({
       settings: updateSettings,
       status: updateSettings.subscription_status === 'past_due' ? 'error' : 'connected',
-      last_error: updateSettings.subscription_status === 'past_due' ? 'Odeme gecikti.' : null,
+      last_error:
+        updateSettings.subscription_status === 'past_due'
+          ? t('api.stripeWebhook.paymentPastDue')
+          : null,
     })
     .eq('id', matched.id)
 

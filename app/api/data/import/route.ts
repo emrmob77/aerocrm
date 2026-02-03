@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Json } from '@/types/database'
+import { getServerT } from '@/lib/i18n/server'
 
 type ImportEntity = 'contacts' | 'deals' | 'proposals' | 'sales'
 
@@ -48,19 +49,21 @@ const parseDate = (value?: string | null) => {
 
 const normalizeText = (value?: string | null) => value?.toString().trim() || null
 
-const getContactNameFromEmail = (email: string) => email.split('@')[0] || 'Müşteri'
+const getContactNameFromEmail = (email: string, fallback: string) => email.split('@')[0] || fallback
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as ImportPayload | null
   const entity = payload?.entity
   const rows = Array.isArray(payload?.rows) ? payload?.rows : []
+  const customerFallback = t('header.customerFallback')
 
   if (!entity || !['contacts', 'deals', 'proposals', 'sales'].includes(entity)) {
-    return NextResponse.json({ error: 'Geçerli bir veri türü seçin.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.invalidDataType') }, { status: 400 })
   }
 
   if (!rows.length) {
-    return NextResponse.json({ error: 'İçe aktarma için veri bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.data.importNoData') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()
@@ -70,7 +73,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -80,7 +83,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const now = new Date().toISOString()
@@ -99,7 +102,7 @@ export async function POST(request: Request) {
     .single()
 
   if (jobError || !job) {
-    return NextResponse.json({ error: 'İçe aktarma kaydı oluşturulamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.data.importRecordFailed') }, { status: 400 })
   }
 
   const errors: ImportError[] = []
@@ -135,7 +138,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const fullName = name ?? (email ? getContactNameFromEmail(email) : 'Müşteri')
+    const fullName = name ?? (email ? getContactNameFromEmail(email, customerFallback) : customerFallback)
     const { data: created, error } = await supabase
       .from('contacts')
       .insert({
@@ -160,7 +163,7 @@ export async function POST(request: Request) {
         if (entity === 'contacts') {
           const fullName = normalizeText(row.full_name) ?? normalizeText(row.name)
           if (!fullName) {
-            throw new Error('Ad soyad zorunludur.')
+            throw new Error(t('api.data.fullNameRequired'))
           }
           const { error } = await supabase.from('contacts').insert({
             full_name: fullName,
@@ -173,7 +176,7 @@ export async function POST(request: Request) {
             team_id: profile.team_id,
           })
           if (error) {
-            throw new Error(error.message || 'Kayıt oluşturulamadı.')
+            throw new Error(error.message || t('api.data.recordCreateFailed'))
           }
           successCount += 1
         }
@@ -181,7 +184,7 @@ export async function POST(request: Request) {
         if (entity === 'deals') {
           const title = normalizeText(row.title)
           if (!title) {
-            throw new Error('Anlaşma adı zorunludur.')
+            throw new Error(t('api.data.dealTitleRequired'))
           }
           const contactId =
             normalizeText(row.contact_id) ??
@@ -191,7 +194,7 @@ export async function POST(request: Request) {
             }))
 
           if (!contactId) {
-            throw new Error('Müşteri bilgisi bulunamadı.')
+            throw new Error(t('api.data.customerMissing'))
           }
 
           const { error } = await supabase.from('deals').insert({
@@ -207,7 +210,7 @@ export async function POST(request: Request) {
             team_id: profile.team_id,
           })
           if (error) {
-            throw new Error(error.message || 'Anlaşma oluşturulamadı.')
+            throw new Error(error.message || t('api.data.dealCreateFailed'))
           }
           successCount += 1
         }
@@ -215,7 +218,7 @@ export async function POST(request: Request) {
         if (entity === 'sales') {
           const title = normalizeText(row.title)
           if (!title) {
-            throw new Error('Satış adı zorunludur.')
+            throw new Error(t('api.data.saleTitleRequired'))
           }
           const contactId =
             normalizeText(row.contact_id) ??
@@ -225,7 +228,7 @@ export async function POST(request: Request) {
             }))
 
           if (!contactId) {
-            throw new Error('Müşteri bilgisi bulunamadı.')
+            throw new Error(t('api.data.customerMissing'))
           }
 
           const { error } = await supabase.from('deals').insert({
@@ -241,7 +244,7 @@ export async function POST(request: Request) {
             team_id: profile.team_id,
           })
           if (error) {
-            throw new Error(error.message || 'Satış kaydedilemedi.')
+            throw new Error(error.message || t('api.data.saleSaveFailed'))
           }
           successCount += 1
         }
@@ -249,7 +252,7 @@ export async function POST(request: Request) {
         if (entity === 'proposals') {
           const title = normalizeText(row.title)
           if (!title) {
-            throw new Error('Teklif başlığı zorunludur.')
+            throw new Error(t('api.data.proposalTitleRequired'))
           }
           const contactId =
             normalizeText(row.contact_id) ??
@@ -259,7 +262,7 @@ export async function POST(request: Request) {
             }))
 
           if (!contactId) {
-            throw new Error('Müşteri bilgisi bulunamadı.')
+            throw new Error(t('api.data.customerMissing'))
           }
 
           const { error } = await supabase.from('proposals').insert({
@@ -274,14 +277,14 @@ export async function POST(request: Request) {
           })
 
           if (error) {
-            throw new Error(error.message || 'Teklif oluşturulamadı.')
+            throw new Error(error.message || t('api.data.proposalCreateFailed'))
           }
           successCount += 1
         }
       } catch (error) {
         errors.push({
           row: index + 1,
-          message: error instanceof Error ? error.message : 'Satır işlenemedi.',
+          message: error instanceof Error ? error.message : t('api.data.rowFailed'),
         })
       }
     }
@@ -317,6 +320,9 @@ export async function POST(request: Request) {
       })
       .eq('id', job.id)
 
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'İçe aktarma başarısız.' }, { status: 400 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : t('api.data.importFailed') },
+      { status: 400 }
+    )
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { getDbStage, normalizeStage, type StageId } from '@/components/deals/stage-utils'
+import { getServerT } from '@/lib/i18n/server'
 
 type CreateDealPayload = {
   title?: string
@@ -16,21 +17,22 @@ type CreateDealPayload = {
 const normalizeText = (value?: string | null) => value?.trim() || ''
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as CreateDealPayload | null
 
   const title = normalizeText(payload?.title)
   if (!title) {
-    return NextResponse.json({ error: 'Anlaşma başlığı zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.deals.titleRequired') }, { status: 400 })
   }
 
   const contactId = payload?.contactId ?? null
   if (!contactId) {
-    return NextResponse.json({ error: 'İlgili kişi seçilmelidir.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.deals.contactRequired') }, { status: 400 })
   }
 
   const value = Number(payload?.value ?? 0)
   if (!Number.isFinite(value)) {
-    return NextResponse.json({ error: 'Anlaşma değeri geçersiz.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.deals.valueInvalid') }, { status: 400 })
   }
 
   const stage = normalizeStage(payload?.stage ?? 'lead')
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const ownerId = payload?.ownerId || user.id
@@ -73,7 +75,7 @@ export async function POST(request: Request) {
     .single()
 
   if (error || !deal) {
-    return NextResponse.json({ error: 'Anlaşma oluşturulamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.deals.createFailed') }, { status: 400 })
   }
 
   await dispatchWebhookEvent({

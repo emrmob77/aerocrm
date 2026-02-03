@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerLocale, getServerT } from '@/lib/i18n/server'
+import { messages } from '@/lib/i18n/messages'
 
 const rangeOptions = [7, 30, 90, 180]
 
@@ -25,14 +27,17 @@ const escapeCsv = (value: string) => {
   return value
 }
 
-const formatDate = (value?: string | null) => {
+const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' })
+  return date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 export async function GET(request: Request) {
+  const t = getServerT()
+  const locale = getServerLocale()
+  const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
   const { searchParams } = new URL(request.url)
   const fromParam = parseDateInput(searchParams.get('from'))
   const toParam = parseDateInput(searchParams.get('to'))
@@ -44,7 +49,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -54,7 +59,7 @@ export async function GET(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const now = new Date()
@@ -109,16 +114,7 @@ export async function GET(request: Request) {
     })
   }
 
-  const header = [
-    'Teklif ID',
-    'Başlık',
-    'Durum',
-    'Oluşturma Tarihi',
-    'İmza Tarihi',
-    'Görüntüleme Sayısı',
-    'Ortalama Görüntüleme Süresi (sn)',
-    'Public URL',
-  ]
+  const header = [...(messages[locale]?.api?.analytics?.exportHeaders ?? [])]
 
   const rows = proposals.map((proposal) => {
     const stats = viewStats.get(proposal.id)
@@ -127,8 +123,8 @@ export async function GET(request: Request) {
       proposal.id,
       proposal.title ?? '',
       proposal.status ?? '',
-      formatDate(proposal.created_at),
-      formatDate(proposal.signed_at),
+      formatDate(proposal.created_at, formatLocale),
+      formatDate(proposal.signed_at, formatLocale),
       String(stats?.count ?? 0),
       String(avgDuration),
       proposal.public_url ?? '',

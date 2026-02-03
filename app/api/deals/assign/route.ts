@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerT } from '@/lib/i18n/server'
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as { dealId?: string; ownerId?: string } | null
 
   if (!payload?.dealId || !payload.ownerId) {
-    return NextResponse.json({ error: 'Anlaşma ve sorumlu seçilmelidir.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.deals.assignMissing') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()
@@ -15,7 +17,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -25,7 +27,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const { data: member, error: memberError } = await supabase
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (memberError || !member) {
-    return NextResponse.json({ error: 'Sorumlu kişi bulunamadı.' }, { status: 404 })
+    return NextResponse.json({ error: t('api.deals.ownerNotFound') }, { status: 404 })
   }
 
   const updatedAt = new Date().toISOString()
@@ -50,7 +52,7 @@ export async function POST(request: Request) {
     .single()
 
   if (error || !deal) {
-    return NextResponse.json({ error: 'Anlaşma atanamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.deals.assignFailed') }, { status: 400 })
   }
 
   return NextResponse.json({ deal })

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSupabase, useUser } from '@/hooks'
 import type { NotificationPreference } from '@/types'
+import { useI18n } from '@/lib/i18n'
 
 type PreferenceKey =
   | 'email_enabled'
@@ -25,6 +26,7 @@ const urlBase64ToUint8Array = (base64String: string) => {
 }
 
 export default function NotificationSettingsPage() {
+  const { t } = useI18n()
   const supabase = useSupabase()
   const { authUser, loading: authLoading } = useUser()
   const [preferences, setPreferences] = useState<NotificationPreference | null>(null)
@@ -53,7 +55,7 @@ export default function NotificationSettingsPage() {
         .maybeSingle()
 
       if (error) {
-        toast.error('Bildirim tercihleri getirilemedi.')
+        toast.error(t('notificationSettings.errors.fetch'))
         setIsLoading(false)
         return
       }
@@ -66,7 +68,7 @@ export default function NotificationSettingsPage() {
           .single()
 
         if (insertError || !created) {
-          toast.error('Bildirim tercihleri oluşturulamadı.')
+          toast.error(t('notificationSettings.errors.create'))
           setIsLoading(false)
           return
         }
@@ -100,7 +102,7 @@ export default function NotificationSettingsPage() {
       .eq('id', preferences.id)
 
     if (error) {
-      toast.error('Tercih güncellenemedi.')
+      toast.error(t('notificationSettings.errors.update'))
       setPreferences(preferences)
     }
     setIsSaving(false)
@@ -109,12 +111,12 @@ export default function NotificationSettingsPage() {
   const enablePush = async () => {
     if (!userId) return
     if (!pushSupported) {
-      toast.error('Tarayıcı push bildirimlerini desteklemiyor.')
+      toast.error(t('notificationSettings.errors.pushUnsupported'))
       return
     }
     const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
     if (!vapidKey) {
-      toast.error('VAPID anahtarı tanımlı değil.')
+      toast.error(t('notificationSettings.errors.vapidMissing'))
       return
     }
 
@@ -123,7 +125,7 @@ export default function NotificationSettingsPage() {
       const permission = await Notification.requestPermission()
       setPushPermission(permission)
       if (permission !== 'granted') {
-        toast.error('Push bildirim izni verilmedi.')
+        toast.error(t('notificationSettings.errors.permissionDenied'))
         setPushBusy(false)
         return
       }
@@ -142,7 +144,7 @@ export default function NotificationSettingsPage() {
 
       const payload = subscription.toJSON()
       if (!payload.endpoint || !payload.keys?.p256dh || !payload.keys?.auth) {
-        throw new Error('Push abonelik bilgisi eksik.')
+        throw new Error(t('notificationSettings.errors.subscriptionMissing'))
       }
 
       const { error } = await supabase.from('push_subscriptions').upsert(
@@ -157,14 +159,14 @@ export default function NotificationSettingsPage() {
       )
 
       if (error) {
-        throw new Error('Push aboneliği kaydedilemedi.')
+        throw new Error(t('notificationSettings.errors.subscriptionFailed'))
       }
 
       setPushEnabled(true)
       await updatePreference('push_enabled', true)
-      toast.success('Push bildirimleri etkin.')
+      toast.success(t('notificationSettings.success.pushEnabled'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Push bildirimi etkinleştirilemedi.')
+      toast.error(error instanceof Error ? error.message : t('notificationSettings.errors.pushEnableFailed'))
     } finally {
       setPushBusy(false)
     }
@@ -182,9 +184,9 @@ export default function NotificationSettingsPage() {
       }
       setPushEnabled(false)
       await updatePreference('push_enabled', false)
-      toast.success('Push bildirimleri kapatıldı.')
+      toast.success(t('notificationSettings.success.pushDisabled'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Push bildirimi kapatılamadı.')
+      toast.error(error instanceof Error ? error.message : t('notificationSettings.errors.pushDisableFailed'))
     } finally {
       setPushBusy(false)
     }
@@ -195,33 +197,39 @@ export default function NotificationSettingsPage() {
     return [
       {
         id: 'in_app_enabled' as PreferenceKey,
-        title: 'Uygulama İçi',
-        description: 'Panel içinde bildirim göster.',
+        title: t('notificationSettings.channels.inApp.title'),
+        description: t('notificationSettings.channels.inApp.description'),
         enabled: preferences.in_app_enabled,
       },
       {
         id: 'email_enabled' as PreferenceKey,
-        title: 'E-posta',
-        description: 'E-posta ile bildirim al.',
+        title: t('notificationSettings.channels.email.title'),
+        description: t('notificationSettings.channels.email.description'),
         enabled: preferences.email_enabled,
       },
     ]
-  }, [preferences])
+  }, [preferences, t])
+
+  const pushStatusLabel = pushSupported
+    ? t(`notificationSettings.pushStatus.${pushPermission}`)
+    : t('notificationSettings.pushStatus.unsupported')
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">Bildirim Tercihleri</h1>
-        <p className="text-[#48679d] dark:text-gray-400">Hangi kanallardan bildirim alacağınızı seçin.</p>
+        <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">
+          {t('notificationSettings.title')}
+        </h1>
+        <p className="text-[#48679d] dark:text-gray-400">{t('notificationSettings.subtitle')}</p>
       </div>
 
       {isLoading ? (
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6 text-sm text-[#48679d]">
-          Tercihler yükleniyor...
+          {t('notificationSettings.loading')}
         </div>
       ) : !preferences ? (
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6 text-sm text-[#48679d]">
-          Tercihler yüklenemedi. Lütfen sayfayı yenileyin.
+          {t('notificationSettings.loadFailed')}
         </div>
       ) : (
         <>
@@ -244,7 +252,7 @@ export default function NotificationSettingsPage() {
                       : 'bg-slate-100 text-slate-500 border border-slate-200'
                   }`}
                 >
-                  <span>{card.enabled ? 'Aktif' : 'Pasif'}</span>
+                  <span>{card.enabled ? t('notificationSettings.states.active') : t('notificationSettings.states.inactive')}</span>
                   <span className="material-symbols-outlined text-lg">
                     {card.enabled ? 'toggle_on' : 'toggle_off'}
                   </span>
@@ -254,9 +262,9 @@ export default function NotificationSettingsPage() {
 
             <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-5 flex flex-col justify-between gap-4">
               <div>
-                <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">Push Bildirimleri</h3>
+                <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">{t('notificationSettings.channels.push.title')}</h3>
                 <p className="text-xs text-[#48679d] mt-1">
-                  Tarayıcı üzerinden anlık bildirim alın. Durum: {pushSupported ? pushPermission : 'desteklenmiyor'}
+                  {t('notificationSettings.channels.push.description', { status: pushStatusLabel })}
                 </p>
               </div>
               <button
@@ -268,7 +276,7 @@ export default function NotificationSettingsPage() {
                     : 'bg-slate-100 text-slate-500 border border-slate-200'
                 }`}
               >
-                <span>{pushEnabled ? 'Aktif' : 'Pasif'}</span>
+                <span>{pushEnabled ? t('notificationSettings.states.active') : t('notificationSettings.states.inactive')}</span>
                 <span className="material-symbols-outlined text-lg">
                   {pushEnabled ? 'notifications_active' : 'notifications_off'}
                 </span>
@@ -278,25 +286,25 @@ export default function NotificationSettingsPage() {
 
           <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6 space-y-4">
             <div>
-              <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">Bildirim Türleri</h3>
-              <p className="text-xs text-[#48679d] mt-1">Hangi olaylar için bildirim almak istediğinizi seçin.</p>
+              <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">{t('notificationSettings.types.title')}</h3>
+              <p className="text-xs text-[#48679d] mt-1">{t('notificationSettings.types.subtitle')}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 {
                   id: 'proposals_enabled',
-                  title: 'Teklifler',
-                  description: 'Teklif görüntüleme, imza ve gönderim.',
+                  title: t('notificationSettings.types.proposals.title'),
+                  description: t('notificationSettings.types.proposals.description'),
                 },
                 {
                   id: 'deals_enabled',
-                  title: 'Anlaşmalar',
-                  description: 'Pipeline ve aşama değişiklikleri.',
+                  title: t('notificationSettings.types.deals.title'),
+                  description: t('notificationSettings.types.deals.description'),
                 },
                 {
                   id: 'system_enabled',
-                  title: 'Sistem',
-                  description: 'Hesap ve takım bildirimleri.',
+                  title: t('notificationSettings.types.system.title'),
+                  description: t('notificationSettings.types.system.description'),
                 },
               ].map((item) => (
                 <button

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerT } from '@/lib/i18n/server'
 
 export async function POST(_: Request, { params }: { params: { id: string } }) {
+  const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {
     data: { user },
@@ -9,7 +11,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: template, error } = await supabase
@@ -19,7 +21,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
     .maybeSingle()
 
   if (error || !template) {
-    return NextResponse.json({ error: 'Şablon bulunamadı.' }, { status: 404 })
+    return NextResponse.json({ error: t('api.templates.notFound') }, { status: 404 })
   }
 
   const nextCount = (template.usage_count ?? 0) + 1

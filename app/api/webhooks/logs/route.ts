@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerT } from '@/lib/i18n/server'
 
 const parseStatusFilter = (value: string | null) => {
   if (value === 'success') return true
@@ -8,6 +9,7 @@ const parseStatusFilter = (value: string | null) => {
 }
 
 export async function GET(request: Request) {
+  const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {
     data: { user },
@@ -15,7 +17,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -25,7 +27,7 @@ export async function GET(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const { data: teamWebhooks, error: webhooksError } = await supabase
@@ -55,7 +57,7 @@ export async function GET(request: Request) {
   const { data: rows, error } = await query
 
   if (error) {
-    return NextResponse.json({ error: 'Webhook logları getirilemedi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.webhooks.logsFetchFailed') }, { status: 400 })
   }
 
   const logs = (rows ?? []).map((row) => {

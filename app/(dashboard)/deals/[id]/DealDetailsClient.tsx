@@ -94,6 +94,7 @@ const formatFileSize = (bytes: number | null | undefined, t: (key: string) => st
   return `${mb} ${t('deals.detail.files.mb')}`
 }
 
+
 export default function DealDetailsClient({
   dealId,
   authUserId,

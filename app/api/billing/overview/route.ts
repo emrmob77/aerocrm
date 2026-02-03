@@ -8,6 +8,7 @@ import {
   type StripeCustomer,
 } from '@/lib/integrations/stripe'
 import type { StripeCredentials } from '@/types/database'
+import { getServerLocale, getServerT } from '@/lib/i18n/server'
 
 const buildPlanCatalog = () => {
   const plans = [] as Array<{ id: string; name: string; priceId: string }>
@@ -23,6 +24,9 @@ const buildPlanCatalog = () => {
 }
 
 export async function GET() {
+  const t = getServerT()
+  const locale = getServerLocale()
+  const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
   const supabase = await createServerSupabaseClient()
 
   const {
@@ -31,7 +35,7 @@ export async function GET() {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -41,7 +45,7 @@ export async function GET() {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const { data: team } = await supabase
@@ -62,9 +66,21 @@ export async function GET() {
       status: 'disconnected',
       plan: team?.plan ?? 'free',
       usage: [
-        { label: 'Aktif kullanici', value: '0 / 0', hint: 'Veri yok' },
-        { label: 'Teklif gonderimi', value: '0 / 0', hint: 'Veri yok' },
-        { label: 'Depolama', value: '0 GB / 0 GB', hint: 'Veri yok' },
+        {
+          label: t('api.billing.usageActiveUsers'),
+          value: t('api.billing.usageEmptyValue'),
+          hint: t('api.billing.usageEmptyHint'),
+        },
+        {
+          label: t('api.billing.usageProposals'),
+          value: t('api.billing.usageEmptyValue'),
+          hint: t('api.billing.usageEmptyHint'),
+        },
+        {
+          label: t('api.billing.usageStorage'),
+          value: t('api.billing.usageEmptyStorageValue'),
+          hint: t('api.billing.usageEmptyHint'),
+        },
       ],
       invoices: [],
       subscription: null,
@@ -75,7 +91,7 @@ export async function GET() {
 
   const credentials = (integration.credentials || {}) as StripeCredentials
   if (!credentials.secret_key) {
-    return NextResponse.json({ error: 'Stripe anahtari bulunamadi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.billing.stripeKeyMissing') }, { status: 400 })
   }
 
   const envCredentials = getCredentialsFromEnv()
@@ -99,7 +115,7 @@ export async function GET() {
 
     if (!createResult.success || !createResult.customer) {
       return NextResponse.json(
-        { error: createResult.error || 'Stripe musteri olusturulamadi.' },
+        { error: createResult.error || t('api.billing.stripeCustomerCreateFailed') },
         { status: 400 }
       )
     }
@@ -132,9 +148,9 @@ export async function GET() {
 
   const mappedInvoices = invoices.map((invoice) => ({
     id: invoice.id,
-    date: invoice.created ? new Date(invoice.created * 1000).toLocaleDateString('tr-TR') : '- ',
+    date: invoice.created ? new Date(invoice.created * 1000).toLocaleDateString(formatLocale) : '- ',
     amount: invoice.amount_due
-      ? new Intl.NumberFormat('tr-TR', {
+      ? new Intl.NumberFormat(formatLocale, {
           style: 'currency',
           currency: invoice.currency?.toUpperCase() || 'TRY',
         }).format(invoice.amount_due / 100)
@@ -147,9 +163,21 @@ export async function GET() {
     status: integration.status,
     plan: team?.plan ?? 'free',
     usage: [
-      { label: 'Aktif kullanici', value: '12 / 20', hint: '%60 kullanildi' },
-      { label: 'Teklif gonderimi', value: '148 / 500', hint: '%29 kullanildi' },
-      { label: 'Depolama', value: '3.2 GB / 10 GB', hint: '%32 kullanildi' },
+      {
+        label: t('api.billing.usageActiveUsers'),
+        value: '12 / 20',
+        hint: t('api.billing.usageHintActive', { value: '60%' }),
+      },
+      {
+        label: t('api.billing.usageProposals'),
+        value: '148 / 500',
+        hint: t('api.billing.usageHintActive', { value: '29%' }),
+      },
+      {
+        label: t('api.billing.usageStorage'),
+        value: '3.2 GB / 10 GB',
+        hint: t('api.billing.usageHintActive', { value: '32%' }),
+      },
     ],
     invoices: mappedInvoices,
     subscription,

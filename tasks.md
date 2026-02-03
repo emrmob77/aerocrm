@@ -342,6 +342,7 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - Yapıldı (devam): Analytics sayfası + chart etiketleri i18n ✅
   - Yapıldı (devam): Ürün & Hizmetler sayfası i18n ✅
   - Yapıldı (devam): Teklifler liste sayfası i18n ✅
+  - Yapıldı (devam): Metadata + API error mesajları i18n ✅
   - Kalan: tüm sayfalarda TR metin temizliği ve eksik çeviriler
   - _Gereksinimler: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6_
 

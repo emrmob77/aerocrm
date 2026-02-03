@@ -7,13 +7,20 @@ import { formatCurrency } from '@/components/deals'
 
 type ReportType = 'sales' | 'deals' | 'team' | 'forecast'
 type DateRange = '7d' | '30d' | '90d' | '12m'
+type Trend = 'up' | 'down'
+type KpiEntry = { value: number; change: number; trend: Trend }
 
 // KPI Data
-const kpiData = {
-  totalRevenue: { value: 1245800, change: 18.2, trend: 'up' as const },
-  closedDeals: { value: 47, change: 12, trend: 'up' as const },
-  avgDealSize: { value: 26506, change: -5.3, trend: 'down' as const },
-  winRate: { value: 68, change: 4.2, trend: 'up' as const },
+const kpiData: {
+  totalRevenue: KpiEntry
+  closedDeals: KpiEntry
+  avgDealSize: KpiEntry
+  winRate: KpiEntry
+} = {
+  totalRevenue: { value: 1245800, change: 18.2, trend: 'up' },
+  closedDeals: { value: 47, change: 12, trend: 'up' },
+  avgDealSize: { value: 26506, change: -5.3, trend: 'down' },
+  winRate: { value: 68, change: 4.2, trend: 'up' },
 }
 
 // Top performers

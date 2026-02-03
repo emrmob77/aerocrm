@@ -3,34 +3,40 @@ import { Toaster } from 'react-hot-toast'
 import './globals.css'
 import { Providers } from './providers'
 import { cookies } from 'next/headers'
+import { getServerLocale } from '@/lib/i18n/server'
+import { messages } from '@/lib/i18n/messages'
 
-export const metadata: Metadata = {
-  title: {
-    default: 'AERO CRM',
-    template: '%s | AERO CRM',
-  },
-  description: 'Modern satış ekipleri için kapsamlı CRM ve teklif hazırlama platformu',
-  keywords: ['CRM', 'satış', 'teklif', 'pipeline', 'müşteri yönetimi'],
-  authors: [{ name: 'AERO Team' }],
-  creator: 'AERO CRM',
-  openGraph: {
-    type: 'website',
-    locale: 'tr_TR',
-    url: 'https://aerocrm.com',
-    siteName: 'AERO CRM',
-    title: 'AERO CRM - Satış, Hızla Uçar',
-    description: 'Modern satış ekipleri için kapsamlı CRM ve teklif hazırlama platformu',
-  },
-  manifest: '/manifest.webmanifest',
-  twitter: {
-    card: 'summary_large_image',
-    title: 'AERO CRM - Satış, Hızla Uçar',
-    description: 'Modern satış ekipleri için kapsamlı CRM ve teklif hazırlama platformu',
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = getServerLocale()
+  const meta = messages[locale].meta
+  return {
+    title: {
+      default: meta.titleDefault,
+      template: meta.titleTemplate,
+    },
+    description: meta.description,
+    keywords: [...meta.keywords],
+    authors: [{ name: 'AERO Team' }],
+    creator: 'AERO CRM',
+    openGraph: {
+      type: 'website',
+      locale: meta.openGraph.locale,
+      url: meta.openGraph.url,
+      siteName: meta.openGraph.siteName,
+      title: meta.openGraph.title,
+      description: meta.openGraph.description,
+    },
+    manifest: '/manifest.webmanifest',
+    twitter: {
+      card: 'summary_large_image',
+      title: meta.twitter.title,
+      description: meta.twitter.description,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  }
 }
 
 export default function RootLayout({

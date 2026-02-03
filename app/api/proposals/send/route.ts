@@ -4,6 +4,7 @@ import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { buildProposalDeliveryEmail, getProposalDefaults } from '@/lib/notifications/email-templates'
 import { sendTwilioMessage, getCredentialsFromEnv } from '@/lib/integrations/twilio'
 import type { TwilioCredentials } from '@/types/database'
+import { getServerT } from '@/lib/i18n/server'
 
 type SendProposalPayload = {
   title?: string
@@ -58,11 +59,17 @@ const buildMessageWithLink = (
   return `${message}\n\n${link}`
 }
 
-const sendEmail = async (params: { to: string; subject: string; text: string; html: string }) => {
+const sendEmail = async (params: {
+  to: string
+  subject: string
+  text: string
+  html: string
+  t: (key: string, vars?: Record<string, string | number>) => string
+}) => {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.RESEND_FROM_EMAIL
   if (!apiKey || !from) {
-    throw new Error('E-posta gönderimi için RESEND_API_KEY ve RESEND_FROM_EMAIL gerekir.')
+    throw new Error(params.t('api.proposals.emailConfigMissing'))
   }
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -80,7 +87,7 @@ const sendEmail = async (params: { to: string; subject: string; text: string; ht
   })
   if (!response.ok) {
     const payload = await response.json().catch(() => null)
-    throw new Error(payload?.message || 'E-posta gönderimi başarısız oldu.')
+    throw new Error(payload?.message || params.t('api.proposals.emailSendFailed'))
   }
 }
 
@@ -107,10 +114,11 @@ const getTwilioCredentials = async (
 }
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as SendProposalPayload | null
 
   if (!payload?.title || !payload.title.trim()) {
-    return NextResponse.json({ error: 'Teklif başlığı zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.proposals.titleRequired') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()
@@ -120,7 +128,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -130,7 +138,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const teamId = profile.team_id
@@ -139,7 +147,7 @@ export async function POST(request: Request) {
   const clientName =
     normalizeText(payload.clientName) ||
     (contactEmail ? contactEmail.split('@')[0] : null) ||
-    'Müşteri'
+    t('header.customerFallback')
 
   let contactId: string | null = null
 
@@ -186,7 +194,7 @@ export async function POST(request: Request) {
       .single()
 
     if (contactError || !newContact) {
-      return NextResponse.json({ error: 'Kişi oluşturulamadı.' }, { status: 400 })
+      return NextResponse.json({ error: t('api.proposals.contactCreateFailed') }, { status: 400 })
     }
 
     contactId = newContact.id
@@ -214,25 +222,26 @@ export async function POST(request: Request) {
     .single()
 
   if (proposalError || !proposal) {
-    return NextResponse.json({ error: 'Teklif kaydedilemedi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.proposals.saveFailed') }, { status: 400 })
   }
 
   const method = payload.method ?? 'email'
   const locale = profile.language === 'en' ? 'en' : 'tr'
   const proposalDefaults = getProposalDefaults({ locale, client: clientName })
+  const anchorText = proposalDefaults.anchor || t('api.proposals.anchorText')
 
   const messageBody = buildMessageWithLink(
     payload.message?.trim() || proposalDefaults.message,
     publicUrl,
     payload.includeLink,
-    proposalDefaults.anchor
+    anchorText
   )
 
   try {
     if (method === 'email') {
       const recipient = contactEmail
       if (!recipient) {
-        throw new Error('E-posta gönderimi için alıcı e-posta gerekli.')
+        throw new Error(t('api.proposals.recipientEmailRequired'))
       }
       const subject = payload.subject?.trim() || proposalDefaults.subject
       const template = buildProposalDeliveryEmail({
@@ -246,22 +255,25 @@ export async function POST(request: Request) {
         subject: template.subject,
         text: template.text,
         html: template.html,
+        t,
       })
     } else if (method === 'sms' || method === 'whatsapp') {
       const recipient = contactPhone
       if (!recipient) {
-        throw new Error(`${method === 'sms' ? 'SMS' : 'WhatsApp'} gönderimi için alıcı numarası gerekir.`)
+        const methodLabel =
+          method === 'sms' ? t('api.integrations.methods.sms') : t('api.integrations.methods.whatsapp')
+        throw new Error(t('api.proposals.recipientPhoneRequired', { method: methodLabel }))
       }
 
       // Get Twilio credentials from DB or env
       const twilioCredentials = await getTwilioCredentials(supabase, teamId)
       if (!twilioCredentials) {
-        throw new Error('Twilio yapılandırması bulunamadı. Lütfen Entegrasyonlar sayfasından ayarlayın.')
+        throw new Error(t('api.proposals.twilioConfigMissing'))
       }
 
       const result = await sendTwilioMessage(method, recipient, messageBody, twilioCredentials)
       if (!result.success) {
-        throw new Error(result.error || 'Mesaj gönderimi başarısız oldu.')
+        throw new Error(result.error || t('api.proposals.messageSendFailed'))
       }
 
       // Update last_used_at for integration
@@ -278,14 +290,18 @@ export async function POST(request: Request) {
       finalStatus = 'sent'
     }
 
+    const proposalTitle = proposal.title ?? t('api.proposals.fallbackTitle')
     await supabase.from('notifications').insert({
       user_id: user.id,
       type: method === 'link' ? 'proposal_link' : 'proposal_sent',
-      title: method === 'link' ? 'Teklif linki hazır' : 'Teklif gönderildi',
+      title:
+        method === 'link'
+          ? t('api.proposals.notifications.linkReadyTitle')
+          : t('api.proposals.notifications.sentTitle'),
       message:
         method === 'link'
-          ? `${proposal.title} için link oluşturuldu.`
-          : `${proposal.title} müşteriye gönderildi.`,
+          ? t('api.proposals.notifications.linkCreatedMessage', { title: proposalTitle })
+          : t('api.proposals.notifications.sentMessage', { title: proposalTitle }),
       read: false,
       action_url: `/proposals/${proposal.id}`,
       metadata: {
@@ -308,7 +324,7 @@ export async function POST(request: Request) {
       })
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Gönderim başarısız oldu.'
+    const message = error instanceof Error ? error.message : t('api.proposals.sendFailed')
     await supabase.from('proposals').update({ status: 'failed' }).eq('id', proposal.id)
     return NextResponse.json({ error: message }, { status: 400 })
   }

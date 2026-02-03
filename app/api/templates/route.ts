@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerT } from '@/lib/i18n/server'
 
 type TemplatePayload = {
   name?: string
@@ -10,6 +11,7 @@ type TemplatePayload = {
 }
 
 export async function GET(request: Request) {
+  const t = getServerT()
   const { searchParams } = new URL(request.url)
   const scope = searchParams.get('scope') ?? 'team'
 
@@ -20,7 +22,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -30,7 +32,7 @@ export async function GET(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   let templatesQuery = supabase
@@ -49,18 +51,19 @@ export async function GET(request: Request) {
   const { data, error } = await templatesQuery
 
   if (error) {
-    return NextResponse.json({ error: 'Şablonlar getirilemedi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.templates.fetchFailed') }, { status: 400 })
   }
 
   return NextResponse.json({ templates: data ?? [] })
 }
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as TemplatePayload | null
   const name = payload?.name?.trim()
 
   if (!name) {
-    return NextResponse.json({ error: 'Şablon adı zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.templates.nameRequired') }, { status: 400 })
   }
 
   const supabase = await createServerSupabaseClient()
@@ -70,7 +73,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -80,7 +83,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const { data, error } = await supabase
@@ -99,7 +102,7 @@ export async function POST(request: Request) {
     .single()
 
   if (error || !data) {
-    return NextResponse.json({ error: 'Şablon oluşturulamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.templates.createFailed') }, { status: 400 })
   }
 
   return NextResponse.json({ template: data })

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { getDbStage, normalizeStage, type StageId } from '@/components/deals/stage-utils'
+import { getServerT } from '@/lib/i18n/server'
 
 type StageUpdatePayload = {
   dealId?: string
@@ -9,14 +10,15 @@ type StageUpdatePayload = {
 }
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as StageUpdatePayload | null
 
   if (!payload?.dealId) {
-    return NextResponse.json({ error: 'Anlaşma ID zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.deals.idRequired') }, { status: 400 })
   }
 
   if (!payload?.stage) {
-    return NextResponse.json({ error: 'Aşama zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.deals.stageRequired') }, { status: 400 })
   }
 
   const nextStage = normalizeStage(payload.stage)
@@ -28,7 +30,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -38,7 +40,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   const { data: current, error: currentError } = await supabase
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
     .single()
 
   if (currentError || !current) {
-    return NextResponse.json({ error: 'Anlaşma bulunamadı.' }, { status: 404 })
+    return NextResponse.json({ error: t('api.deals.notFound') }, { status: 404 })
   }
 
   const previousStage = normalizeStage(current.stage)
@@ -68,7 +70,7 @@ export async function POST(request: Request) {
     .single()
 
   if (error || !updated) {
-    return NextResponse.json({ error: 'Aşama güncellenemedi.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.deals.stageUpdateFailed') }, { status: 400 })
   }
 
   if (nextStage === 'won' || nextStage === 'lost') {

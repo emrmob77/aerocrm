@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { sendSMS, sendWhatsApp, getCredentialsFromEnv } from '@/lib/integrations/twilio'
 import type { TwilioCredentials } from '@/types/database'
+import { getServerT } from '@/lib/i18n/server'
 
 type TestPayload = {
   to: string
@@ -10,11 +11,12 @@ type TestPayload = {
 }
 
 export async function POST(request: Request) {
+  const t = getServerT()
   const payload = (await request.json().catch(() => null)) as TestPayload | null
 
   if (!payload?.to || !payload?.message || !payload?.method) {
     return NextResponse.json(
-      { error: 'Alıcı numara, mesaj ve yöntem zorunludur.' },
+      { error: t('api.integrations.twilioTestRequired') },
       { status: 400 }
     )
   }
@@ -27,7 +29,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+    return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
-    return NextResponse.json({ error: 'Takım bilgisi bulunamadı.' }, { status: 400 })
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
   // Get credentials from DB first, then fallback to env
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
 
   if (!credentials) {
     return NextResponse.json(
-      { error: 'Twilio yapılandırması bulunamadı. Lütfen önce bağlantı kurun.' },
+      { error: t('api.integrations.twilioConfigMissing') },
       { status: 400 }
     )
   }
@@ -80,7 +82,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: result.error || 'Mesaj gönderilemedi.' },
+      { error: result.error || t('api.integrations.messageSendFailed') },
       { status: 400 }
     )
   }
@@ -101,6 +103,11 @@ export async function POST(request: Request) {
   return NextResponse.json({
     success: true,
     sid: result.sid,
-    message: `Test ${payload.method === 'whatsapp' ? 'WhatsApp mesajı' : 'SMS'} gönderildi.`,
+    message: t('api.integrations.testSent', {
+      method:
+        payload.method === 'whatsapp'
+          ? t('api.integrations.methods.whatsapp')
+          : t('api.integrations.methods.sms'),
+    }),
   })
 }
