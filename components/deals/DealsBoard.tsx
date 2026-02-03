@@ -21,7 +21,9 @@ export type DealCardData = {
   ownerName: string
   ownerInitials: string
   ownerAvatarUrl?: string | null
+  ownerId: string | null
   updatedAt: string
+  createdAt: string
 }
 
 type DealsBoardProps = {
@@ -57,10 +59,78 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
   const [deals, setDeals] = useState<DealCardData[]>(initialDeals)
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
   const [showLost, setShowLost] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [ownerFilter, setOwnerFilter] = useState('all')
+  const [dateFilter, setDateFilter] = useState('all')
+  const [sortFilter, setSortFilter] = useState('newest')
+  const [stageFilters, setStageFilters] = useState<StageId[]>([])
+  const [minValue, setMinValue] = useState('')
+  const [maxValue, setMaxValue] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+  const [members, setMembers] = useState<Array<{ id: string; name: string; avatarUrl: string | null }>>([])
+  const [stageUpdatingId, setStageUpdatingId] = useState<string | null>(null)
+  const [ownerUpdatingId, setOwnerUpdatingId] = useState<string | null>(null)
 
   useEffect(() => {
     setDeals(initialDeals)
   }, [initialDeals])
+
+  useEffect(() => {
+    if (!teamId && !userId) return
+
+    const loadMembers = async () => {
+      let query = supabase
+        .from('users')
+        .select('id, full_name, avatar_url')
+        .order('created_at', { ascending: true })
+
+      if (teamId) {
+        query = query.eq('team_id', teamId)
+      } else if (userId) {
+        query = query.eq('id', userId)
+      }
+
+      const { data } = await query
+      const nextMembers = (data ?? []).map((member) => ({
+        id: member.id,
+        name: member.full_name || t('deals.ownerFallback'),
+        avatarUrl: member.avatar_url ?? null,
+      }))
+      setMembers(nextMembers)
+    }
+
+    loadMembers()
+  }, [supabase, teamId, userId, t])
+
+  const memberMap = useMemo(
+    () => new Map(members.map((member) => [member.id, member])),
+    [members]
+  )
+
+  useEffect(() => {
+    if (members.length === 0) return
+    setDeals((prev) =>
+      prev.map((deal) => {
+        if (!deal.ownerId) return deal
+        const member = memberMap.get(deal.ownerId)
+        if (!member) return deal
+        const initials = createInitials(member.name)
+        if (
+          deal.ownerName === member.name &&
+          deal.ownerInitials === initials &&
+          deal.ownerAvatarUrl === member.avatarUrl
+        ) {
+          return deal
+        }
+        return {
+          ...deal,
+          ownerName: member.name,
+          ownerInitials: initials,
+          ownerAvatarUrl: member.avatarUrl,
+        }
+      })
+    )
+  }, [memberMap, members.length])
 
   useEffect(() => {
     if (!teamId && !userId) {
@@ -115,7 +185,9 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
               ownerName,
               ownerInitials: createInitials(ownerName),
               ownerAvatarUrl: ownerInfo?.data?.avatar_url ?? null,
+              ownerId: row.user_id ?? null,
               updatedAt: row.updated_at ?? row.created_at ?? new Date().toISOString(),
+              createdAt: row.created_at ?? row.updated_at ?? new Date().toISOString(),
             }
 
             return [next, ...prev]
@@ -137,6 +209,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                     title: row.title ?? deal.title,
                     value: row.value ?? deal.value,
                     stage: normalizeStage(row.stage),
+                    ownerId: row.user_id ?? deal.ownerId,
                     updatedAt: row.updated_at ?? deal.updatedAt,
                   }
                 : deal
@@ -159,14 +232,108 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase, teamId, userId])
+  }, [supabase, teamId, userId, t])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
+  const toggleStageFilter = (stageId: StageId) => {
+    setStageFilters((prev) =>
+      prev.includes(stageId) ? prev.filter((item) => item !== stageId) : [...prev, stageId]
+    )
+  }
+
+  const resetExtraFilters = () => {
+    setStageFilters([])
+    setMinValue('')
+    setMaxValue('')
+  }
+
+  const filteredDeals = useMemo(() => {
+    let result = [...deals]
+
+    const query = searchQuery.trim().toLowerCase()
+    if (query) {
+      result = result.filter((deal) => {
+        const haystack = [
+          deal.title,
+          deal.company,
+          deal.contactName,
+          deal.ownerName,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        return haystack.includes(query)
+      })
+    }
+
+    if (ownerFilter !== 'all') {
+      if (ownerFilter === 'unassigned') {
+        result = result.filter((deal) => !deal.ownerId)
+      } else {
+        result = result.filter((deal) => deal.ownerId === ownerFilter)
+      }
+    }
+
+    if (dateFilter !== 'all') {
+      const now = new Date()
+      let start: Date | null = null
+      if (dateFilter === 'thisMonth') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1)
+      } else if (dateFilter === 'last7') {
+        start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      } else if (dateFilter === 'last30') {
+        start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      } else if (dateFilter === 'last90') {
+        start = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+      }
+      if (start) {
+        result = result.filter((deal) => {
+          const base = deal.createdAt || deal.updatedAt
+          return new Date(base) >= start!
+        })
+      }
+    }
+
+    if (stageFilters.length > 0) {
+      result = result.filter((deal) => stageFilters.includes(deal.stage))
+    }
+
+    const minInput = minValue.trim()
+    if (minInput !== '') {
+      const min = Number(minInput)
+      if (Number.isFinite(min)) {
+        result = result.filter((deal) => deal.value >= min)
+      }
+    }
+
+    const maxInput = maxValue.trim()
+    if (maxInput !== '') {
+      const max = Number(maxInput)
+      if (Number.isFinite(max)) {
+        result = result.filter((deal) => deal.value <= max)
+      }
+    }
+
+    return result
+  }, [deals, dateFilter, maxValue, minValue, ownerFilter, searchQuery, stageFilters])
+
+  const sortedDeals = useMemo(() => {
+    const result = [...filteredDeals]
+    if (sortFilter === 'oldest') {
+      result.sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
+    } else if (sortFilter === 'valueHigh') {
+      result.sort((a, b) => b.value - a.value)
+    } else if (sortFilter === 'valueLow') {
+      result.sort((a, b) => a.value - b.value)
+    } else {
+      result.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    }
+    return result
+  }, [filteredDeals, sortFilter])
+
   const dealsByStage = (stageId: StageId) =>
-    deals
-      .filter(deal => deal.stage === stageId)
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    sortedDeals.filter(deal => deal.stage === stageId)
 
   const getStageTotals = (stageId: StageId) => {
     const stageDeals = dealsByStage(stageId)
@@ -176,25 +343,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
     }
   }
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
-
-    if (!over) {
-      return
-    }
-
-    const activeId = String(active.id)
-    if (!activeId.startsWith('deal-')) {
-      return
-    }
-
-    const dealId = activeId.replace('deal-', '')
-    const targetStage = getTargetStage(over.id, deals)
-
-    if (!targetStage) {
-      return
-    }
-
+  const applyStageChange = async (dealId: string, targetStage: StageId) => {
     const current = deals.find(deal => deal.id === dealId)
     if (!current || current.stage === targetStage) {
       return
@@ -216,6 +365,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
       )
     )
 
+    setStageUpdatingId(dealId)
     try {
       const response = await fetch('/api/deals/stage', {
         method: 'POST',
@@ -266,10 +416,106 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
         )
       )
       toast.error(error instanceof Error ? error.message : t('deals.stageUpdateError'))
+    } finally {
+      setStageUpdatingId((prev) => (prev === dealId ? null : prev))
     }
   }
 
-  const totalPipelineValue = deals.reduce((sum, deal) => sum + deal.value, 0)
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over) {
+      return
+    }
+
+    const activeId = String(active.id)
+    if (!activeId.startsWith('deal-')) {
+      return
+    }
+
+    const dealId = activeId.replace('deal-', '')
+    const targetStage = getTargetStage(over.id, deals)
+
+    if (!targetStage) {
+      return
+    }
+
+    await applyStageChange(dealId, targetStage)
+  }
+
+  const handleAssignOwner = async (dealId: string, nextOwnerId: string) => {
+    const current = deals.find((deal) => deal.id === dealId)
+    if (!current) return
+    if (!nextOwnerId) return
+    if (current.ownerId === nextOwnerId) return
+
+    const previousOwnerId = current.ownerId
+    const previousOwnerName = current.ownerName
+    const previousOwnerInitials = current.ownerInitials
+    const previousOwnerAvatarUrl = current.ownerAvatarUrl ?? null
+    const nextMember = memberMap.get(nextOwnerId)
+    const nextOwnerName = nextMember?.name ?? t('deals.ownerFallback')
+    const nextOwnerInitials = createInitials(nextOwnerName)
+
+    setDeals((prev) =>
+      prev.map((deal) =>
+        deal.id === dealId
+          ? {
+              ...deal,
+              ownerId: nextOwnerId,
+              ownerName: nextOwnerName,
+              ownerInitials: nextOwnerInitials,
+              ownerAvatarUrl: nextMember?.avatarUrl ?? null,
+            }
+          : deal
+      )
+    )
+
+    setOwnerUpdatingId(dealId)
+    try {
+      const response = await fetch('/api/deals/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, ownerId: nextOwnerId }),
+      })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        setDeals((prev) =>
+          prev.map((deal) =>
+            deal.id === dealId
+              ? {
+                  ...deal,
+                  ownerId: previousOwnerId,
+                  ownerName: previousOwnerName,
+                  ownerInitials: previousOwnerInitials,
+                  ownerAvatarUrl: previousOwnerAvatarUrl,
+                }
+              : deal
+          )
+        )
+        toast.error(payload?.error || t('deals.assignError'))
+      }
+    } catch (error) {
+      setDeals((prev) =>
+        prev.map((deal) =>
+          deal.id === dealId
+            ? {
+                ...deal,
+                ownerId: previousOwnerId,
+                ownerName: previousOwnerName,
+                ownerInitials: previousOwnerInitials,
+                ownerAvatarUrl: previousOwnerAvatarUrl,
+              }
+            : deal
+        )
+      )
+      toast.error(error instanceof Error ? error.message : t('deals.assignError'))
+    } finally {
+      setOwnerUpdatingId((prev) => (prev === dealId ? null : prev))
+    }
+  }
+
+  const totalPipelineValue = sortedDeals.reduce((sum, deal) => sum + deal.value, 0)
 
   return (
     <div className="flex min-h-full flex-col -mx-4 -mt-4 lg:-mx-8 lg:-mt-8">
@@ -312,31 +558,142 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
         </div>
 
         <div className="flex gap-3 flex-wrap items-center">
-          <button className="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 px-3 hover:bg-slate-50 transition-colors">
-            <span className="material-symbols-outlined text-[18px] text-slate-500">person</span>
-            <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{t('deals.allOwners')}</span>
-            <span className="material-symbols-outlined text-[18px] text-slate-400">expand_more</span>
-          </button>
-          <button className="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 px-3 hover:bg-slate-50 transition-colors">
-            <span className="material-symbols-outlined text-[18px] text-slate-500">calendar_today</span>
-            <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{t('deals.thisMonth')}</span>
-            <span className="material-symbols-outlined text-[18px] text-slate-400">expand_more</span>
-          </button>
-          <button className="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 px-3 hover:bg-slate-50 transition-colors">
-            <span className="material-symbols-outlined text-[18px] text-slate-500">sort</span>
-            <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{t('deals.sortNewest')}</span>
-            <span className="material-symbols-outlined text-[18px] text-slate-400">expand_more</span>
-          </button>
+          <div className="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 px-3">
+            <span className="material-symbols-outlined text-[18px] text-slate-400">search</span>
+            <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder={t('deals.searchPlaceholder')}
+              className="bg-transparent text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 outline-none w-48"
+            />
+          </div>
+
+          <div className="relative">
+            <span className="material-symbols-outlined text-[18px] text-slate-500 absolute left-3 top-1/2 -translate-y-1/2">person</span>
+            <select
+              value={ownerFilter}
+              onChange={(event) => setOwnerFilter(event.target.value)}
+              className="appearance-none rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 pl-9 pr-9 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
+            >
+              <option value="all">{t('deals.ownerFilterAll')}</option>
+              <option value="unassigned">{t('deals.ownerFilterUnassigned')}</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+            <span className="material-symbols-outlined text-[18px] text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">expand_more</span>
+          </div>
+
+          <div className="relative">
+            <span className="material-symbols-outlined text-[18px] text-slate-500 absolute left-3 top-1/2 -translate-y-1/2">calendar_today</span>
+            <select
+              value={dateFilter}
+              onChange={(event) => setDateFilter(event.target.value)}
+              className="appearance-none rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 pl-9 pr-9 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
+            >
+              <option value="thisMonth">{t('deals.dateFilters.thisMonth')}</option>
+              <option value="last7">{t('deals.dateFilters.last7Days')}</option>
+              <option value="last30">{t('deals.dateFilters.last30Days')}</option>
+              <option value="last90">{t('deals.dateFilters.last90Days')}</option>
+              <option value="all">{t('deals.dateFilters.all')}</option>
+            </select>
+            <span className="material-symbols-outlined text-[18px] text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">expand_more</span>
+          </div>
+
+          <div className="relative">
+            <span className="material-symbols-outlined text-[18px] text-slate-500 absolute left-3 top-1/2 -translate-y-1/2">sort</span>
+            <select
+              value={sortFilter}
+              onChange={(event) => setSortFilter(event.target.value)}
+              className="appearance-none rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 pl-9 pr-9 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
+            >
+              <option value="newest">{t('deals.sort.newest')}</option>
+              <option value="oldest">{t('deals.sort.oldest')}</option>
+              <option value="valueHigh">{t('deals.sort.valueHigh')}</option>
+              <option value="valueLow">{t('deals.sort.valueLow')}</option>
+            </select>
+            <span className="material-symbols-outlined text-[18px] text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">expand_more</span>
+          </div>
+
           <div className="h-6 w-[1px] bg-slate-300 dark:bg-slate-700 mx-1"></div>
-          <button className="flex items-center gap-2 rounded-lg bg-primary/10 text-primary h-9 px-3 hover:bg-primary/20 transition-colors">
+          <button
+            onClick={() => setShowFilters((prev) => !prev)}
+            className="flex items-center gap-2 rounded-lg bg-primary/10 text-primary h-9 px-3 hover:bg-primary/20 transition-colors"
+          >
             <span className="material-symbols-outlined text-[18px]">filter_list</span>
             <span className="text-sm font-bold">{t('deals.filters')}</span>
           </button>
         </div>
+
+        {showFilters && (
+          <div className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+            <div className="flex flex-wrap gap-6 items-end">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">{t('deals.filtersPanel.stages')}</p>
+                <div className="flex flex-wrap gap-2">
+                  {stageConfigs.map((stage) => (
+                    <button
+                      key={stage.id}
+                      onClick={() => toggleStageFilter(stage.id)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                        stageFilters.includes(stage.id)
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600'
+                      }`}
+                    >
+                      {stage.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">{t('deals.filtersPanel.valueRange')}</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    value={minValue}
+                    onChange={(event) => setMinValue(event.target.value)}
+                    placeholder={t('deals.filtersPanel.minValue')}
+                    className="h-9 w-28 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-700 dark:text-slate-200"
+                  />
+                  <input
+                    type="number"
+                    value={maxValue}
+                    onChange={(event) => setMaxValue(event.target.value)}
+                    placeholder={t('deals.filtersPanel.maxValue')}
+                    className="h-9 w-28 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-700 dark:text-slate-200"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={resetExtraFilters}
+                className="ml-auto text-sm font-semibold text-slate-500 hover:text-slate-700"
+              >
+                {t('deals.filtersPanel.reset')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {viewMode === 'kanban' && (
         <div className="flex-1 overflow-x-auto px-6 lg:px-10 pb-10 custom-scrollbar snap-x snap-mandatory">
+          {sortedDeals.length === 0 && (
+            <div className="mb-6 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/40 p-6 text-center">
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{t('deals.empty.title')}</p>
+              <p className="text-xs text-slate-400 mt-1">{t('deals.empty.subtitle')}</p>
+              <button
+                onClick={resetExtraFilters}
+                className="mt-3 text-xs font-semibold text-primary hover:underline"
+              >
+                {t('deals.filtersPanel.reset')}
+              </button>
+            </div>
+          )}
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <div className="flex gap-6 h-full min-h-[600px]">
               {stageConfigs
@@ -427,12 +784,19 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                   <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">{t('deals.table.company')}</th>
                   <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">{t('deals.table.deal')}</th>
                   <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">{t('deals.table.stage')}</th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">{t('deals.table.owner')}</th>
                   <th className="text-right px-6 py-3 text-xs font-bold text-slate-500 uppercase">{t('deals.table.value')}</th>
                   <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">{t('deals.table.lastActivity')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                {deals.map((deal) => {
+                {sortedDeals.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-slate-400">
+                      {t('deals.empty.subtitle')}
+                    </td>
+                  </tr>
+                ) : sortedDeals.map((deal) => {
                   const stage = stageConfigs.find(item => item.id === deal.stage)
                   return (
                     <tr key={deal.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
@@ -443,14 +807,35 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                         <span className="font-bold text-slate-800 dark:text-slate-100">{deal.title}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                          deal.stage === 'won' ? 'bg-emerald-100 text-emerald-700' :
-                          deal.stage === 'lost' ? 'bg-red-100 text-red-700' :
-                          deal.stage === 'proposal' ? 'bg-primary/10 text-primary' :
-                          'bg-slate-200 text-slate-600'
-                        }`}>
-                          {stage?.label}
-                        </span>
+                        <select
+                          value={deal.stage}
+                          disabled={stageUpdatingId === deal.id}
+                          onChange={(event) => applyStageChange(deal.id, event.target.value as StageId)}
+                          className="h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs font-semibold text-slate-600 dark:text-slate-200"
+                        >
+                          {stageConfigs.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={deal.ownerId ?? ''}
+                          disabled={ownerUpdatingId === deal.id}
+                          onChange={(event) => handleAssignOwner(deal.id, event.target.value)}
+                          className="h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs font-semibold text-slate-600 dark:text-slate-200"
+                        >
+                          <option value="" disabled>
+                            {t('deals.ownerSelectPlaceholder')}
+                          </option>
+                          {members.map((member) => (
+                            <option key={member.id} value={member.id}>
+                              {member.name}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span className="text-primary font-extrabold">{formatCurrency(deal.value, locale === 'en' ? 'en-US' : 'tr-TR', currency)}</span>

@@ -212,6 +212,7 @@ export default function ProposalEditorPage() {
   const { user, authUser, loading: userLoading } = useUser()
   const searchParams = useSearchParams()
   const templateId = searchParams.get('templateId')
+  const proposalId = searchParams.get('proposalId')
   const { t, get, locale } = useI18n()
   const localeCode = locale === 'en' ? 'en-US' : 'tr-TR'
 
@@ -703,14 +704,11 @@ export default function ProposalEditorPage() {
     fontScale: 100,
   })
 
-  const proposalMeta = useMemo(
-    () => ({
-      clientName: t('proposalEditor.defaults.clientName'),
-      contactEmail: 'info@abc.com',
-      contactPhone: '+90 532 000 00 00',
-    }),
-    [t]
-  )
+  const [proposalMeta, setProposalMeta] = useState(() => ({
+    clientName: t('proposalEditor.defaults.clientName'),
+    contactEmail: 'info@abc.com',
+    contactPhone: '+90 532 000 00 00',
+  }))
 
   useEffect(() => {
     if (userLoading) return
@@ -756,7 +754,7 @@ export default function ProposalEditorPage() {
     }
     setSavedTemplates((payload?.templates ?? []) as SavedTemplate[])
     setTemplatesLoading(false)
-  }, [paletteItems])
+  }, [t])
 
   useEffect(() => {
     if (userLoading) return
@@ -768,14 +766,19 @@ export default function ProposalEditorPage() {
     fetchTemplates(templateScope)
   }, [authUser, userLoading, templateScope, fetchTemplates])
 
-  const [proposalLink, setProposalLink] = useState(() => {
-    const slug = crypto.randomUUID().split('-')[0]
-    return `https://aero-crm.app/p/${slug}`
-  })
+  const [proposalLink, setProposalLink] = useState('')
   const [draftId, setDraftId] = useState<string | null>(null)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [versionHistory, setVersionHistory] = useState<DraftVersion[]>([])
+
+  useEffect(() => {
+    if (proposalLink) return
+    if (proposalId) return
+    if (typeof window === 'undefined') return
+    const slug = crypto.randomUUID().split('-')[0]
+    setProposalLink(`${window.location.origin}/p/${slug}`)
+  }, [proposalId, proposalLink])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -784,7 +787,7 @@ export default function ProposalEditorPage() {
       (item): [BlockType, { label: string; icon: string }] => [item.id, { label: item.label, icon: item.icon }]
     )
     return new Map(entries)
-  }, [])
+  }, [paletteItems])
 
   const filteredProductOptions = useMemo(() => {
     const query = productSearch.trim().toLowerCase()
@@ -828,7 +831,7 @@ export default function ProposalEditorPage() {
     setDocumentTitle((prev) => template.name || prev)
     setSelectedBlockId(null)
     setEditorMode('edit')
-  }, [])
+  }, [t])
 
   const openTemplateModal = () => {
     setTemplateName(documentTitle)
@@ -878,7 +881,7 @@ export default function ProposalEditorPage() {
   }
 
   useEffect(() => {
-    if (!templateId) return
+    if (!templateId || proposalId) return
     const loadTemplate = async () => {
       const response = await fetch(`/api/templates/${templateId}`)
       const payload = await response.json().catch(() => null)
@@ -894,7 +897,65 @@ export default function ProposalEditorPage() {
       applySavedTemplate(template, true)
     }
     loadTemplate()
-  }, [templateId, applySavedTemplate])
+  }, [templateId, proposalId, applySavedTemplate, t])
+
+  useEffect(() => {
+    if (!proposalId) return
+    if (userLoading) return
+    if (!authUser) return
+
+    const loadProposal = async () => {
+      const { data, error } = await supabase
+        .from('proposals')
+        .select('id, title, blocks, public_url, contacts(full_name, company, email, phone)')
+        .eq('id', proposalId)
+        .maybeSingle()
+
+      if (error || !data) {
+        toast.error(t('proposalEditor.toasts.proposalLoadFailed'))
+        return
+      }
+
+      const rawBlocks = data.blocks
+      let nextBlocks: ProposalBlock[] = []
+      if (Array.isArray(rawBlocks)) {
+        nextBlocks = rawBlocks as ProposalBlock[]
+      } else if (typeof rawBlocks === 'string') {
+        try {
+          const parsed = JSON.parse(rawBlocks)
+          if (Array.isArray(parsed)) {
+            nextBlocks = parsed as ProposalBlock[]
+          }
+        } catch {
+          nextBlocks = []
+        }
+      }
+
+      if (nextBlocks.length > 0) {
+        setBlocks(nextBlocks)
+      }
+
+      const contact = Array.isArray(data.contacts) ? data.contacts[0] : data.contacts
+      const contactName =
+        contact?.full_name?.trim() ||
+        contact?.company?.trim() ||
+        t('proposalEditor.defaults.clientName')
+
+      setProposalMeta({
+        clientName: contactName,
+        contactEmail: contact?.email ?? '',
+        contactPhone: contact?.phone ?? '',
+      })
+
+      setDraftId(data.id)
+      setDocumentTitle(data.title || t('proposalEditor.defaults.documentTitle'))
+      if (data.public_url) {
+        setProposalLink(data.public_url)
+      }
+    }
+
+    loadProposal()
+  }, [authUser, proposalId, supabase, t, userLoading])
 
   const handleSaveDraft = async () => {
     if (isSavingDraft) return

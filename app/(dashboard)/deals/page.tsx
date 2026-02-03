@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 type DealRow = Pick<
   Database['public']['Tables']['deals']['Row'],
-  'id' | 'title' | 'value' | 'stage' | 'updated_at' | 'contact_id' | 'user_id'
+  'id' | 'title' | 'value' | 'stage' | 'updated_at' | 'created_at' | 'contact_id' | 'user_id'
 >
 
 type DealContact = {
@@ -41,11 +41,13 @@ export default async function DealsPage() {
 
   let dealsQuery = supabase
     .from('deals')
-    .select('id, title, value, stage, updated_at, contact_id, user_id, contacts(full_name, company), users(full_name, avatar_url)')
+    .select('id, title, value, stage, updated_at, created_at, contact_id, user_id, contacts(full_name, company), users(full_name, avatar_url)')
     .order('updated_at', { ascending: false })
 
   if (teamId) {
-    dealsQuery = dealsQuery.eq('team_id', teamId)
+    dealsQuery = dealsQuery.or(
+      `team_id.eq.${teamId},user_id.eq.${user.id}`
+    )
   } else {
     dealsQuery = dealsQuery.eq('user_id', user.id)
   }
@@ -86,7 +88,9 @@ export default async function DealsPage() {
       ownerName,
       ownerInitials: ownerInitials || '??',
       ownerAvatarUrl: owner?.avatar_url ?? null,
+      ownerId: deal.user_id ?? null,
       updatedAt: deal.updated_at ?? new Date().toISOString(),
+      createdAt: deal.created_at ?? deal.updated_at ?? new Date().toISOString(),
     }
   })
 

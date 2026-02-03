@@ -29,7 +29,7 @@ type HandlerContext = {
   params?: Record<string, string>
 }
 
-type ApiHandler = (request: Request, context: HandlerContext) => Promise<Response>
+type ApiHandler<C extends HandlerContext = HandlerContext> = (request: Request, context: C) => Promise<Response>
 
 type LoggingOptions = {
   teamId?: string | null
@@ -150,14 +150,18 @@ export async function logSystemError({
   }
 }
 
-export const withApiLogging = (handler: ApiHandler, options: LoggingOptions = {}) => {
-  return async (request: Request, context: HandlerContext = {}) => {
+export const withApiLogging = <C extends HandlerContext>(
+  handler: ApiHandler<C>,
+  options: LoggingOptions = {}
+) => {
+  return async (request: Request, context?: C) => {
     const startedAt = Date.now()
     let response: Response
     let errorMessage: string | null = null
+    const resolvedContext = (context ?? {}) as C
 
     try {
-      response = await handler(request, context)
+      response = await handler(request, resolvedContext)
     } catch (error) {
       const t = getServerT()
       response = NextResponse.json({ error: t('api.errors.unexpected') }, { status: 500 })
