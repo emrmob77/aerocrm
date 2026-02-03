@@ -286,12 +286,13 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 19: Anlaşma Aşama Güncelleme Tutarlılığı**
   - **Doğrular: Gereksinim 16.3**
 
-- [ ] 22. Entegrasyon Hub'ı
-  - Entegrasyon listesi sayfası
-  - OAuth akış yönetimi
-  - Gmail, Slack, Google Drive entegrasyonları
-  - Entegrasyon durumu monitoring
-  - API anahtarı yönetimi
+- [x] 22. Entegrasyon Hub'ı ✅
+  - Entegrasyon listesi sayfası (SSR, dinamik) ✅
+  - Twilio SMS/WhatsApp entegrasyonu ✅
+  - Twilio ayar sayfası (credentials, test gönderimi) ✅
+  - Entegrasyon durumu monitoring (connected/disconnected/error) ✅
+  - API credentials yönetimi (DB'de saklanıyor) ✅
+  - Diğer entegrasyonlar placeholder (Gmail, Slack, Stripe vb. - Yakında)
   - _Gereksinimler: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6_
 
 - [ ]* 22.1 Entegrasyon property testleri
@@ -309,6 +310,11 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
 - [ ]* 23.1 Faturalama property testleri
   - **Property 21: Plan Değişikliği Anında Uygulama**
   - **Doğrular: Gereksinim 18.3**
+
+- [ ] 23.2 Faturalama geliştirmeleri
+  - Stripe webhook event kapsamını genişlet (invoice.payment_failed, invoice.paid vb.)
+  - Kullanım metriklerini gerçek verilere bağla (kullanıcı sayısı, teklif gönderimi, depolama)
+  - _Gereksinimler: 18.1, 18.3, 18.4, 18.5_
 
 - [ ] 24. Sistem Sağlığı ve Monitoring
   - Sistem sağlığı dashboard'u

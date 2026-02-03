@@ -77,7 +77,7 @@ const integrationConfigs: IntegrationConfig[] = [
     iconColor: 'text-indigo-600',
     iconBg: 'bg-indigo-50 dark:bg-indigo-900/20',
     recommended: true,
-    comingSoon: true,
+    href: '/integrations/stripe',
     category: 'payment',
   },
   {

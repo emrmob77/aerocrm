@@ -1360,3 +1360,8 @@ export type TwilioCredentials = {
   from_sms?: string
   from_whatsapp?: string
 }
+
+export type StripeCredentials = {
+  secret_key: string
+  webhook_secret?: string
+}
