@@ -65,6 +65,14 @@ export type WebhookLog = Database['public']['Tables']['webhook_logs']['Row']
 export type WebhookLogInsert = Database['public']['Tables']['webhook_logs']['Insert']
 export type WebhookLogUpdate = Database['public']['Tables']['webhook_logs']['Update']
 
+// Monitoring types
+export type SystemLog = Database['public']['Tables']['system_logs']['Row']
+export type SystemLogInsert = Database['public']['Tables']['system_logs']['Insert']
+export type SystemLogUpdate = Database['public']['Tables']['system_logs']['Update']
+export type ApiUsageLog = Database['public']['Tables']['api_usage_logs']['Row']
+export type ApiUsageLogInsert = Database['public']['Tables']['api_usage_logs']['Insert']
+export type ApiUsageLogUpdate = Database['public']['Tables']['api_usage_logs']['Update']
+
 // Notification types
 export type Notification = Database['public']['Tables']['notifications']['Row']
 export type NotificationInsert = Database['public']['Tables']['notifications']['Insert']

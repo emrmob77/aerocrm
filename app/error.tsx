@@ -11,6 +11,21 @@ export default function Error({ error, reset }: ErrorProps) {
   useEffect(() => {
     // Hata loglaması yapılabilir
     console.error('Application error:', error)
+    const context = {
+      digest: error.digest,
+      stack: error.stack,
+      href: typeof window !== 'undefined' ? window.location.href : undefined,
+    }
+    fetch('/api/monitoring/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        level: 'error',
+        message: error.message || 'Bilinmeyen hata',
+        source: 'app/error',
+        context,
+      }),
+    }).catch(() => undefined)
   }, [error])
 
   return (

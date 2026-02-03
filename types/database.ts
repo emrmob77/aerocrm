@@ -1034,6 +1034,108 @@ export type Database = {
           },
         ]
       }
+      system_logs: {
+        Row: {
+          id: string
+          created_at: string | null
+          team_id: string | null
+          user_id: string | null
+          level: string
+          message: string
+          source: string | null
+          context: Json | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string | null
+          team_id?: string | null
+          user_id?: string | null
+          level: string
+          message: string
+          source?: string | null
+          context?: Json | null
+        }
+        Update: {
+          id?: string
+          created_at?: string | null
+          team_id?: string | null
+          user_id?: string | null
+          level?: string
+          message?: string
+          source?: string | null
+          context?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_logs_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_usage_logs: {
+        Row: {
+          id: string
+          created_at: string | null
+          team_id: string | null
+          user_id: string | null
+          path: string
+          method: string
+          status: number | null
+          duration_ms: number | null
+          user_agent: string | null
+          ip_address: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string | null
+          team_id?: string | null
+          user_id?: string | null
+          path: string
+          method: string
+          status?: number | null
+          duration_ms?: number | null
+          user_agent?: string | null
+          ip_address?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string | null
+          team_id?: string | null
+          user_id?: string | null
+          path?: string
+          method?: string
+          status?: number | null
+          duration_ms?: number | null
+          user_agent?: string | null
+          ip_address?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_logs_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_usage_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhooks: {
         Row: {
           active: boolean | null

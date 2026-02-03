@@ -8,6 +8,7 @@ const settingsSections = [
   { title: 'Bildirimler', description: 'Bildirim tercihlerinizi ayarlayın', icon: 'notifications', href: '/settings/notifications' },
   { title: 'Güvenlik', description: 'Şifre ve güvenlik ayarları', icon: 'security', href: '/settings/security' },
   { title: 'Faturalama', description: 'Abonelik ve ödeme bilgileri', icon: 'credit_card', href: '/settings/billing' },
+  { title: 'Sistem Sağlığı', description: 'Loglar ve performans metrikleri', icon: 'monitor_heart', href: '/settings/monitoring' },
   { title: 'API & Geliştirici', description: 'API anahtarları ve entegrasyonlar', icon: 'code', href: '/settings/developer' },
 ]
 
