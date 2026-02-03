@@ -1334,3 +1334,29 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+// Custom types for integrations
+export type IntegrationProvider = 'twilio' | 'gmail' | 'slack' | 'gdrive' | 'zapier' | 'stripe'
+export type IntegrationStatus = 'connected' | 'disconnected' | 'error'
+
+export type Integration = {
+  id: string
+  team_id: string
+  provider: IntegrationProvider
+  status: IntegrationStatus
+  credentials: Record<string, string>
+  settings: Record<string, unknown>
+  last_used_at: string | null
+  last_error: string | null
+  connected_at: string | null
+  connected_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type TwilioCredentials = {
+  account_sid: string
+  auth_token: string
+  from_sms?: string
+  from_whatsapp?: string
+}

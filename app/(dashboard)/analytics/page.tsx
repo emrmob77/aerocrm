@@ -310,22 +310,26 @@ export default async function AnalyticsPage({
   const views = (viewsData ?? []) as ProposalView[]
 
   const lastRangeProposals = proposals.filter((proposal) => {
+    if (!proposal.created_at) return false
     const createdAt = new Date(proposal.created_at)
     return createdAt >= rangeStart && createdAt <= rangeEnd
   })
   const prevRangeProposals = proposals.filter(
     (proposal) => {
+      if (!proposal.created_at) return false
       const createdAt = new Date(proposal.created_at)
       return createdAt < rangeStart && createdAt >= prevRangeStart && createdAt <= prevRangeEnd
     }
   )
 
   const lastRangeViews = views.filter((view) => {
+    if (!view.created_at) return false
     const createdAt = new Date(view.created_at)
     return createdAt >= rangeStart && createdAt <= rangeEnd
   })
   const prevRangeViews = views.filter(
     (view) => {
+      if (!view.created_at) return false
       const createdAt = new Date(view.created_at)
       return createdAt < rangeStart && createdAt >= prevRangeStart && createdAt <= prevRangeEnd
     }
@@ -419,11 +423,12 @@ export default async function AnalyticsPage({
   }
 
   const proposalTableRows = lastRangeProposals
+    .filter((proposal) => proposal.created_at !== null)
     .slice(0, 8)
     .map((proposal) => ({
       id: proposal.id,
       title: proposal.title,
-      createdAt: proposal.created_at,
+      createdAt: proposal.created_at as string,
       views: viewStats.get(proposal.id) ?? 0,
       status: proposal.status ?? 'sent',
     }))
@@ -435,10 +440,12 @@ export default async function AnalyticsPage({
   }
   const sentSeriesMap = new Map<string, number>()
   for (const proposal of lastRangeProposals) {
+    if (!proposal.created_at) continue
     const key = new Date(proposal.created_at).toISOString().slice(0, 10)
     sentSeriesMap.set(key, (sentSeriesMap.get(key) ?? 0) + 1)
   }
   for (const view of lastRangeViews) {
+    if (!view.created_at) continue
     const key = new Date(view.created_at).toISOString().slice(0, 10)
     const entry = timeSeriesMap.get(key)
     if (entry) entry.views += 1
@@ -469,6 +476,7 @@ export default async function AnalyticsPage({
   }> = []
 
   for (const view of lastRangeViews.slice(0, 6)) {
+    if (!view.created_at) continue
     const title = proposalMap.get(view.proposal_id) ?? 'Teklif'
     activityEvents.push({
       date: view.created_at,
@@ -481,8 +489,10 @@ export default async function AnalyticsPage({
   }
 
   for (const proposal of lastRangeProposals.filter((item) => isSignedStatus(item.status)).slice(0, 6)) {
+    const eventDate = proposal.signed_at ?? proposal.updated_at ?? proposal.created_at
+    if (!eventDate) continue
     activityEvents.push({
-      date: proposal.signed_at ?? proposal.updated_at ?? proposal.created_at,
+      date: eventDate,
       icon: 'verified',
       iconBg: 'bg-[#07883b]/10',
       iconColor: 'text-[#07883b]',
@@ -492,6 +502,7 @@ export default async function AnalyticsPage({
   }
 
   for (const proposal of lastRangeProposals.filter((item) => isSentStatus(item.status)).slice(0, 6)) {
+    if (!proposal.created_at) continue
     activityEvents.push({
       date: proposal.created_at,
       icon: 'send',

@@ -83,7 +83,7 @@ export function ActivityFeed({ initialActivities, teamId }: ActivityFeedProps) {
                     <div className="flex justify-between">
                       <p className="text-sm font-bold text-[#0d121c] dark:text-white">{activity.title}</p>
                       <span className="text-xs text-[#48679d] dark:text-gray-400">
-                        {formatRelativeTime(activity.createdAt)}
+                        {activity.createdAt ? formatRelativeTime(activity.createdAt) : ''}
                       </span>
                     </div>
                     {activity.description && (

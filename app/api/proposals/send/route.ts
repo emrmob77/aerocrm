@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { buildProposalDeliveryEmail } from '@/lib/notifications/email-templates'
+import { sendTwilioMessage, getCredentialsFromEnv } from '@/lib/integrations/twilio'
+import type { TwilioCredentials } from '@/types/database'
 
 type SendProposalPayload = {
   title?: string
@@ -77,30 +79,26 @@ const sendEmail = async (params: { to: string; subject: string; text: string; ht
   }
 }
 
-const sendTwilioMessage = async (params: { to: string; from: string; body: string }) => {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  if (!accountSid || !authToken) {
-    throw new Error('SMS/WhatsApp için TWILIO_ACCOUNT_SID ve TWILIO_AUTH_TOKEN gerekir.')
+// Helper to get Twilio credentials from DB or env
+const getTwilioCredentials = async (
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  teamId: string
+): Promise<TwilioCredentials | null> => {
+  // Try to get from DB first
+  const { data: integration } = await supabase
+    .from('integrations')
+    .select('credentials')
+    .eq('team_id', teamId)
+    .eq('provider', 'twilio')
+    .eq('status', 'connected')
+    .maybeSingle()
+
+  if (integration?.credentials) {
+    return integration.credentials as TwilioCredentials
   }
-  const authHeader = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
-  const bodyParams = new URLSearchParams({
-    To: params.to,
-    From: params.from,
-    Body: params.body,
-  })
-  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${authHeader}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: bodyParams.toString(),
-  })
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null)
-    throw new Error(payload?.message || 'Mesaj gönderimi başarısız oldu.')
-  }
+
+  // Fallback to env variables
+  return getCredentialsFromEnv()
 }
 
 export async function POST(request: Request) {
@@ -240,24 +238,29 @@ export async function POST(request: Request) {
         text: template.text,
         html: template.html,
       })
-    } else if (method === 'sms') {
+    } else if (method === 'sms' || method === 'whatsapp') {
       const recipient = contactPhone
-      const from = process.env.TWILIO_FROM_SMS
-      if (!recipient || !from) {
-        throw new Error('SMS gönderimi için alıcı ve TWILIO_FROM_SMS gerekir.')
+      if (!recipient) {
+        throw new Error(`${method === 'sms' ? 'SMS' : 'WhatsApp'} gönderimi için alıcı numarası gerekir.`)
       }
-      await sendTwilioMessage({ to: recipient, from, body: messageBody })
-    } else if (method === 'whatsapp') {
-      const recipient = contactPhone
-      const from = process.env.TWILIO_FROM_WHATSAPP
-      if (!recipient || !from) {
-        throw new Error('WhatsApp gönderimi için alıcı ve TWILIO_FROM_WHATSAPP gerekir.')
+
+      // Get Twilio credentials from DB or env
+      const twilioCredentials = await getTwilioCredentials(supabase, teamId)
+      if (!twilioCredentials) {
+        throw new Error('Twilio yapılandırması bulunamadı. Lütfen Entegrasyonlar sayfasından ayarlayın.')
       }
-      await sendTwilioMessage({
-        to: recipient.startsWith('whatsapp:') ? recipient : `whatsapp:${recipient}`,
-        from: from.startsWith('whatsapp:') ? from : `whatsapp:${from}`,
-        body: messageBody,
-      })
+
+      const result = await sendTwilioMessage(method, recipient, messageBody, twilioCredentials)
+      if (!result.success) {
+        throw new Error(result.error || 'Mesaj gönderimi başarısız oldu.')
+      }
+
+      // Update last_used_at for integration
+      await supabase
+        .from('integrations')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('team_id', teamId)
+        .eq('provider', 'twilio')
     }
 
     let finalStatus = proposal.status

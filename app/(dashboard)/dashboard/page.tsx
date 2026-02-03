@@ -9,7 +9,8 @@ const quickActions = [
   { label: 'Rapor Al', icon: 'analytics', href: '/reports' },
 ]
 
-type DashboardMetrics = Database['public']['Functions']['get_dashboard_metrics']['Returns']
+type DashboardMetricsArray = Database['public']['Functions']['get_dashboard_metrics']['Returns']
+type DashboardMetrics = DashboardMetricsArray[number]
 
 type ActivityRow = Pick<
   Database['public']['Tables']['activities']['Row'],
@@ -55,9 +56,11 @@ const buildMetricsFromDeals = (deals: DealMetricRow[]): DashboardMetrics => {
 
     if (wonStages.has(deal.stage)) {
       wonDeals += 1
-      const createdAt = new Date(deal.created_at)
-      if (createdAt >= monthStart) {
-        monthlyRevenue += deal.value ?? 0
+      if (deal.created_at) {
+        const createdAt = new Date(deal.created_at)
+        if (createdAt >= monthStart) {
+          monthlyRevenue += deal.value ?? 0
+        }
       }
     }
   }

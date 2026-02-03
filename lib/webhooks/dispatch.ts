@@ -107,8 +107,8 @@ export async function dispatchWebhookEvent({ supabase, teamId, event, data }: Di
   await Promise.all(
     hooks.map(async (hook) => {
       const attempt = await sendWebhook(hook, event, data, new Date().toISOString())
-      const successCount = hook.success_count + (attempt.result.ok ? 1 : 0)
-      const failureCount = hook.failure_count + (attempt.result.ok ? 0 : 1)
+      const successCount = (hook.success_count ?? 0) + (attempt.result.ok ? 1 : 0)
+      const failureCount = (hook.failure_count ?? 0) + (attempt.result.ok ? 0 : 1)
 
       await insertWebhookLog({
         supabase,
@@ -142,8 +142,8 @@ export async function sendWebhookTest(
     webhookId: webhook.id,
   }, new Date().toISOString())
 
-  const successCount = webhook.success_count + (attempt.result.ok ? 1 : 0)
-  const failureCount = webhook.failure_count + (attempt.result.ok ? 0 : 1)
+  const successCount = (webhook.success_count ?? 0) + (attempt.result.ok ? 1 : 0)
+  const failureCount = (webhook.failure_count ?? 0) + (attempt.result.ok ? 0 : 1)
 
   await insertWebhookLog({
     supabase,

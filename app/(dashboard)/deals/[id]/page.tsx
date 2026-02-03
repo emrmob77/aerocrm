@@ -136,7 +136,7 @@ export default async function DealDetailsPage({ params }: { params: { id: string
   if (productIds.length > 0) {
     const { data: productRows } = await supabase
       .from('products')
-      .select('id, name, price, currency, category, active, team_id, created_at, updated_at')
+      .select('id, name, price, currency, category, active, team_id, created_at, updated_at, description')
       .in('id', productIds)
     productMap = new Map((productRows ?? []).map((item) => [item.id, item]))
   }

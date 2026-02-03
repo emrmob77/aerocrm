@@ -26,14 +26,15 @@ const buildDealStats = (deals: DealForStats[]) => {
     const contactId = deal.contact_id
     if (!contactId) continue
 
+    const dealActivityAt = deal.updated_at ?? deal.created_at ?? new Date().toISOString()
     const existing = stats.get(contactId) ?? {
       totalValue: 0,
-      lastActivityAt: deal.updated_at ?? deal.created_at,
+      lastActivityAt: dealActivityAt,
       dealsCount: 0,
     }
 
     const updatedAt = deal.updated_at ?? deal.created_at
-    if (new Date(updatedAt) > new Date(existing.lastActivityAt)) {
+    if (updatedAt && new Date(updatedAt) > new Date(existing.lastActivityAt)) {
       existing.lastActivityAt = updatedAt
     }
 
@@ -95,9 +96,10 @@ export default async function ContactsPage() {
 
   const dealStats = buildDealStats(deals)
 
+  const now = new Date().toISOString()
   const initialContacts = (contacts ?? []).map((contact: ContactCore) => {
     const stats = dealStats.get(contact.id)
-    const fallbackLast = contact.updated_at ?? contact.created_at
+    const fallbackLast = contact.updated_at ?? contact.created_at ?? now
 
     return {
       id: contact.id,
@@ -106,8 +108,8 @@ export default async function ContactsPage() {
       phone: contact.phone,
       company: contact.company,
       position: contact.position,
-      createdAt: contact.created_at,
-      updatedAt: contact.updated_at,
+      createdAt: contact.created_at ?? now,
+      updatedAt: contact.updated_at ?? now,
       totalValue: stats?.totalValue ?? 0,
       lastActivityAt: stats?.lastActivityAt ?? fallbackLast,
       dealsCount: stats?.dealsCount ?? 0,

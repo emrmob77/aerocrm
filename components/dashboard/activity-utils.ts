@@ -10,7 +10,7 @@ export type DashboardActivity = {
   title: string
   description: string | null
   type: string | null
-  createdAt: string
+  createdAt: string | null
 }
 
 const activityTypeMap: Record<string, { icon: string; iconBg: string; iconColor: string }> = {

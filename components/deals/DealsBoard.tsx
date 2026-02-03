@@ -111,7 +111,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
               ownerName,
               ownerInitials: createInitials(ownerName),
               ownerAvatarUrl: ownerInfo?.data?.avatar_url ?? null,
-              updatedAt: row.updated_at ?? row.created_at,
+              updatedAt: row.updated_at ?? row.created_at ?? new Date().toISOString(),
             }
 
             return [next, ...prev]

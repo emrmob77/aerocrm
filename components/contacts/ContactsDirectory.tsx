@@ -21,10 +21,10 @@ export type ContactListItem = {
   phone: string | null
   company: string | null
   position: string | null
-  createdAt: string
-  updatedAt: string
+  createdAt: string | null
+  updatedAt: string | null
   totalValue: number
-  lastActivityAt: string
+  lastActivityAt: string | null
   dealsCount: number
 }
 
@@ -106,7 +106,7 @@ export function ContactsDirectory({
           const updatedAt = deal.updated_at ?? deal.created_at
           acc.totalValue += value
           acc.dealsCount += 1
-          if (new Date(updatedAt) > new Date(acc.lastActivityAt)) {
+          if (updatedAt && new Date(updatedAt) > new Date(acc.lastActivityAt)) {
             acc.lastActivityAt = updatedAt
           }
           return acc
@@ -183,9 +183,9 @@ export function ContactsDirectory({
 
               const updatedAt = row.updated_at ?? contact.updatedAt
               const lastActivityAt =
-                new Date(updatedAt) > new Date(contact.lastActivityAt)
+                updatedAt && contact.lastActivityAt && new Date(updatedAt) > new Date(contact.lastActivityAt)
                   ? updatedAt
-                  : contact.lastActivityAt
+                  : contact.lastActivityAt ?? updatedAt
 
               return {
                 ...contact,

@@ -8,7 +8,7 @@ import { useDropzone } from 'react-dropzone'
 import DOMPurify from 'dompurify'
 import { useSupabase } from '@/hooks'
 import type { Database } from '@/types/database'
-import { formatRelativeTime, getDbStage, normalizeStage, stageConfigs } from '@/components/deals/stage-utils'
+import { formatRelativeTime, getDbStage, normalizeStage, stageConfigs, type StageId } from '@/components/deals/stage-utils'
 import 'react-quill/dist/quill.snow.css'
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false })
@@ -558,7 +558,7 @@ export default function DealDetailsClient({
                   {isEditing ? (
                     <select
                       value={draft.stage}
-                      onChange={(event) => setDraft((prev) => ({ ...prev, stage: event.target.value }))}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, stage: event.target.value as StageId }))}
                       className="px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border border-primary/30 text-primary bg-primary/10"
                     >
                       {stageConfigs.map((stage) => (
@@ -572,7 +572,7 @@ export default function DealDetailsClient({
                       {stageLabel}
                     </span>
                   )}
-                  <span className="text-xs text-gray-500">Son güncelleme: {formatRelativeTime(deal.updated_at)}</span>
+                  <span className="text-xs text-gray-500">Son güncelleme: {formatRelativeTime(deal.updated_at ?? deal.created_at ?? new Date().toISOString())}</span>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -973,7 +973,7 @@ export default function DealDetailsClient({
                                   <p className="text-sm font-semibold text-[#0d121c] dark:text-white">
                                     {activity.title}
                                   </p>
-                                  <span className="text-xs text-gray-400">{formatRelativeTime(activity.created_at)}</span>
+                                  <span className="text-xs text-gray-400">{formatRelativeTime(activity.created_at ?? new Date().toISOString())}</span>
                                 </div>
                                 {activity.description && (
                                   <p className="text-xs text-gray-500 mt-1">{activity.description}</p>

@@ -29,10 +29,10 @@ const getAvatarStyle = (seed: string) => {
 }
 
 const getLastActivity = (contact: ContactCore, deals: DealRow[]) => {
-  let latest = contact.updated_at ?? contact.created_at
+  let latest = contact.updated_at ?? contact.created_at ?? new Date().toISOString()
   for (const deal of deals) {
     const updated = deal.updated_at ?? deal.created_at
-    if (new Date(updated) > new Date(latest)) {
+    if (updated && new Date(updated) > new Date(latest)) {
       latest = updated
     }
   }
@@ -182,7 +182,7 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
                             {formatCurrency(deal.value ?? 0)}
                           </td>
                           <td className="px-6 py-4 text-right text-sm text-[#48679d] dark:text-gray-400">
-                            {formatRelativeTime(deal.updated_at ?? deal.created_at)}
+                            {formatRelativeTime(deal.updated_at ?? deal.created_at ?? new Date().toISOString())}
                           </td>
                         </tr>
                       )
