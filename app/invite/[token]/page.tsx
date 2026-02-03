@@ -5,8 +5,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { useUser } from '@/hooks'
+import { useI18n } from '@/lib/i18n'
 
 export default function InviteAcceptPage({ params }: { params: { token: string } }) {
+  const { t } = useI18n()
   const router = useRouter()
   const { authUser, loading } = useUser()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -22,14 +24,14 @@ export default function InviteAcceptPage({ params }: { params: { token: string }
       })
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        toast.error(payload?.error || 'Davet kabul edilemedi.')
+        toast.error(payload?.error || t('invite.errors.accept'))
         setIsSubmitting(false)
         return
       }
-      toast.success('Takıma katıldınız.')
+      toast.success(t('invite.success'))
       router.push('/dashboard')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Davet kabul edilemedi.')
+      toast.error(error instanceof Error ? error.message : t('invite.errors.accept'))
     } finally {
       setIsSubmitting(false)
     }
@@ -41,29 +43,29 @@ export default function InviteAcceptPage({ params }: { params: { token: string }
         <div className="mx-auto size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
           <span className="material-symbols-outlined text-2xl">group_add</span>
         </div>
-        <h1 className="text-2xl font-extrabold text-[#0d121c]">Takım Daveti</h1>
+        <h1 className="text-2xl font-extrabold text-[#0d121c]">{t('invite.title')}</h1>
         <p className="text-sm text-[#48679d]">
-          AERO CRM takımına katılmak için daveti onaylayın.
+          {t('invite.subtitle')}
         </p>
 
         {loading ? (
-          <p className="text-sm text-gray-500">Kontrol ediliyor...</p>
+          <p className="text-sm text-gray-500">{t('invite.checking')}</p>
         ) : authUser ? (
           <button
             onClick={handleAccept}
             disabled={isSubmitting}
             className="w-full h-11 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition-colors disabled:opacity-70"
           >
-            {isSubmitting ? 'Onaylanıyor' : 'Daveti Kabul Et'}
+            {isSubmitting ? t('invite.accepting') : t('invite.accept')}
           </button>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500">Devam etmek için giriş yapın.</p>
+            <p className="text-sm text-gray-500">{t('invite.loginPrompt')}</p>
             <Link
               href="/login"
               className="inline-flex w-full justify-center h-11 items-center rounded-lg border border-[#e7ebf4] text-sm font-bold text-[#0d121c] hover:bg-gray-50"
             >
-              Giriş Yap
+              {t('invite.login')}
             </Link>
           </div>
         )}

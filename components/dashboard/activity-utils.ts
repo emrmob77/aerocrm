@@ -44,7 +44,10 @@ export function getActivityPresentation(type: string | null) {
   return activityTypeMap[type] ?? defaultActivityPresentation
 }
 
-export function formatRelativeTime(isoDate: string) {
+export function formatRelativeTime(
+  isoDate: string,
+  t: (key: string, vars?: Record<string, string | number>) => string
+) {
   const target = new Date(isoDate)
   const now = new Date()
   const diffMs = target.getTime() - now.getTime()
@@ -52,25 +55,31 @@ export function formatRelativeTime(isoDate: string) {
   const absSeconds = Math.abs(diffSeconds)
 
   if (absSeconds < 60) {
-    return diffSeconds <= 0 ? 'Az önce' : 'Birazdan'
+    return diffSeconds <= 0 ? t('time.justNow') : t('time.soon')
   }
 
   const diffMinutes = Math.round(diffSeconds / 60)
   const absMinutes = Math.abs(diffMinutes)
 
   if (absMinutes < 60) {
-    return diffMinutes < 0 ? `${Math.abs(diffMinutes)} dk önce` : `${diffMinutes} dk sonra`
+    return diffMinutes < 0
+      ? t('time.minutesAgo', { count: Math.abs(diffMinutes) })
+      : t('time.minutesFromNow', { count: diffMinutes })
   }
 
   const diffHours = Math.round(diffMinutes / 60)
   const absHours = Math.abs(diffHours)
 
   if (absHours < 24) {
-    return diffHours < 0 ? `${Math.abs(diffHours)} saat önce` : `${diffHours} saat sonra`
+    return diffHours < 0
+      ? t('time.hoursAgo', { count: Math.abs(diffHours) })
+      : t('time.hoursFromNow', { count: diffHours })
   }
 
   const diffDays = Math.round(diffHours / 24)
-  return diffDays < 0 ? `${Math.abs(diffDays)} gün önce` : `${diffDays} gün sonra`
+  return diffDays < 0
+    ? t('time.daysAgo', { count: Math.abs(diffDays) })
+    : t('time.daysFromNow', { count: diffDays })
 }
 
 export function mapActivityRow(row: ActivityRow): DashboardActivity {

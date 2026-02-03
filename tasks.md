@@ -333,12 +333,16 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - Monitoring dashboard'a hata oranı ve ortalama yanıt süresi kartları ekle
   - _Gereksinimler: 19.2, 19.3, 19.5_
 
-- [ ] 25. Çoklu Dil Desteği
-  - i18n konfigürasyonu
-  - Dil değiştirme bileşeni
-  - Türkçe ve İngilizce çeviriler
-  - Tarih ve sayı formatları
-  - E-posta şablonları çoklu dil desteği
+- [ ] 25. Çoklu Dil Desteği (devam ediyor)
+  - i18n konfigürasyonu ✅
+  - Dil değiştirme bileşeni ✅
+  - Türkçe ve İngilizce çeviriler (temel/kritik sayfalar) ✅
+  - Tarih ve sayı formatları ✅
+  - E-posta şablonları çoklu dil desteği ✅
+  - Yapıldı (devam): Analytics sayfası + chart etiketleri i18n ✅
+  - Yapıldı (devam): Ürün & Hizmetler sayfası i18n ✅
+  - Yapıldı (devam): Teklifler liste sayfası i18n ✅
+  - Kalan: tüm sayfalarda TR metin temizliği ve eksik çeviriler
   - _Gereksinimler: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6_
 
 - [ ]* 25.1 Çoklu dil property testleri

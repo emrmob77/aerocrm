@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { useUser } from '@/hooks'
+import { useI18n } from '@/lib/i18n'
 
 type TemplateRow = {
   id: string
@@ -19,6 +20,7 @@ type TemplateRow = {
 }
 
 export default function TemplateDetailPage() {
+  const { t, formatDate } = useI18n()
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const { authUser } = useUser()
@@ -38,13 +40,13 @@ export default function TemplateDetailPage() {
       const response = await fetch(`/api/templates/${params.id}`)
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        toast.error(payload?.error || 'Şablon yüklenemedi.')
+        toast.error(payload?.error || t('templatesDetail.errors.fetch'))
         setIsLoading(false)
         return
       }
       const data = payload?.template as TemplateRow | undefined
       if (!data) {
-        toast.error('Şablon bulunamadı.')
+        toast.error(t('templatesDetail.errors.notFound'))
         setIsLoading(false)
         return
       }
@@ -57,7 +59,7 @@ export default function TemplateDetailPage() {
       setIsLoading(false)
     }
     loadTemplate()
-  }, [params?.id])
+  }, [params?.id, t])
 
   const canEdit = !!template && !!authUser?.id && template.user_id === authUser.id
 
@@ -65,27 +67,27 @@ export default function TemplateDetailPage() {
     try {
       const parsed = JSON.parse(blocksInput)
       if (!Array.isArray(parsed)) {
-        return { parsedBlocks: null, parseError: 'Bloklar JSON listesi olmalıdır.' }
+        return { parsedBlocks: null, parseError: t('templatesDetail.errors.blocksArray') }
       }
       return { parsedBlocks: parsed, parseError: null }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'JSON geçersiz.'
+      const message = err instanceof Error ? err.message : t('templatesDetail.errors.invalidJson')
       return { parsedBlocks: null, parseError: message }
     }
-  }, [blocksInput])
+  }, [blocksInput, t])
 
   const handleSave = async () => {
     if (!template) return
     if (!canEdit) {
-      toast.error('Bu şablonu düzenleme yetkiniz yok.')
+      toast.error(t('templatesDetail.errors.noEditPermission'))
       return
     }
     if (!name.trim()) {
-      toast.error('Şablon adı zorunludur.')
+      toast.error(t('templatesDetail.errors.nameRequired'))
       return
     }
     if (parseError || !parsedBlocks) {
-      toast.error('Bloklar JSON formatında olmalı.')
+      toast.error(t('templatesDetail.errors.blocksJson'))
       return
     }
     setIsSaving(true)
@@ -102,36 +104,36 @@ export default function TemplateDetailPage() {
     })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      toast.error(payload?.error || 'Şablon güncellenemedi.')
+      toast.error(payload?.error || t('templatesDetail.errors.update'))
       setIsSaving(false)
       return
     }
     setTemplate(payload?.template ?? template)
-    toast.success('Şablon güncellendi.')
+    toast.success(t('templatesDetail.success.update'))
     setIsSaving(false)
   }
 
   const handleDelete = async () => {
     if (!template) return
     if (!canEdit) {
-      toast.error('Bu şablonu silme yetkiniz yok.')
+      toast.error(t('templatesDetail.errors.noDeletePermission'))
       return
     }
-    if (!confirm('Şablonu silmek istiyor musunuz?')) return
+    if (!confirm(t('templatesDetail.confirmDelete'))) return
     const response = await fetch(`/api/templates/${template.id}`, { method: 'DELETE' })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      toast.error(payload?.error || 'Şablon silinemedi.')
+      toast.error(payload?.error || t('templatesDetail.errors.delete'))
       return
     }
-    toast.success('Şablon silindi.')
+    toast.success(t('templatesDetail.success.delete'))
     router.push('/templates')
   }
 
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
-        <p className="text-sm text-[#48679d]">Şablon yükleniyor...</p>
+        <p className="text-sm text-[#48679d]">{t('templatesDetail.loading')}</p>
       </div>
     )
   }
@@ -139,9 +141,9 @@ export default function TemplateDetailPage() {
   if (!template) {
     return (
       <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
-        <p className="text-sm text-[#48679d]">Şablon bulunamadı.</p>
+        <p className="text-sm text-[#48679d]">{t('templatesDetail.empty')}</p>
         <Link href="/templates" className="text-sm text-primary font-semibold mt-3 inline-flex">
-          Şablonlara dön
+          {t('templatesDetail.back')}
         </Link>
       </div>
     )
@@ -151,12 +153,14 @@ export default function TemplateDetailPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">Şablon Detayı</p>
+          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">
+            {t('templatesDetail.kicker')}
+          </p>
           <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">
             {template.name}
           </h1>
           <p className="text-sm text-[#48679d] mt-1">
-            Son güncelleme: {new Date(template.updated_at).toLocaleDateString('tr-TR')}
+            {t('templatesDetail.updatedAt', { date: formatDate(template.updated_at) })}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -164,13 +168,13 @@ export default function TemplateDetailPage() {
             href="/templates"
             className="px-4 h-10 flex items-center justify-center rounded-lg border border-[#e7ebf4] text-sm font-semibold text-[#48679d] hover:border-primary/40 hover:text-primary"
           >
-            Geri Dön
+            {t('templatesDetail.back')}
           </Link>
           <button
             onClick={handleDelete}
             className="px-4 h-10 flex items-center justify-center rounded-lg border border-rose-200 text-sm font-semibold text-rose-600 hover:bg-rose-50"
           >
-            Sil
+            {t('common.delete')}
           </button>
         </div>
       </div>
@@ -179,7 +183,9 @@ export default function TemplateDetailPage() {
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6 space-y-4">
             <div>
-              <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Şablon Adı</label>
+              <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">
+                {t('templatesDetail.fields.name')}
+              </label>
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
@@ -188,7 +194,9 @@ export default function TemplateDetailPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Açıklama</label>
+              <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">
+                {t('templatesDetail.fields.description')}
+              </label>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
@@ -197,7 +205,9 @@ export default function TemplateDetailPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">Kategori</label>
+              <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">
+                {t('templatesDetail.fields.category')}
+              </label>
               <input
                 value={category}
                 onChange={(event) => setCategory(event.target.value)}
@@ -207,8 +217,10 @@ export default function TemplateDetailPage() {
             </div>
             <div className="flex items-center justify-between rounded-lg border border-[#e7ebf4] dark:border-gray-800 px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-[#0d121c] dark:text-white">Şablonu paylaş</p>
-                <p className="text-xs text-[#48679d]">Şablon ekibiniz veya herkese açık olur.</p>
+                <p className="text-sm font-semibold text-[#0d121c] dark:text-white">
+                  {t('templatesDetail.share.title')}
+                </p>
+                <p className="text-xs text-[#48679d]">{t('templatesDetail.share.subtitle')}</p>
               </div>
               <button
                 onClick={() => setIsPublic((prev) => !prev)}
@@ -217,25 +229,27 @@ export default function TemplateDetailPage() {
                 }`}
                 disabled={!canEdit}
               >
-                {isPublic ? 'Genel' : 'Takım'}
+                {isPublic ? t('templatesDetail.share.public') : t('templatesDetail.share.team')}
               </button>
             </div>
             {!canEdit && (
               <p className="text-xs text-amber-600">
-                Bu şablon size ait olmadığı için düzenleme kapalı.
+                {t('templatesDetail.readOnly')}
               </p>
             )}
           </div>
 
           <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">Bloklar (JSON)</h3>
+              <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">
+                {t('templatesDetail.blocks.title')}
+              </h3>
               <button
                 onClick={() => setBlocksInput('[]')}
                 className="text-xs font-semibold text-primary hover:underline"
                 disabled={!canEdit}
               >
-                Temizle
+                {t('templatesDetail.blocks.clear')}
               </button>
             </div>
             <textarea
@@ -251,19 +265,19 @@ export default function TemplateDetailPage() {
         <div className="space-y-4">
           <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-5 space-y-3">
             <div>
-              <p className="text-xs text-[#48679d]">Paylaşım</p>
+              <p className="text-xs text-[#48679d]">{t('templatesDetail.stats.sharing')}</p>
               <p className="text-sm font-semibold text-[#0d121c] dark:text-white mt-1">
-                {template.is_public ? 'Genel şablon' : 'Takım şablonu'}
+                {template.is_public ? t('templatesDetail.stats.public') : t('templatesDetail.stats.team')}
               </p>
             </div>
             <div>
-              <p className="text-xs text-[#48679d]">Kullanım</p>
+              <p className="text-xs text-[#48679d]">{t('templatesDetail.stats.usage')}</p>
               <p className="text-sm font-semibold text-[#0d121c] dark:text-white mt-1">
-                {template.usage_count ?? 0} kullanım
+                {template.usage_count ?? 0} {t('templatesDetail.stats.usageLabel')}
               </p>
             </div>
             <div>
-              <p className="text-xs text-[#48679d]">Blok sayısı</p>
+              <p className="text-xs text-[#48679d]">{t('templatesDetail.stats.blocks')}</p>
               <p className="text-sm font-semibold text-[#0d121c] dark:text-white mt-1">
                 {parsedBlocks?.length ?? 0}
               </p>
@@ -276,7 +290,7 @@ export default function TemplateDetailPage() {
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 disabled:opacity-70"
           >
             <span className="material-symbols-outlined text-lg">save</span>
-            {isSaving ? 'Kaydediliyor' : 'Değişiklikleri Kaydet'}
+            {isSaving ? t('templatesDetail.saving') : t('templatesDetail.save')}
           </button>
         </div>
       </div>

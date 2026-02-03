@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { useI18n } from '@/lib/i18n'
 
 type QuickAction = {
   label: string
@@ -11,10 +12,11 @@ type QuickActionsProps = {
 }
 
 export function QuickActions({ actions }: QuickActionsProps) {
+  const { t } = useI18n()
   return (
     <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-[#e7ebf4] dark:border-gray-800">
-        <h3 className="font-bold text-lg text-[#0d121c] dark:text-white">Hızlı Aksiyonlar</h3>
+        <h3 className="font-bold text-lg text-[#0d121c] dark:text-white">{t('dashboard.quickActionsTitle')}</h3>
       </div>
       <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {actions.map((action) => (

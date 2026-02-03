@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
+import { useI18n } from '@/lib/i18n'
 
 type WebhookRow = {
   id: string
@@ -16,31 +17,31 @@ type WebhookRow = {
   failure_count: number
 }
 
-const eventGroups = [
+const buildEventGroups = (t: (key: string) => string) => [
   {
-    title: 'Teklif Olayları',
+    title: t('webhooks.events.proposals'),
     icon: 'description',
     options: [
-      { id: 'proposal.viewed', label: 'Görüntülendi' },
-      { id: 'proposal.signed', label: 'İmzalandı' },
-      { id: 'proposal.expired', label: 'Süresi Doldu' },
-      { id: 'proposal.sent', label: 'Gönderildi' },
+      { id: 'proposal.viewed', label: t('webhooks.eventLabels.proposalViewed') },
+      { id: 'proposal.signed', label: t('webhooks.eventLabels.proposalSigned') },
+      { id: 'proposal.expired', label: t('webhooks.eventLabels.proposalExpired') },
+      { id: 'proposal.sent', label: t('webhooks.eventLabels.proposalSent') },
     ],
   },
   {
-    title: 'Anlaşma Olayları',
+    title: t('webhooks.events.deals'),
     icon: 'handshake',
     options: [
-      { id: 'deal.created', label: 'Oluşturuldu' },
-      { id: 'deal.won', label: 'Kazanıldı' },
-      { id: 'deal.lost', label: 'Kaybedildi' },
+      { id: 'deal.created', label: t('webhooks.eventLabels.dealCreated') },
+      { id: 'deal.won', label: t('webhooks.eventLabels.dealWon') },
+      { id: 'deal.lost', label: t('webhooks.eventLabels.dealLost') },
     ],
   },
 ]
 
-const buildEventState = (events: string[]) => {
+const buildEventState = (events: string[], groups: Array<{ options: Array<{ id: string }> }>) => {
   const state: Record<string, boolean> = {}
-  eventGroups.forEach((group) => {
+  groups.forEach((group) => {
     group.options.forEach((option) => {
       state[option.id] = events.includes(option.id)
     })
@@ -48,15 +49,17 @@ const buildEventState = (events: string[]) => {
   return state
 }
 
-// Settings menu items
-const settingsMenu = [
-  { icon: 'person', label: 'Profil', href: '/settings', active: false },
-  { icon: 'group', label: 'Ekip Yönetimi', href: '/settings/team', active: false },
-  { icon: 'api', label: 'Webhooks', href: '/webhooks', active: true },
-  { icon: 'security', label: 'API Anahtarları', href: '/settings/developer', active: false },
+const buildSettingsMenu = (t: (key: string) => string) => [
+  { icon: 'person', label: t('settings.sections.profile.title'), href: '/settings', active: false },
+  { icon: 'group', label: t('settings.sections.team.title'), href: '/settings/team', active: false },
+  { icon: 'api', label: t('nav.webhooks'), href: '/webhooks', active: true },
+  { icon: 'security', label: t('settings.sections.developer.title'), href: '/settings/developer', active: false },
 ]
 
 export default function WebhooksPage() {
+  const { t } = useI18n()
+  const eventGroups = useMemo(() => buildEventGroups(t), [t])
+  const settingsMenu = useMemo(() => buildSettingsMenu(t), [t])
   const [webhooks, setWebhooks] = useState<WebhookRow[]>([])
   const [selectedWebhookId, setSelectedWebhookId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -64,7 +67,7 @@ export default function WebhooksPage() {
   const [targetUrl, setTargetUrl] = useState('')
   const [secretKey, setSecretKey] = useState('')
   const [active, setActive] = useState(true)
-  const [events, setEvents] = useState<Record<string, boolean>>(() => buildEventState([]))
+  const [events, setEvents] = useState<Record<string, boolean>>(() => buildEventState([], eventGroups))
   const [isSaving, setIsSaving] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
 
@@ -86,7 +89,7 @@ export default function WebhooksPage() {
         setTargetUrl(first.url)
         setSecretKey(first.secret_key)
         setActive(first.active)
-        setEvents(buildEventState(first.events))
+        setEvents(buildEventState(first.events, eventGroups))
       }
       setIsLoading(false)
     }
@@ -113,7 +116,7 @@ export default function WebhooksPage() {
     setTargetUrl('')
     setSecretKey('')
     setActive(true)
-    setEvents(buildEventState([]))
+    setEvents(buildEventState([], eventGroups))
   }
 
   const handleCancel = () => {
@@ -134,7 +137,7 @@ export default function WebhooksPage() {
     setTargetUrl(webhook.url)
     setSecretKey(webhook.secret_key)
     setActive(webhook.active)
-    setEvents(buildEventState(webhook.events))
+    setEvents(buildEventState(webhook.events, eventGroups))
   }
 
   const handleSave = async () => {
@@ -148,7 +151,7 @@ export default function WebhooksPage() {
       .filter(([, enabled]) => enabled)
       .map(([key]) => key)
     if (selectedEvents.length === 0) {
-      toast.error('En az bir olay seçilmelidir.')
+      toast.error(t('webhooks.errors.selectEvent'))
       return
     }
 
@@ -184,7 +187,7 @@ export default function WebhooksPage() {
 
   const handleTest = async () => {
     if (!selectedWebhookId) {
-      toast.error('Test için önce webhook seçin.')
+      toast.error(t('webhooks.errors.selectWebhook'))
       return
     }
     if (isTesting) return
@@ -193,13 +196,13 @@ export default function WebhooksPage() {
       const response = await fetch(`/api/webhooks/${selectedWebhookId}/test`, { method: 'POST' })
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        throw new Error(payload?.error || 'Test gönderimi başarısız.')
+        throw new Error(payload?.error || t('webhooks.errors.testFailed'))
       }
       const updated = payload?.webhook as WebhookRow
       setWebhooks((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
-      toast.success('Test gönderildi.')
+      toast.success(t('webhooks.success.testSent'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Test gönderimi başarısız.')
+      toast.error(error instanceof Error ? error.message : t('webhooks.errors.testFailed'))
     } finally {
       setIsTesting(false)
     }
@@ -208,12 +211,12 @@ export default function WebhooksPage() {
   const handleCopySecret = async () => {
     if (!secretKey) return
     await navigator.clipboard.writeText(secretKey)
-    toast.success('Secret key kopyalandı.')
+    toast.success(t('webhooks.success.secretCopied'))
   }
 
   const formatLastTrigger = (value: string | null) => {
-    if (!value) return 'Henüz yok'
-    return formatRelativeTime(value)
+    if (!value) return t('webhooks.emptyValue')
+    return formatRelativeTime(value, t)
   }
 
   return (
@@ -222,7 +225,7 @@ export default function WebhooksPage() {
         {/* Settings Sidebar */}
         <aside className="lg:col-span-3 space-y-6">
           <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-[#e2e8f0] dark:border-slate-700">
-            <h3 className="text-xs font-bold text-[#64748b] uppercase tracking-wider mb-4 px-2">Ayarlar</h3>
+            <h3 className="text-xs font-bold text-[#64748b] uppercase tracking-wider mb-4 px-2">{t('settings.title')}</h3>
             <nav className="space-y-1">
               {settingsMenu.map((item, index) => (
                 <Link
@@ -250,7 +253,7 @@ export default function WebhooksPage() {
               <div className="p-2 bg-primary/10 rounded-lg">
                 <span className="material-symbols-outlined text-primary">visibility</span>
               </div>
-              <h1 className="text-2xl font-extrabold text-[#0f172a] dark:text-white tracking-tight">Webhook Yapılandırması</h1>
+              <h1 className="text-2xl font-extrabold text-[#0f172a] dark:text-white tracking-tight">{t('webhooks.title')}</h1>
             </div>
             <div className="flex items-center gap-3">
               <Link 
@@ -258,7 +261,7 @@ export default function WebhooksPage() {
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-[#e2e8f0] dark:border-slate-600 text-[#0f172a] dark:text-white text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
               >
                 <span className="material-symbols-outlined text-[20px]">history</span>
-                Gönderim Logları
+                {t('webhooks.logs')}
               </Link>
               <button
                 onClick={resetForm}
@@ -279,17 +282,17 @@ export default function WebhooksPage() {
                     <th className="px-6 py-4 text-xs font-bold text-[#64748b] uppercase tracking-wider">Hedef URL</th>
                     <th className="px-6 py-4 text-xs font-bold text-[#64748b] uppercase tracking-wider">Durum</th>
                     <th className="px-6 py-4 text-xs font-bold text-[#64748b] uppercase tracking-wider">Son Tetikleme</th>
-                    <th className="px-6 py-4 text-xs font-bold text-[#64748b] uppercase tracking-wider text-right">İşlemler</th>
+                    <th className="px-6 py-4 text-xs font-bold text-[#64748b] uppercase tracking-wider text-right">{t('webhooks.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e2e8f0] dark:divide-slate-700">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-6 text-sm text-[#64748b]">Webhooklar yükleniyor...</td>
+                      <td colSpan={4} className="px-6 py-6 text-sm text-[#64748b]">{t('webhooks.loading')}</td>
                     </tr>
                   ) : webhooks.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-6 text-sm text-[#64748b]">Henüz webhook yok.</td>
+                      <td colSpan={4} className="px-6 py-6 text-sm text-[#64748b]">{t('webhooks.empty')}</td>
                     </tr>
                   ) : webhooks.map((webhook) => (
                     <tr 
@@ -323,7 +326,7 @@ export default function WebhooksPage() {
                         {formatLastTrigger(webhook.last_triggered_at)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="text-primary hover:underline text-sm font-bold">Düzenle</button>
+                        <button className="text-primary hover:underline text-sm font-bold">{t('common.edit')}</button>
                       </td>
                     </tr>
                   ))}
@@ -335,8 +338,8 @@ export default function WebhooksPage() {
           {/* Webhook Details Form */}
           <section className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-[#e2e8f0] dark:border-slate-700 overflow-hidden">
             <div className="px-6 py-5 border-b border-[#e2e8f0] dark:border-slate-700 bg-white dark:bg-slate-900">
-              <h2 className="text-lg font-bold text-[#0f172a] dark:text-white">Webhook Detayları</h2>
-              <p className="text-sm text-[#64748b]">Belirli olaylar gerçekleştiğinde veri gönderilecek hedefi yapılandırın.</p>
+              <h2 className="text-lg font-bold text-[#0f172a] dark:text-white">{t('webhooks.detailsTitle')}</h2>
+              <p className="text-sm text-[#64748b]">{t('webhooks.detailsSubtitle')}</p>
             </div>
 
             <div className="p-6 space-y-8">
@@ -358,7 +361,7 @@ export default function WebhooksPage() {
                     <input
                       type="password"
                       readOnly
-                      value={secretKey ? '••••••••••••••••••••••••' : 'Kaydettikten sonra oluşur'}
+                      value={secretKey ? '••••••••••••••••••••••••' : t('webhooks.secretPlaceholder')}
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-[#e2e8f0] dark:border-slate-600 rounded-lg text-sm pr-10 px-4 py-2.5 focus:ring-2 focus:ring-primary focus:border-primary text-[#64748b]"
                     />
                     <button
@@ -388,7 +391,7 @@ export default function WebhooksPage() {
                     onClick={selectAllEvents}
                     className="text-xs font-bold text-primary hover:underline transition-colors"
                   >
-                    Tümünü Seç
+                    {t('webhooks.selectAll')}
                   </button>
                 </div>
 
@@ -432,14 +435,14 @@ export default function WebhooksPage() {
                 className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-[#e2e8f0] dark:border-slate-600 text-[#0f172a] dark:text-white hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-bold rounded-lg transition-all shadow-sm disabled:opacity-60"
               >
                 <span className="material-symbols-outlined text-[20px]">send</span>
-                {isTesting ? 'Gönderiliyor' : 'Test Gönder'}
+                {isTesting ? t('webhooks.testing') : t('webhooks.test')}
               </button>
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleCancel}
                   className="px-4 py-2 text-[#64748b] hover:text-[#0f172a] dark:hover:text-white text-sm font-bold transition-colors"
                 >
-                  İptal
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleSave}

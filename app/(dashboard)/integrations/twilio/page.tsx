@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useI18n } from '@/lib/i18n'
 
 type IntegrationData = {
   id?: string
@@ -19,6 +20,7 @@ type IntegrationData = {
 }
 
 export default function TwilioSettingsPage() {
+  const { t } = useI18n()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -36,8 +38,17 @@ export default function TwilioSettingsPage() {
 
   // Test form state
   const [testTo, setTestTo] = useState('')
-  const [testMessage, setTestMessage] = useState('Bu bir AERO CRM test mesajidir.')
+  const defaultTestMessage = t('integrationsTwilio.test.defaultMessage')
+  const [testMessage, setTestMessage] = useState(defaultTestMessage)
+  const defaultMessageRef = useRef(defaultTestMessage)
   const [testMethod, setTestMethod] = useState<'sms' | 'whatsapp'>('sms')
+
+  useEffect(() => {
+    if (testMessage === defaultMessageRef.current) {
+      setTestMessage(defaultTestMessage)
+    }
+    defaultMessageRef.current = defaultTestMessage
+  }, [defaultTestMessage, testMessage])
 
   // Fetch current integration
   useEffect(() => {
@@ -56,14 +67,14 @@ export default function TwilioSettingsPage() {
           }
         }
       } catch {
-        showToast('error', 'Entegrasyon bilgileri yüklenemedi.')
+        showToast('error', t('integrationsTwilio.errors.fetch'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchIntegration()
-  }, [])
+  }, [t])
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message })
@@ -89,18 +100,23 @@ export default function TwilioSettingsPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        showToast('error', data.error || 'Kaydetme basarisiz oldu.')
+        showToast('error', data.error || t('integrationsTwilio.errors.save'))
         return
       }
 
-      showToast('success', `Twilio baglantisi kuruldu${data.accountName ? ` (${data.accountName})` : ''}.`)
+      showToast(
+        'success',
+        t('integrationsTwilio.success.connected', {
+          account: data.accountName ? ` (${data.accountName})` : '',
+        })
+      )
       setIntegration({
         id: data.integration?.id,
         status: 'connected',
         connected_at: data.integration?.connected_at,
       })
     } catch {
-      showToast('error', 'Baglanti hatasi olustu.')
+      showToast('error', t('integrationsTwilio.errors.connection'))
     } finally {
       setSaving(false)
     }
@@ -124,20 +140,20 @@ export default function TwilioSettingsPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        showToast('error', data.error || 'Test gonderimi basarisiz oldu.')
+        showToast('error', data.error || t('integrationsTwilio.errors.test'))
         return
       }
 
-      showToast('success', data.message || 'Test mesaji gonderildi.')
+      showToast('success', data.message || t('integrationsTwilio.success.test'))
     } catch {
-      showToast('error', 'Test gonderimi sirasinda hata olustu.')
+      showToast('error', t('integrationsTwilio.errors.test'))
     } finally {
       setTesting(false)
     }
   }
 
   const handleDisconnect = async () => {
-    if (!confirm('Twilio baglantisini kaldirmak istediginizden emin misiniz?')) {
+    if (!confirm(t('integrationsTwilio.confirmDisconnect'))) {
       return
     }
 
@@ -150,14 +166,14 @@ export default function TwilioSettingsPage() {
 
       if (!response.ok) {
         const data = await response.json()
-        showToast('error', data.error || 'Baglanti kaldirilamadi.')
+        showToast('error', data.error || t('integrationsTwilio.errors.disconnect'))
         return
       }
 
-      showToast('success', 'Twilio baglantisi kaldirildi.')
+      showToast('success', t('integrationsTwilio.success.disconnected'))
       router.push('/integrations')
     } catch {
-      showToast('error', 'Baglanti kaldirma sirasinda hata olustu.')
+      showToast('error', t('integrationsTwilio.errors.disconnect'))
     } finally {
       setDisconnecting(false)
     }
@@ -195,7 +211,7 @@ export default function TwilioSettingsPage() {
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm mb-6">
           <Link href="/integrations" className="text-[#48679d] hover:text-primary transition-colors">
-            Entegrasyonlar
+            {t('integrationsTwilio.breadcrumb.integrations')}
           </Link>
           <span className="text-[#48679d]">/</span>
           <span className="text-[#0d121c] dark:text-white font-medium">Twilio</span>
@@ -213,16 +229,20 @@ export default function TwilioSettingsPage() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#0d121c] dark:text-white">Twilio SMS & WhatsApp</h1>
+                <h1 className="text-2xl font-bold text-[#0d121c] dark:text-white">
+                  {t('integrationsTwilio.title')}
+                </h1>
                 <p className="text-[#48679d] dark:text-slate-400 mt-1">
-                  Musterilerinize SMS ve WhatsApp ile ulasin
+                  {t('integrationsTwilio.subtitle')}
                 </p>
               </div>
             </div>
             {isConnected && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 rounded-full">
                 <div className="size-2 rounded-full bg-green-500"></div>
-                <span className="text-sm font-medium text-green-600 dark:text-green-400">Bagli</span>
+                <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                  {t('integrationsTwilio.status.connected')}
+                </span>
               </div>
             )}
           </div>
@@ -232,7 +252,7 @@ export default function TwilioSettingsPage() {
         <form onSubmit={handleSave}>
           <div className="bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-6 mb-6">
             <h2 className="text-lg font-bold text-[#0d121c] dark:text-white mb-4">
-              API Kimlik Bilgileri
+              {t('integrationsTwilio.sections.credentials')}
             </h2>
 
             <div className="space-y-4">
@@ -278,7 +298,7 @@ export default function TwilioSettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0d121c] dark:text-white mb-1.5">
-                    SMS Gonderen Numara
+                    {t('integrationsTwilio.fields.fromSms')}
                   </label>
                   <input
                     type="tel"
@@ -290,7 +310,7 @@ export default function TwilioSettingsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0d121c] dark:text-white mb-1.5">
-                    WhatsApp Gonderen Numara
+                    {t('integrationsTwilio.fields.fromWhatsapp')}
                   </label>
                   <input
                     type="tel"
@@ -308,13 +328,13 @@ export default function TwilioSettingsPage() {
           {isConnected && (
             <div className="bg-white dark:bg-slate-900 border border-[#e7ebf4] dark:border-slate-800 rounded-xl p-6 mb-6">
               <h2 className="text-lg font-bold text-[#0d121c] dark:text-white mb-4">
-                Test Gonderimi
+                {t('integrationsTwilio.sections.test')}
               </h2>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0d121c] dark:text-white mb-1.5">
-                    Alici Numara
+                    {t('integrationsTwilio.fields.testTo')}
                   </label>
                   <input
                     type="tel"
@@ -327,20 +347,20 @@ export default function TwilioSettingsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-[#0d121c] dark:text-white mb-1.5">
-                    Mesaj
+                    {t('integrationsTwilio.fields.testMessage')}
                   </label>
                   <textarea
                     value={testMessage}
                     onChange={(e) => setTestMessage(e.target.value)}
                     rows={3}
                     className="w-full px-4 py-2.5 rounded-lg border border-[#ced8e9] dark:border-slate-700 bg-white dark:bg-slate-800 text-[#0d121c] dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all resize-none"
-                    placeholder="Test mesajinizi yazin..."
+                    placeholder={t('integrationsTwilio.placeholders.testMessage')}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-[#0d121c] dark:text-white mb-1.5">
-                    Gonderim Yontemi
+                    {t('integrationsTwilio.fields.testMethod')}
                   </label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -377,12 +397,12 @@ export default function TwilioSettingsPage() {
                   {testing ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                      Gonderiliyor...
+                      {t('integrationsTwilio.actions.testing')}
                     </>
                   ) : (
                     <>
                       <span className="material-symbols-outlined text-lg">send</span>
-                      Test Gonder
+                      {t('integrationsTwilio.actions.test')}
                     </>
                   )}
                 </button>
@@ -402,12 +422,12 @@ export default function TwilioSettingsPage() {
                 {disconnecting ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                    Kaldiriliyor...
+                    {t('integrationsTwilio.actions.disconnecting')}
                   </>
                 ) : (
                   <>
                     <span className="material-symbols-outlined text-lg">link_off</span>
-                    Baglantiyiyi Kes
+                    {t('integrationsTwilio.actions.disconnect')}
                   </>
                 )}
               </button>
@@ -423,12 +443,12 @@ export default function TwilioSettingsPage() {
               {saving ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Kaydediliyor...
+                  {t('integrationsTwilio.actions.saving')}
                 </>
               ) : (
                 <>
                   <span className="material-symbols-outlined text-lg">save</span>
-                  Kaydet
+                  {t('common.save')}
                 </>
               )}
             </button>
@@ -440,11 +460,11 @@ export default function TwilioSettingsPage() {
           <div className="flex gap-3">
             <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">info</span>
             <div className="text-sm text-blue-800 dark:text-blue-300">
-              <p className="font-medium mb-1">Twilio Hesabi Nasil Alinir?</p>
+              <p className="font-medium mb-1">{t('integrationsTwilio.info.title')}</p>
               <ol className="list-decimal list-inside space-y-1 text-blue-700 dark:text-blue-400">
-                <li>twilio.com adresinde ucretsiz hesap olusturun</li>
-                <li>Console &gt; Account Info bolumunden Account SID ve Auth Token bilgilerini alin</li>
-                <li>Phone Numbers bolumunden SMS/WhatsApp numaranizi satin alin veya etkinlestirin</li>
+                <li>{t('integrationsTwilio.info.steps.0')}</li>
+                <li>{t('integrationsTwilio.info.steps.1')}</li>
+                <li>{t('integrationsTwilio.info.steps.2')}</li>
               </ol>
             </div>
           </div>

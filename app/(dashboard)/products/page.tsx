@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSupabase, useUser } from '@/hooks'
+import { useI18n } from '@/lib/i18n'
 
 type Product = {
   id: string
@@ -22,13 +23,13 @@ type CategoryOption = {
   icon: string
 }
 
-const baseCategories: CategoryOption[] = [
-  { id: 'software', name: 'Yazılım', icon: 'code' },
-  { id: 'service', name: 'Hizmet', icon: 'support_agent' },
-  { id: 'consulting', name: 'Danışmanlık', icon: 'psychology' },
-  { id: 'marketing', name: 'Pazarlama', icon: 'campaign' },
-  { id: 'design', name: 'Tasarım', icon: 'palette' },
-  { id: 'training', name: 'Eğitim', icon: 'school' },
+const buildBaseCategories = (t: (key: string) => string): CategoryOption[] => [
+  { id: 'software', name: t('products.categories.software'), icon: 'code' },
+  { id: 'service', name: t('products.categories.service'), icon: 'support_agent' },
+  { id: 'consulting', name: t('products.categories.consulting'), icon: 'psychology' },
+  { id: 'marketing', name: t('products.categories.marketing'), icon: 'campaign' },
+  { id: 'design', name: t('products.categories.design'), icon: 'palette' },
+  { id: 'training', name: t('products.categories.training'), icon: 'school' },
 ]
 
 const currencyOptions = [
@@ -38,11 +39,6 @@ const currencyOptions = [
   { code: 'GBP', label: '£ GBP' },
 ]
 
-const categoryMap = baseCategories.reduce<Record<string, CategoryOption>>((acc, category) => {
-  acc[category.id] = category
-  return acc
-}, {})
-
 const formatCategoryLabel = (value: string) =>
   value
     .replace(/[-_]+/g, ' ')
@@ -51,9 +47,13 @@ const formatCategoryLabel = (value: string) =>
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join(' ')
 
-const getCategoryMeta = (value?: string | null): CategoryOption => {
+const getCategoryMeta = (
+  value: string | null | undefined,
+  categoryMap: Record<string, CategoryOption>,
+  t: (key: string) => string
+): CategoryOption => {
   if (!value) {
-    return { id: 'uncategorized', name: 'Kategori yok', icon: 'sell' }
+    return { id: 'uncategorized', name: t('products.category.none'), icon: 'sell' }
   }
   if (categoryMap[value]) {
     return categoryMap[value]
@@ -61,25 +61,8 @@ const getCategoryMeta = (value?: string | null): CategoryOption => {
   return { id: value, name: formatCategoryLabel(value), icon: 'sell' }
 }
 
-const formatCurrency = (value: number, currency = 'TRY') => {
-  try {
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value)
-  } catch {
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value)
-  }
-}
-
 export default function ProductsPage() {
+  const { t, formatNumber } = useI18n()
   const supabase = useSupabase()
   const { user, authUser, loading: authLoading } = useUser()
 
@@ -118,7 +101,7 @@ export default function ProductsPage() {
       .order('created_at', { ascending: false })
 
     if (error) {
-      toast.error(error.message || 'Ürünler getirilemedi.')
+      toast.error(error.message || t('products.errors.fetch'))
       setIsLoading(false)
       return
     }
@@ -148,7 +131,17 @@ export default function ProductsPage() {
     }
 
     loadProducts()
-  }, [authLoading, authUser, user?.team_id, supabase])
+  }, [authLoading, authUser, user?.team_id, supabase, t])
+
+  const baseCategories = useMemo(() => buildBaseCategories(t), [t])
+  const categoryMap = useMemo(
+    () =>
+      baseCategories.reduce<Record<string, CategoryOption>>((acc, category) => {
+        acc[category.id] = category
+        return acc
+      }, {}),
+    [baseCategories]
+  )
 
   const categories = useMemo(() => {
     const unique = new Set<string>()
@@ -157,12 +150,14 @@ export default function ProductsPage() {
     })
 
     const list = Array.from(unique).map((categoryId) =>
-      categoryId === 'uncategorized' ? getCategoryMeta(null) : getCategoryMeta(categoryId)
+      categoryId === 'uncategorized'
+        ? getCategoryMeta(null, categoryMap, t)
+        : getCategoryMeta(categoryId, categoryMap, t)
     )
 
     list.sort((a, b) => a.name.localeCompare(b.name, 'tr'))
-    return [{ id: 'all', name: 'Tümü', icon: 'apps' }, ...list]
-  }, [products])
+    return [{ id: 'all', name: t('products.filters.all'), icon: 'apps' }, ...list]
+  }, [products, categoryMap, t])
 
   useEffect(() => {
     if (selectedCategory === 'all') return
@@ -225,19 +220,19 @@ export default function ProductsPage() {
     if (isSaving) return
 
     if (!user?.team_id) {
-      toast.error('Takım bilgisi bulunamadı.')
+      toast.error(t('products.errors.noTeam'))
       return
     }
 
     const name = formData.name.trim()
     if (!name) {
-      toast.error('Ürün adı zorunludur.')
+      toast.error(t('products.errors.nameRequired'))
       return
     }
 
     const price = Number(formData.price)
     if (!Number.isFinite(price)) {
-      toast.error('Geçerli bir fiyat girin.')
+      toast.error(t('products.errors.priceInvalid'))
       return
     }
 
@@ -262,7 +257,7 @@ export default function ProductsPage() {
         .single()
 
       if (error || !data) {
-        toast.error(error?.message || 'Ürün güncellenemedi.')
+        toast.error(error?.message || t('products.errors.update'))
         setIsSaving(false)
         return
       }
@@ -284,7 +279,7 @@ export default function ProductsPage() {
             : product
         )
       )
-      toast.success('Ürün güncellendi.')
+      toast.success(t('products.success.updated'))
     } else {
       const { data, error } = await supabase
         .from('products')
@@ -296,7 +291,7 @@ export default function ProductsPage() {
         .single()
 
       if (error || !data) {
-        toast.error(error?.message || 'Ürün oluşturulamadı.')
+        toast.error(error?.message || t('products.errors.create'))
         setIsSaving(false)
         return
       }
@@ -315,7 +310,7 @@ export default function ProductsPage() {
         },
         ...prev,
       ])
-      toast.success('Ürün oluşturuldu.')
+      toast.success(t('products.success.created'))
     }
 
     setIsSaving(false)
@@ -340,13 +335,13 @@ export default function ProductsPage() {
       setProducts((prev) =>
         prev.map((item) => (item.id === product.id ? { ...item, isActive: product.isActive } : item))
       )
-      toast.error(error.message || 'Durum güncellenemedi.')
+      toast.error(error.message || t('products.errors.status'))
     }
   }
 
   const deleteProduct = async (productId: string) => {
     if (!user?.team_id) return
-    if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) return
+    if (!confirm(t('products.confirmDelete'))) return
 
     const { error } = await supabase
       .from('products')
@@ -355,20 +350,22 @@ export default function ProductsPage() {
       .eq('team_id', user.team_id)
 
     if (error) {
-      toast.error(error.message || 'Ürün silinemedi.')
+      toast.error(error.message || t('products.errors.delete'))
       return
     }
 
     setProducts((prev) => prev.filter((product) => product.id !== productId))
-    toast.success('Ürün silindi.')
+    toast.success(t('products.success.deleted'))
   }
 
   if (!authLoading && (!authUser || !user?.team_id)) {
     return (
       <div className="space-y-4">
-        <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">Ürün & Hizmetler</h1>
+        <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">
+          {t('products.title')}
+        </h1>
         <div className="rounded-xl border border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#161e2b] p-6">
-          <p className="text-sm text-[#48679d]">Takım bilgisi bulunamadı.</p>
+          <p className="text-sm text-[#48679d]">{t('products.errors.noTeam')}</p>
         </div>
       </div>
     )
@@ -378,15 +375,17 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">Ürün & Hizmetler</h1>
-          <p className="text-[#48679d] dark:text-gray-400 mt-1">Satılabilir ürün ve hizmetlerinizi yönetin</p>
+          <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">
+            {t('products.title')}
+          </h1>
+          <p className="text-[#48679d] dark:text-gray-400 mt-1">{t('products.subtitle')}</p>
         </div>
         <button
           onClick={openAddModal}
           className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
         >
           <span className="material-symbols-outlined text-lg">add</span>
-          Yeni Ürün/Hizmet
+          {t('products.actions.new')}
         </button>
       </div>
 
@@ -398,7 +397,7 @@ export default function ProductsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-[#0d121c] dark:text-white">{stats.total}</p>
-              <p className="text-xs text-[#48679d] dark:text-gray-400">Toplam Ürün</p>
+              <p className="text-xs text-[#48679d] dark:text-gray-400">{t('products.stats.total')}</p>
             </div>
           </div>
         </div>
@@ -409,7 +408,7 @@ export default function ProductsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-[#0d121c] dark:text-white">{stats.active}</p>
-              <p className="text-xs text-[#48679d] dark:text-gray-400">Aktif Ürün</p>
+              <p className="text-xs text-[#48679d] dark:text-gray-400">{t('products.stats.active')}</p>
             </div>
           </div>
         </div>
@@ -420,7 +419,7 @@ export default function ProductsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-[#0d121c] dark:text-white">{stats.categories}</p>
-              <p className="text-xs text-[#48679d] dark:text-gray-400">Kategori</p>
+              <p className="text-xs text-[#48679d] dark:text-gray-400">{t('products.stats.categories')}</p>
             </div>
           </div>
         </div>
@@ -431,7 +430,7 @@ export default function ProductsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-[#0d121c] dark:text-white">{stats.currencies}</p>
-              <p className="text-xs text-[#48679d] dark:text-gray-400">Para Birimi</p>
+              <p className="text-xs text-[#48679d] dark:text-gray-400">{t('products.stats.currencies')}</p>
             </div>
           </div>
         </div>
@@ -443,7 +442,7 @@ export default function ProductsPage() {
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
             <input
               type="text"
-              placeholder="Ürün veya hizmet ara..."
+              placeholder={t('products.searchPlaceholder')}
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/50 focus:border-primary"
@@ -476,7 +475,7 @@ export default function ProductsPage() {
               onChange={(event) => setShowOnlyActive(event.target.checked)}
               className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
             />
-            <span className="text-sm text-[#48679d] dark:text-gray-300">Sadece Aktifler</span>
+            <span className="text-sm text-[#48679d] dark:text-gray-300">{t('products.filters.activeOnly')}</span>
           </label>
 
           <div className="flex-1" />
@@ -491,7 +490,7 @@ export default function ProductsPage() {
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">grid_view</span>
-              Kart
+              {t('products.view.grid')}
             </button>
             <button
               onClick={() => setViewMode('list')}
@@ -502,7 +501,7 @@ export default function ProductsPage() {
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">list</span>
-              Liste
+              {t('products.view.list')}
             </button>
           </div>
         </div>
@@ -511,26 +510,26 @@ export default function ProductsPage() {
       {isLoading ? (
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-12 text-center">
           <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block">inventory_2</span>
-          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-2">Ürünler yükleniyor</h3>
-          <p className="text-[#48679d] dark:text-gray-400">Lütfen bekleyin.</p>
+          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-2">{t('products.loadingTitle')}</h3>
+          <p className="text-[#48679d] dark:text-gray-400">{t('products.loadingSubtitle')}</p>
         </div>
       ) : filteredProducts.length === 0 ? (
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-12 text-center">
           <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block">inventory_2</span>
-          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-2">Ürün Bulunamadı</h3>
-          <p className="text-[#48679d] dark:text-gray-400 mb-4">Arama kriterlerinize uygun ürün bulunmuyor.</p>
+          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-2">{t('products.emptyTitle')}</h3>
+          <p className="text-[#48679d] dark:text-gray-400 mb-4">{t('products.emptySubtitle')}</p>
           <button
             onClick={openAddModal}
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
           >
             <span className="material-symbols-outlined text-lg">add</span>
-            Yeni Ürün Ekle
+            {t('products.actions.add')}
           </button>
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredProducts.map((product) => {
-            const categoryInfo = getCategoryMeta(product.category)
+            const categoryInfo = getCategoryMeta(product.category, categoryMap, t)
             return (
               <div
                 key={product.id}
@@ -548,7 +547,7 @@ export default function ProductsPage() {
                     </div>
                     {!product.isActive && (
                       <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium rounded-full">
-                        Pasif
+                        {t('products.status.inactive')}
                       </span>
                     )}
                   </div>
@@ -560,15 +559,22 @@ export default function ProductsPage() {
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xl font-extrabold text-primary">{formatCurrency(product.price, product.currency)}</p>
+                      <p className="text-xl font-extrabold text-primary">
+                        {formatNumber(product.price, {
+                          style: 'currency',
+                          currency: product.currency ?? 'TRY',
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
+                      </p>
                       <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
                         {product.currency}
                       </span>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-[#48679d] dark:text-gray-400">Güncellendi</p>
+                      <p className="text-xs text-[#48679d] dark:text-gray-400">{t('products.updatedAt')}</p>
                       <p className="text-sm font-bold text-[#0d121c] dark:text-white">
-                        {new Date(product.updatedAt).toLocaleDateString('tr-TR', {
+                        {new Date(product.updatedAt).toLocaleDateString(undefined, {
                           day: '2-digit',
                           month: 'short',
                         })}
@@ -583,7 +589,7 @@ export default function ProductsPage() {
                     className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 text-[#48679d] dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                   >
                     <span className="material-symbols-outlined text-lg">edit</span>
-                    Düzenle
+                    {t('common.edit')}
                   </button>
                   <button
                     onClick={() => toggleProductStatus(product)}
@@ -592,7 +598,7 @@ export default function ProductsPage() {
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-400 hover:bg-gray-200'
                     }`}
-                    title={product.isActive ? 'Pasif Yap' : 'Aktif Yap'}
+                    title={product.isActive ? t('products.actions.deactivate') : t('products.actions.activate')}
                   >
                     <span className="material-symbols-outlined text-lg">
                       {product.isActive ? 'toggle_on' : 'toggle_off'}
@@ -601,7 +607,7 @@ export default function ProductsPage() {
                   <button
                     onClick={() => deleteProduct(product.id)}
                     className="p-2 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                    title="Sil"
+                    title={t('common.delete')}
                   >
                     <span className="material-symbols-outlined text-lg">delete</span>
                   </button>
@@ -615,17 +621,29 @@ export default function ProductsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[#e7ebf4] dark:border-gray-700">
-                <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Ürün/Hizmet</th>
-                <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Kategori</th>
-                <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Fiyat</th>
-                <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Para Birimi</th>
-                <th className="text-center px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">Durum</th>
-                <th className="text-right px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">İşlemler</th>
+                <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">
+                  {t('products.table.name')}
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">
+                  {t('products.table.category')}
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">
+                  {t('products.table.price')}
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">
+                  {t('products.table.currency')}
+                </th>
+                <th className="text-center px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">
+                  {t('products.table.status')}
+                </th>
+                <th className="text-right px-6 py-3 text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wider">
+                  {t('products.table.actions')}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e7ebf4] dark:divide-gray-700">
               {filteredProducts.map((product) => {
-                const categoryInfo = getCategoryMeta(product.category)
+                const categoryInfo = getCategoryMeta(product.category, categoryMap, t)
                 return (
                   <tr
                     key={product.id}
@@ -648,7 +666,14 @@ export default function ProductsPage() {
                       <span className="text-sm text-[#0d121c] dark:text-white">{categoryInfo.name}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="font-bold text-primary">{formatCurrency(product.price, product.currency)}</span>
+                      <span className="font-bold text-primary">
+                        {formatNumber(product.price, {
+                          style: 'currency',
+                          currency: product.currency ?? 'TRY',
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm text-[#48679d] dark:text-gray-300">{product.currency}</span>
@@ -664,7 +689,7 @@ export default function ProductsPage() {
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${product.isActive ? 'bg-green-500' : 'bg-gray-400'}`}
                         ></span>
-                        {product.isActive ? 'Aktif' : 'Pasif'}
+                        {product.isActive ? t('products.status.active') : t('products.status.inactive')}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -672,7 +697,7 @@ export default function ProductsPage() {
                         <button
                           onClick={() => openEditModal(product)}
                           className="p-2 text-[#48679d] hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                          title="Düzenle"
+                          title={t('common.edit')}
                         >
                           <span className="material-symbols-outlined text-lg">edit</span>
                         </button>
@@ -683,7 +708,7 @@ export default function ProductsPage() {
                               ? 'text-green-600 hover:bg-green-100'
                               : 'text-gray-400 hover:bg-gray-100'
                           }`}
-                          title={product.isActive ? 'Pasif Yap' : 'Aktif Yap'}
+                          title={product.isActive ? t('products.actions.deactivate') : t('products.actions.activate')}
                         >
                           <span className="material-symbols-outlined text-lg">
                             {product.isActive ? 'toggle_on' : 'toggle_off'}
@@ -692,7 +717,7 @@ export default function ProductsPage() {
                         <button
                           onClick={() => deleteProduct(product.id)}
                           className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Sil"
+                          title={t('common.delete')}
                         >
                           <span className="material-symbols-outlined text-lg">delete</span>
                         </button>
@@ -711,7 +736,7 @@ export default function ProductsPage() {
           <div className="bg-white dark:bg-[#161e2b] rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-[#e7ebf4] dark:border-gray-800 flex items-center justify-between">
               <h2 className="text-xl font-bold text-[#0d121c] dark:text-white">
-                {editingProduct ? 'Ürün/Hizmet Düzenle' : 'Yeni Ürün/Hizmet'}
+                {editingProduct ? t('products.modal.editTitle') : t('products.modal.newTitle')}
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -724,24 +749,26 @@ export default function ProductsPage() {
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
-                  Ürün/Hizmet Adı <span className="text-red-500">*</span>
+                  {t('products.form.name')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
-                  placeholder="Örn: CRM Pro Lisansı"
+                  placeholder={t('products.form.namePlaceholder')}
                   required
                   className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/50 focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">Açıklama</label>
+                <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
+                  {t('products.form.description')}
+                </label>
                 <textarea
                   value={formData.description}
                   onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))}
-                  placeholder="Ürün veya hizmet açıklaması..."
+                  placeholder={t('products.form.descriptionPlaceholder')}
                   rows={3}
                   className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/50 focus:border-primary resize-none"
                 />
@@ -750,7 +777,7 @@ export default function ProductsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
-                    Fiyat <span className="text-red-500">*</span>
+                    {t('products.form.price')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -763,7 +790,9 @@ export default function ProductsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">Para Birimi</label>
+                  <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
+                    {t('products.form.currency')}
+                  </label>
                   <select
                     value={formData.currency}
                     onChange={(event) => setFormData((prev) => ({ ...prev, currency: event.target.value }))}
@@ -779,12 +808,14 @@ export default function ProductsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">Kategori</label>
+                <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
+                  {t('products.form.category')}
+                </label>
                 <input
                   list="category-options"
                   value={formData.category}
                   onChange={(event) => setFormData((prev) => ({ ...prev, category: event.target.value }))}
-                  placeholder="Örn: yazılım"
+                  placeholder={t('products.form.categoryPlaceholder')}
                   className="w-full px-4 py-3 border border-[#e7ebf4] dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/50 focus:border-primary"
                 />
                 <datalist id="category-options">
@@ -796,15 +827,15 @@ export default function ProductsPage() {
                       </option>
                     ))}
                 </datalist>
-                <p className="text-xs text-[#48679d] mt-2">Mevcut bir kategori seçebilir veya yeni bir isim yazabilirsiniz.</p>
+                <p className="text-xs text-[#48679d] mt-2">{t('products.form.categoryHint')}</p>
               </div>
 
               <label className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer">
                 <div className="flex items-center gap-3">
                   <span className="material-symbols-outlined text-green-600">check_circle</span>
                   <div>
-                    <p className="font-medium text-[#0d121c] dark:text-white">Aktif</p>
-                    <p className="text-xs text-[#48679d] dark:text-gray-400">Bu ürün/hizmet satışa açık</p>
+                    <p className="font-medium text-[#0d121c] dark:text-white">{t('products.status.active')}</p>
+                    <p className="text-xs text-[#48679d] dark:text-gray-400">{t('products.form.activeHint')}</p>
                   </div>
                 </div>
                 <input
@@ -821,14 +852,18 @@ export default function ProductsPage() {
                   onClick={() => setIsModalOpen(false)}
                   className="px-5 py-2.5 text-[#48679d] hover:text-[#0d121c] dark:hover:text-white font-medium transition-colors"
                 >
-                  İptal
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
                   className="px-6 py-2.5 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 disabled:opacity-70"
                 >
-                  {isSaving ? 'Kaydediliyor' : editingProduct ? 'Güncelle' : 'Oluştur'}
+                  {isSaving
+                    ? t('products.actions.saving')
+                    : editingProduct
+                      ? t('products.actions.update')
+                      : t('products.actions.create')}
                 </button>
               </div>
             </form>

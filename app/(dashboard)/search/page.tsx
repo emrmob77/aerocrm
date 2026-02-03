@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
+import { useI18n } from '@/lib/i18n'
+import { formatCurrency } from '@/components/deals'
 
 type SearchResults = {
   deals: {
@@ -47,33 +49,27 @@ type HistoryItem = {
   created_at: string
 }
 
-const stageOptions = [
-  { id: 'lead', label: 'Aday' },
-  { id: 'proposal_sent', label: 'Teklif Gönderildi' },
-  { id: 'negotiation', label: 'Görüşme' },
-  { id: 'won', label: 'Kazanıldı' },
-  { id: 'lost', label: 'Kaybedildi' },
+const buildStageOptions = (t: (key: string) => string) => [
+  { id: 'lead', label: t('stages.lead') },
+  { id: 'proposal_sent', label: t('stages.proposal') },
+  { id: 'negotiation', label: t('stages.negotiation') },
+  { id: 'won', label: t('stages.won') },
+  { id: 'lost', label: t('stages.lost') },
 ]
 
-const statusOptions = [
-  { id: 'draft', label: 'Taslak' },
-  { id: 'sent', label: 'Gönderildi' },
-  { id: 'viewed', label: 'Görüntülendi' },
-  { id: 'signed', label: 'İmzalandı' },
-  { id: 'expired', label: 'Süresi Doldu' },
+const buildStatusOptions = (t: (key: string) => string) => [
+  { id: 'draft', label: t('proposals.status.draft') },
+  { id: 'sent', label: t('proposals.status.sent') },
+  { id: 'viewed', label: t('proposals.status.viewed') },
+  { id: 'signed', label: t('proposals.status.signed') },
+  { id: 'expired', label: t('proposals.status.expired') },
 ]
-
-const formatMoney = (value: number, currency: string) =>
-  new Intl.NumberFormat('tr-TR', {
-    style: 'currency',
-    currency: currency || 'TRY',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value)
 
 export default function SearchPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { t, locale } = useI18n()
+  const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
   const initialQuery = searchParams.get('q') ?? ''
   const [query, setQuery] = useState(initialQuery)
   const [results, setResults] = useState<SearchResults>({ deals: [], contacts: [], proposals: [] })
@@ -86,6 +82,8 @@ export default function SearchPage() {
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveName, setSaveName] = useState('')
+  const stageOptions = useMemo(() => buildStageOptions(t), [t])
+  const statusOptions = useMemo(() => buildStatusOptions(t), [t])
 
   const filtersPayload = useMemo(
     () => ({
@@ -132,7 +130,7 @@ export default function SearchPage() {
     })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      toast.error(payload?.error || 'Arama yapılamadı.')
+      toast.error(payload?.error || t('search.errors.searchFailed'))
       setIsSearching(false)
       return
     }
@@ -194,7 +192,7 @@ export default function SearchPage() {
 
   const saveSearch = async () => {
     if (!saveName.trim() || !query.trim()) {
-      toast.error('Arama adı ve sorgu zorunludur.')
+      toast.error(t('search.errors.nameRequired'))
       return
     }
     const response = await fetch('/api/search/saved', {
@@ -208,23 +206,23 @@ export default function SearchPage() {
     })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      toast.error(payload?.error || 'Kayıtlı arama oluşturulamadı.')
+      toast.error(payload?.error || t('search.errors.saveFailed'))
       return
     }
     setSavedSearches((prev) => [payload.saved as SavedSearch, ...prev])
     setShowSaveModal(false)
     setSaveName('')
-    toast.success('Arama kaydedildi.')
+    toast.success(t('search.success.saved'))
   }
 
   const removeSavedSearch = async (id: string) => {
     const response = await fetch(`/api/search/saved/${id}`, { method: 'DELETE' })
     if (!response.ok) {
-      toast.error('Kayıtlı arama silinemedi.')
+      toast.error(t('search.errors.deleteFailed'))
       return
     }
     setSavedSearches((prev) => prev.filter((item) => item.id !== id))
-    toast.success('Kayıtlı arama silindi.')
+    toast.success(t('search.success.deleted'))
   }
 
   const totalResults =
@@ -237,13 +235,13 @@ export default function SearchPage() {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
               <span className="material-symbols-outlined text-sm">search</span>
-              <span className="text-xs font-semibold uppercase tracking-wider">Global Search</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">{t('search.breadcrumb')}</span>
             </div>
             <h1 className="text-[#0f172a] dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">
-              Arama Sonuçları
+              {t('search.title')}
             </h1>
             <p className="text-slate-500 text-sm">
-              Anlaşma, kişi ve teklifler arasında arama yapın.
+              {t('search.subtitle')}
             </p>
           </div>
           <button
@@ -251,7 +249,7 @@ export default function SearchPage() {
             className="flex items-center gap-2 px-4 h-10 rounded-lg bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
           >
             <span className="material-symbols-outlined text-lg">bookmark_add</span>
-            Aramayı Kaydet
+            {t('search.save')}
           </button>
         </div>
 
@@ -269,7 +267,7 @@ export default function SearchPage() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Anlaşma, kişi, teklif ara..."
+                placeholder={t('search.placeholder')}
                 className="w-full pl-10 pr-4 py-2 rounded-lg border border-[#e2e8f0] dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-[#0f172a] dark:text-white"
               />
             </div>
@@ -279,15 +277,15 @@ export default function SearchPage() {
               className="flex items-center gap-2 px-4 h-10 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-all disabled:opacity-70"
             >
               <span className="material-symbols-outlined text-lg">search</span>
-              {isSearching ? 'Aranıyor' : 'Ara'}
+              {isSearching ? t('search.searching') : t('common.search')}
             </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 mt-4">
             {[
-              { id: 'deals', label: 'Anlaşmalar' },
-              { id: 'contacts', label: 'Kişiler' },
-              { id: 'proposals', label: 'Teklifler' },
+              { id: 'deals', label: t('nav.deals') },
+              { id: 'contacts', label: t('nav.contacts') },
+              { id: 'proposals', label: t('nav.proposals') },
             ].map((item) => (
               <button
                 key={item.id}
@@ -304,45 +302,45 @@ export default function SearchPage() {
             ))}
             <div className="ml-auto flex items-center gap-2 text-xs text-slate-500">
               <span className="material-symbols-outlined text-sm">tune</span>
-              Gelişmiş filtreler
+              {t('search.advancedFilters')}
             </div>
           </div>
         </form>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
-            <p className="text-xs text-slate-500">Toplam Sonuç</p>
+            <p className="text-xs text-slate-500">{t('search.stats.totalResults')}</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{totalResults}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
-            <p className="text-xs text-slate-500">Seçili Kategoriler</p>
+            <p className="text-xs text-slate-500">{t('search.stats.selectedTypes')}</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{selectedTypes.length}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
-            <p className="text-xs text-slate-500">Tarih Aralığı</p>
+            <p className="text-xs text-slate-500">{t('search.stats.dateRange')}</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">
-              {dateRange === 'all' ? 'Tümü' : dateRange}
+              {dateRange === 'all' ? t('search.allDates') : dateRange}
             </p>
           </div>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-5 mb-8 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-[#0f172a] dark:text-white">Filtreler</h3>
+            <h3 className="text-sm font-bold text-[#0f172a] dark:text-white">{t('search.filters.title')}</h3>
             <select
               value={dateRange}
               onChange={(event) => setDateRange(event.target.value as 'all' | '7d' | '30d' | '90d')}
               className="text-xs bg-white dark:bg-slate-900 border border-[#e2e8f0] dark:border-slate-700 rounded-lg px-2 py-1"
             >
-              <option value="all">Tüm Tarihler</option>
-              <option value="7d">Son 7 Gün</option>
-              <option value="30d">Son 30 Gün</option>
-              <option value="90d">Son 90 Gün</option>
+              <option value="all">{t('search.filters.allDates')}</option>
+              <option value="7d">{t('search.filters.last7Days')}</option>
+              <option value="30d">{t('search.filters.last30Days')}</option>
+              <option value="90d">{t('search.filters.last90Days')}</option>
             </select>
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-slate-500 mb-2">Anlaşma Aşamaları</p>
+            <p className="text-xs font-semibold text-slate-500 mb-2">{t('search.filters.dealStages')}</p>
             <div className="flex flex-wrap gap-2">
               {stageOptions.map((item) => (
                 <button
@@ -362,7 +360,7 @@ export default function SearchPage() {
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-slate-500 mb-2">Teklif Durumları</p>
+            <p className="text-xs font-semibold text-slate-500 mb-2">{t('search.filters.proposalStatuses')}</p>
             <div className="flex flex-wrap gap-2">
               {statusOptions.map((item) => (
                 <button
@@ -386,12 +384,12 @@ export default function SearchPage() {
           <div className="lg:col-span-2 space-y-6">
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Anlaşmalar</h2>
-                <span className="text-xs text-slate-400">{results.deals.length} sonuç</span>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('nav.deals')}</h2>
+                <span className="text-xs text-slate-400">{t('search.results.count', { count: results.deals.length })}</span>
               </div>
               {results.deals.length === 0 ? (
                 <div className="text-sm text-slate-500 bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4">
-                  Bu filtre için anlaşma bulunamadı.
+                  {t('search.results.emptyDeals')}
                 </div>
               ) : (
                 results.deals.map((deal) => (
@@ -404,14 +402,14 @@ export default function SearchPage() {
                       <div>
                         <p className="text-sm font-bold text-slate-900 dark:text-white">{deal.title}</p>
                         <p className="text-xs text-slate-500">
-                          {deal.contact?.full_name || deal.contact?.company || 'Müşteri'}
+                          {deal.contact?.full_name || deal.contact?.company || t('header.customerFallback')}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-primary">
-                          {formatMoney(deal.value ?? 0, deal.currency || 'TRY')}
+                          {formatCurrency(deal.value ?? 0, formatLocale, deal.currency || 'TRY')}
                         </p>
-                        <p className="text-xs text-slate-400">{formatRelativeTime(deal.updated_at)}</p>
+                        <p className="text-xs text-slate-400">{formatRelativeTime(deal.updated_at, t)}</p>
                       </div>
                     </div>
                     <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-900 text-slate-600">
@@ -425,12 +423,12 @@ export default function SearchPage() {
 
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Teklifler</h2>
-                <span className="text-xs text-slate-400">{results.proposals.length} sonuç</span>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('nav.proposals')}</h2>
+                <span className="text-xs text-slate-400">{t('search.results.count', { count: results.proposals.length })}</span>
               </div>
               {results.proposals.length === 0 ? (
                 <div className="text-sm text-slate-500 bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4">
-                  Bu filtre için teklif bulunamadı.
+                  {t('search.results.emptyProposals')}
                 </div>
               ) : (
                 results.proposals.map((proposal) => (
@@ -443,12 +441,12 @@ export default function SearchPage() {
                       <div>
                         <p className="text-sm font-bold text-slate-900 dark:text-white">{proposal.title}</p>
                         <p className="text-xs text-slate-500">
-                          {proposal.contact?.full_name || 'Müşteri'}
+                          {proposal.contact?.full_name || t('header.customerFallback')}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-semibold text-slate-500">{proposal.status}</p>
-                        <p className="text-xs text-slate-400">{formatRelativeTime(proposal.updated_at)}</p>
+                        <p className="text-xs text-slate-400">{formatRelativeTime(proposal.updated_at, t)}</p>
                       </div>
                     </div>
                   </Link>
@@ -458,12 +456,12 @@ export default function SearchPage() {
 
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Kişiler</h2>
-                <span className="text-xs text-slate-400">{results.contacts.length} sonuç</span>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('nav.contacts')}</h2>
+                <span className="text-xs text-slate-400">{t('search.results.count', { count: results.contacts.length })}</span>
               </div>
               {results.contacts.length === 0 ? (
                 <div className="text-sm text-slate-500 bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4">
-                  Bu filtre için kişi bulunamadı.
+                  {t('search.results.emptyContacts')}
                 </div>
               ) : (
                 results.contacts.map((contact) => (
@@ -475,9 +473,9 @@ export default function SearchPage() {
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-bold text-slate-900 dark:text-white">{contact.full_name}</p>
-                        <p className="text-xs text-slate-500">{contact.company || contact.email || 'Kayıt'}</p>
+                        <p className="text-xs text-slate-500">{contact.company || contact.email || t('header.recordFallback')}</p>
                       </div>
-                      <p className="text-xs text-slate-400">{formatRelativeTime(contact.updated_at)}</p>
+                      <p className="text-xs text-slate-400">{formatRelativeTime(contact.updated_at, t)}</p>
                     </div>
                   </Link>
                 ))
@@ -487,10 +485,10 @@ export default function SearchPage() {
 
           <aside className="space-y-6">
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Kayıtlı Aramalar</h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('search.saved.title')}</h3>
               <div className="mt-3 space-y-2">
                 {savedSearches.length === 0 ? (
-                  <p className="text-xs text-slate-500">Henüz kayıtlı arama yok.</p>
+                  <p className="text-xs text-slate-500">{t('search.saved.empty')}</p>
                 ) : (
                   savedSearches.map((item) => (
                     <div key={item.id} className="flex items-center justify-between gap-2">
@@ -504,7 +502,7 @@ export default function SearchPage() {
                         onClick={() => removeSavedSearch(item.id)}
                         className="text-xs text-slate-400 hover:text-rose-500"
                       >
-                        Sil
+                        {t('common.delete')}
                       </button>
                     </div>
                   ))
@@ -513,10 +511,10 @@ export default function SearchPage() {
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Arama Geçmişi</h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('search.history.title')}</h3>
               <div className="mt-3 space-y-2">
                 {history.length === 0 ? (
-                  <p className="text-xs text-slate-500">Henüz arama geçmişi yok.</p>
+                  <p className="text-xs text-slate-500">{t('search.history.empty')}</p>
                 ) : (
                   history.map((item) => (
                     <button
@@ -536,12 +534,12 @@ export default function SearchPage() {
         {showSaveModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-[#161e2b] rounded-xl p-6 w-full max-w-md shadow-2xl">
-              <h3 className="text-lg font-bold text-[#0f172a] dark:text-white mb-2">Aramayı Kaydet</h3>
-              <p className="text-sm text-slate-500 mb-4">Bu sorguya bir isim verin.</p>
+              <h3 className="text-lg font-bold text-[#0f172a] dark:text-white mb-2">{t('search.saveModal.title')}</h3>
+              <p className="text-sm text-slate-500 mb-4">{t('search.saveModal.subtitle')}</p>
               <input
                 value={saveName}
                 onChange={(event) => setSaveName(event.target.value)}
-                placeholder="Örn: İmzalanan Teklifler"
+                placeholder={t('search.saveModal.placeholder')}
                 className="w-full px-3 py-2 rounded-lg border border-[#e2e8f0] dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-[#0f172a] dark:text-white"
               />
               <div className="flex justify-end gap-2 mt-4">
@@ -549,13 +547,13 @@ export default function SearchPage() {
                   onClick={() => setShowSaveModal(false)}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100"
                 >
-                  Vazgeç
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={saveSearch}
                   className="px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary/90"
                 >
-                  Kaydet
+                  {t('common.save')}
                 </button>
               </div>
             </div>

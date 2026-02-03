@@ -258,7 +258,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       const mapped = data.map((row) => ({
         id: row.id,
         message: row.message,
-        time: formatRelativeTime(row.created_at),
+        time: formatRelativeTime(row.created_at, t),
         read: row.read ?? false,
         href: row.action_url ?? undefined,
       }))
@@ -299,7 +299,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               {
                 id: nextId,
                 message: row.message ?? t('header.newNotification'),
-                time: row.created_at ? formatRelativeTime(row.created_at) : t('header.justNow'),
+                time: row.created_at ? formatRelativeTime(row.created_at, t) : t('header.justNow'),
                 read: row.read ?? false,
                 href: row.action_url ?? undefined,
               },
@@ -498,7 +498,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                                   {item.contact?.full_name || item.contact?.company || t('header.customerFallback')}
                                 </p>
                               </div>
-                              <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at)}</span>
+                              <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at, t)}</span>
                             </Link>
                           ))}
                         </div>
@@ -519,7 +519,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                                 <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{item.title}</p>
                                 <p className="text-xs text-gray-500">{item.contact?.full_name || t('header.customerFallback')}</p>
                               </div>
-                              <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at)}</span>
+                              <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at, t)}</span>
                             </Link>
                           ))}
                         </div>
@@ -540,7 +540,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                                 <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{item.full_name}</p>
                                 <p className="text-xs text-gray-500">{item.company || item.email || t('header.recordFallback')}</p>
                               </div>
-                              <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at)}</span>
+                              <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at, t)}</span>
                             </Link>
                           ))}
                         </div>

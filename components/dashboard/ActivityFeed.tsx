@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getSupabaseClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database'
+import { useI18n } from '@/lib/i18n'
 import { formatRelativeTime, getActivityPresentation, mapActivityRow, type DashboardActivity } from './activity-utils'
 
 type ActivityFeedProps = {
@@ -12,6 +13,7 @@ type ActivityFeedProps = {
 
 export function ActivityFeed({ initialActivities, teamId }: ActivityFeedProps) {
   const supabase = useMemo(() => getSupabaseClient(), [])
+  const { t } = useI18n()
   const [activities, setActivities] = useState<DashboardActivity[]>(initialActivities)
 
   useEffect(() => {
@@ -55,13 +57,13 @@ export function ActivityFeed({ initialActivities, teamId }: ActivityFeedProps) {
   return (
     <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-[#e7ebf4] dark:border-gray-800 flex justify-between items-center">
-        <h3 className="font-bold text-lg text-[#0d121c] dark:text-white">Son Aktivite</h3>
-        <button className="text-sm text-primary font-semibold hover:underline">Tümünü Gör</button>
+        <h3 className="font-bold text-lg text-[#0d121c] dark:text-white">{t('dashboard.activity.title')}</h3>
+        <button className="text-sm text-primary font-semibold hover:underline">{t('dashboard.activity.viewAll')}</button>
       </div>
       <div className="p-6">
         {activities.length === 0 ? (
           <div className="text-sm text-[#48679d] dark:text-gray-400">
-            Henüz aktivite yok.
+            {t('dashboard.activity.empty')}
           </div>
         ) : (
           <ul className="space-y-6">
@@ -83,7 +85,7 @@ export function ActivityFeed({ initialActivities, teamId }: ActivityFeedProps) {
                     <div className="flex justify-between">
                       <p className="text-sm font-bold text-[#0d121c] dark:text-white">{activity.title}</p>
                       <span className="text-xs text-[#48679d] dark:text-gray-400">
-                        {activity.createdAt ? formatRelativeTime(activity.createdAt) : ''}
+                        {activity.createdAt ? formatRelativeTime(activity.createdAt, t) : ''}
                       </span>
                     </div>
                     {activity.description && (

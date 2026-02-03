@@ -1,4 +1,7 @@
-export default function Loading() {
+import { getServerT } from '@/lib/i18n/server'
+
+export default async function Loading() {
+  const t = await getServerT()
   return (
     <div className="min-h-screen flex items-center justify-center bg-aero-slate-50 dark:bg-aero-slate-900">
       <div className="flex flex-col items-center gap-4">
@@ -14,9 +17,7 @@ export default function Loading() {
           <div className="w-2 h-2 bg-aero-blue-500 rounded-full animate-bounce" />
         </div>
         
-        <p className="text-aero-slate-500 dark:text-aero-slate-400 text-sm">
-          Yükleniyor...
-        </p>
+        <p className="text-aero-slate-500 dark:text-aero-slate-400 text-sm">{t('common.loading')}</p>
       </div>
     </div>
   )

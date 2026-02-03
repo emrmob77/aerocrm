@@ -20,6 +20,12 @@ type LineSeries = {
   sent: number
 }
 
+type LineLabels = {
+  sent: string
+  views: string
+  signed: string
+}
+
 type PieSlice = {
   name: string
   value: number
@@ -34,7 +40,7 @@ const tooltipStyle = {
   fontSize: 12,
 }
 
-export function AnalyticsLineChart({ data }: { data: LineSeries[] }) {
+export function AnalyticsLineChart({ data, labels }: { data: LineSeries[]; labels: LineLabels }) {
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -49,7 +55,7 @@ export function AnalyticsLineChart({ data }: { data: LineSeries[] }) {
             stroke="#f59e0b"
             strokeWidth={2}
             dot={{ r: 3 }}
-            name="Gönderim"
+            name={labels.sent}
           />
           <Line
             type="monotone"
@@ -57,7 +63,7 @@ export function AnalyticsLineChart({ data }: { data: LineSeries[] }) {
             stroke="#377DF6"
             strokeWidth={2}
             dot={{ r: 3 }}
-            name="Görüntülenme"
+            name={labels.views}
           />
           <Line
             type="monotone"
@@ -65,7 +71,7 @@ export function AnalyticsLineChart({ data }: { data: LineSeries[] }) {
             stroke="#16a34a"
             strokeWidth={2}
             dot={{ r: 3 }}
-            name="İmza"
+            name={labels.signed}
           />
         </LineChart>
       </ResponsiveContainer>

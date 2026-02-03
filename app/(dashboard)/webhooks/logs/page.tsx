@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
+import { useI18n } from '@/lib/i18n'
 
 type FilterType = 'all' | 'success' | 'error'
 
@@ -20,9 +21,9 @@ type WebhookLog = {
   created_at: string
 }
 
-const formatResponseTime = (value: number | null) => {
+const formatResponseTime = (value: number | null, t: (key: string) => string) => {
   if (value === null || Number.isNaN(value)) {
-    return '—'
+    return t('webhooks.logs.na')
   }
   if (value >= 1000) {
     return `${(value / 1000).toFixed(1)}s`
@@ -30,14 +31,14 @@ const formatResponseTime = (value: number | null) => {
   return `${Math.round(value)}ms`
 }
 
-const formatStatusText = (log: WebhookLog) => {
+const formatStatusText = (log: WebhookLog, t: (key: string) => string) => {
   if (log.response_status != null) {
     return log.response_body ? `${log.response_status} ${log.response_body}` : `${log.response_status}`
   }
   if (log.success) {
-    return 'Başarılı'
+    return t('webhooks.logs.statusSuccess')
   }
-  return 'Hata'
+  return t('webhooks.logs.statusError')
 }
 
 const getStatusClasses = (status: number | null, success: boolean) => {
@@ -56,6 +57,7 @@ const getStatusClasses = (status: number | null, success: boolean) => {
 }
 
 export default function WebhookLogsPage() {
+  const { t } = useI18n()
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [selectedLog, setSelectedLog] = useState<string | null>(null)
   const [logs, setLogs] = useState<WebhookLog[]>([])
@@ -68,7 +70,7 @@ export default function WebhookLogsPage() {
     const response = await fetch('/api/webhooks/logs')
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      toast.error(payload?.error || 'Webhook logları getirilemedi.')
+      toast.error(payload?.error || t('webhooks.logs.errors.fetchFailed'))
       setIsRefreshing(false)
       return
     }
@@ -104,16 +106,16 @@ export default function WebhookLogsPage() {
       const response = await fetch(`/api/webhooks/logs/${log.id}/retry`, { method: 'POST' })
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        toast.error(payload?.error || 'Webhook yeniden denenemedi.')
+        toast.error(payload?.error || t('webhooks.logs.errors.retryFailed'))
         setRetryingId(null)
         return
       }
       const newLog = payload?.log as WebhookLog
       setLogs((prev) => [newLog, ...prev.filter((item) => item.id !== log.id)])
-      toast.success('Webhook yeniden denendi.')
+      toast.success(t('webhooks.logs.success.retried'))
       setRetryingId(null)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Webhook yeniden denenemedi.')
+      toast.error(error instanceof Error ? error.message : t('webhooks.logs.errors.retryFailed'))
       setRetryingId(null)
     }
   }
@@ -126,10 +128,10 @@ export default function WebhookLogsPage() {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
               <span className="material-symbols-outlined text-sm">settings</span>
-              <span className="text-xs font-semibold uppercase tracking-wider">Configuration</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">{t('webhooks.logs.breadcrumb')}</span>
             </div>
-            <h1 className="text-[#0f172a] dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">Webhook Günlükleri</h1>
-            <p className="text-slate-500 text-sm">Tüm webhook gönderimlerini ve durumlarını buradan gerçek zamanlı takip edin.</p>
+            <h1 className="text-[#0f172a] dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">{t('webhooks.logs.title')}</h1>
+            <p className="text-slate-500 text-sm">{t('webhooks.logs.subtitle')}</p>
           </div>
           <div className="flex gap-3">
             <Link
@@ -137,7 +139,7 @@ export default function WebhookLogsPage() {
               className="flex items-center gap-2 px-4 h-10 rounded-lg bg-white dark:bg-slate-800 border border-[#e2e8f0] dark:border-slate-700 text-slate-700 dark:text-white text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
             >
               <span className="material-symbols-outlined text-xl">arrow_back</span>
-              <span>Konfigürasyona Dön</span>
+              <span>{t('webhooks.logs.back')}</span>
             </Link>
             <button
               onClick={fetchLogs}
@@ -145,7 +147,7 @@ export default function WebhookLogsPage() {
               className="flex items-center gap-2 px-4 h-10 rounded-lg bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-70"
             >
               <span className="material-symbols-outlined text-xl">refresh</span>
-              <span>{isRefreshing ? 'Yenileniyor' : 'Yenile'}</span>
+              <span>{isRefreshing ? t('webhooks.logs.refreshing') : t('webhooks.logs.refresh')}</span>
             </button>
           </div>
         </div>
@@ -156,7 +158,7 @@ export default function WebhookLogsPage() {
             <div className="flex flex-wrap items-center gap-3">
               <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-[#e2e8f0] dark:border-slate-600 text-slate-700 dark:text-white text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                 <span className="material-symbols-outlined text-lg text-primary">calendar_today</span>
-                <span>Son 24 Saat</span>
+                <span>{t('webhooks.logs.last24h')}</span>
                 <span className="material-symbols-outlined text-lg">expand_more</span>
               </button>
               <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-lg">
@@ -168,7 +170,7 @@ export default function WebhookLogsPage() {
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Tümü
+                  {t('webhooks.logs.filters.all')}
                 </button>
                 <button
                   onClick={() => setActiveFilter('success')}
@@ -178,7 +180,7 @@ export default function WebhookLogsPage() {
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Başarılı
+                  {t('webhooks.logs.filters.success')}
                 </button>
                 <button
                   onClick={() => setActiveFilter('error')}
@@ -188,18 +190,18 @@ export default function WebhookLogsPage() {
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Hatalı
+                  {t('webhooks.logs.filters.error')}
                 </button>
               </div>
             </div>
             <div className="flex items-center gap-3 text-slate-500 text-sm font-medium">
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border border-emerald-200 dark:border-emerald-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                {successCount} Başarılı
+                {t('webhooks.logs.summary.success', { count: successCount })}
               </span>
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-600 border border-rose-200 dark:border-rose-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                {errorCount} Hatalı
+                {t('webhooks.logs.summary.error', { count: errorCount })}
               </span>
             </div>
           </div>
@@ -211,11 +213,11 @@ export default function WebhookLogsPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900 border-b border-[#e2e8f0] dark:border-slate-700">
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Zaman Damgası</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">{t('webhooks.logs.table.timestamp')}</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Olay</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Hedef URL</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Durum</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Yanıt Süresi</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">{t('webhooks.logs.table.duration')}</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center w-24">Aksiyon</th>
                 </tr>
               </thead>
@@ -229,7 +231,7 @@ export default function WebhookLogsPage() {
                       onClick={() => setSelectedLog(selectedLog === log.id ? null : log.id)}
                     >
                       <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                        {formatRelativeTime(log.created_at)}
+                        {formatRelativeTime(log.created_at, t)}
                       </td>
                       <td className="px-6 py-4">
                         <span className="font-mono text-xs font-semibold px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/20 text-primary border border-blue-100 dark:border-blue-800">
@@ -248,11 +250,11 @@ export default function WebhookLogsPage() {
                             log.success
                           )}`}
                         >
-                          {formatStatusText(log)}
+                          {formatStatusText(log, t)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right font-mono text-sm text-slate-600 dark:text-slate-400">
-                        {formatResponseTime(log.duration_ms)}
+                        {formatResponseTime(log.duration_ms, t)}
                       </td>
                       <td className="px-6 py-4 text-center">
                         {log.success ? (
@@ -288,7 +290,7 @@ export default function WebhookLogsPage() {
                             <div>
                               <p className="text-[11px] uppercase tracking-wider text-slate-400">Zaman</p>
                               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                {formatRelativeTime(log.created_at)}
+                                {formatRelativeTime(log.created_at, t)}
                               </p>
                             </div>
                             {log.error_message && (
@@ -306,7 +308,7 @@ export default function WebhookLogsPage() {
                 {!isLoading && filteredLogs.length === 0 && (
                   <tr>
                     <td className="px-6 py-10 text-center text-sm text-slate-500" colSpan={6}>
-                      Henüz webhook logu yok.
+                      {t('webhooks.logs.empty')}
                     </td>
                   </tr>
                 )}
@@ -316,7 +318,7 @@ export default function WebhookLogsPage() {
           
           {/* Pagination */}
           <div className="px-6 py-4 border-t border-[#e2e8f0] dark:border-slate-700 flex items-center justify-between">
-            <span className="text-sm text-slate-500">Toplam {logs.length} kayıt gösteriliyor</span>
+            <span className="text-sm text-slate-500">{t('webhooks.logs.total', { count: logs.length })}</span>
             <div className="flex items-center gap-2">
               <button className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] dark:border-slate-600 text-slate-600 dark:text-slate-400 text-sm font-medium disabled:opacity-50" disabled>
                 Geri
@@ -324,7 +326,9 @@ export default function WebhookLogsPage() {
               <button className="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm font-bold">1</button>
               <button className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] dark:border-slate-600 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">2</button>
               <button className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] dark:border-slate-600 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">3</button>
-              <button className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] dark:border-slate-600 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">İleri</button>
+              <button className="px-3 py-1.5 rounded-lg border border-[#e2e8f0] dark:border-slate-600 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">
+                {t('webhooks.logs.next')}
+              </button>
             </div>
           </div>
         </div>

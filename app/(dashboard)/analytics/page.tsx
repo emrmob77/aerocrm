@@ -1,11 +1,18 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import type { Proposal, ProposalView } from '@/types'
 import { AnalyticsLineChart, StatusPieChart } from './charts'
 
 export const revalidate = 0
 
-const formatNumber = (value: number) => new Intl.NumberFormat('tr-TR').format(value)
+const localeMap: Record<'tr' | 'en', string> = {
+  tr: 'tr-TR',
+  en: 'en-US',
+}
+
+const formatNumber = (value: number, locale: 'tr' | 'en') =>
+  new Intl.NumberFormat(localeMap[locale]).format(value)
 
 const pad = (value: number) => value.toString().padStart(2, '0')
 
@@ -22,63 +29,79 @@ const formatDuration = (seconds: number) => {
   return `${minutes}:${pad(remainingSeconds)}`
 }
 
-const getTimeAgo = (dateString: string) => {
+const getTimeAgo = (dateString: string, t: (key: string, vars?: Record<string, string | number>) => string) => {
   const diff = Date.now() - new Date(dateString).getTime()
   if (Number.isNaN(diff)) return dateString
   const minutes = Math.floor(diff / 60000)
-  if (minutes < 1) return 'şimdi'
-  if (minutes < 60) return `${minutes} dakika önce`
+  if (minutes < 1) return t('analytics.time.now')
+  if (minutes < 60) return t('analytics.time.minutesAgo', { count: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} saat önce`
+  if (hours < 24) return t('analytics.time.hoursAgo', { count: hours })
   const days = Math.floor(hours / 24)
-  return `${days} gün önce`
+  return t('analytics.time.daysAgo', { count: days })
 }
 
-const buildTrend = (current: number, previous: number) => {
+const buildTrend = (
+  current: number,
+  previous: number,
+  t: (key: string, vars?: Record<string, string | number>) => string
+) => {
   if (previous === 0) {
     if (current === 0) {
-      return { value: '0% değişim', type: 'neutral' as const, color: 'text-[#48679d]' }
+      return { value: t('analytics.trends.noChange'), type: 'neutral' as const, color: 'text-[#48679d]' }
     }
-    return { value: 'Yeni', type: 'up' as const, color: 'text-[#07883b]' }
+    return { value: t('analytics.trends.new'), type: 'up' as const, color: 'text-[#07883b]' }
   }
   const diff = Math.round(((current - previous) / previous) * 100)
   if (diff === 0) {
-    return { value: '0% değişim', type: 'neutral' as const, color: 'text-[#48679d]' }
+    return { value: t('analytics.trends.noChange'), type: 'neutral' as const, color: 'text-[#48679d]' }
   }
   if (diff > 0) {
-    return { value: `+${diff}% vs önceki dönem`, type: 'up' as const, color: 'text-[#07883b]' }
+    return { value: t('analytics.trends.up', { value: `+${diff}%` }), type: 'up' as const, color: 'text-[#07883b]' }
   }
-  return { value: `${diff}% vs önceki dönem`, type: 'down' as const, color: 'text-[#e73908]' }
+  return { value: t('analytics.trends.down', { value: `${diff}%` }), type: 'down' as const, color: 'text-[#e73908]' }
 }
 
-const buildDurationTrend = (current: number, previous: number) => {
+const buildDurationTrend = (
+  current: number,
+  previous: number,
+  t: (key: string, vars?: Record<string, string | number>) => string
+) => {
   if (!previous && !current) {
-    return { value: 'Veri yok', type: 'neutral' as const, color: 'text-[#48679d]' }
+    return { value: t('analytics.trends.noData'), type: 'neutral' as const, color: 'text-[#48679d]' }
   }
   if (!previous && current) {
-    return { value: 'Yeni', type: 'up' as const, color: 'text-[#07883b]' }
+    return { value: t('analytics.trends.new'), type: 'up' as const, color: 'text-[#07883b]' }
   }
   const diff = current - previous
   if (diff === 0) {
-    return { value: 'Değişim yok', type: 'neutral' as const, color: 'text-[#48679d]' }
+    return { value: t('analytics.trends.noChangeLabel'), type: 'neutral' as const, color: 'text-[#48679d]' }
   }
   if (diff < 0) {
-    return { value: `${formatDuration(Math.abs(diff))} daha hızlı`, type: 'up' as const, color: 'text-[#07883b]' }
+    return {
+      value: t('analytics.trends.faster', { value: formatDuration(Math.abs(diff)) }),
+      type: 'up' as const,
+      color: 'text-[#07883b]',
+    }
   }
-  return { value: `${formatDuration(diff)} daha yavaş`, type: 'down' as const, color: 'text-[#e73908]' }
+  return {
+    value: t('analytics.trends.slower', { value: formatDuration(diff) }),
+    type: 'down' as const,
+    color: 'text-[#e73908]',
+  }
 }
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string, t: (key: string) => string) => {
   switch (status) {
     case 'signed':
-      return { label: 'İmzalandı', className: 'bg-green-100 text-green-700' }
+      return { label: t('analytics.status.signed'), className: 'bg-green-100 text-green-700' }
     case 'viewed':
-      return { label: 'Görüntülendi', className: 'bg-blue-100 text-blue-700' }
+      return { label: t('analytics.status.viewed'), className: 'bg-blue-100 text-blue-700' }
     case 'draft':
-      return { label: 'Taslak', className: 'bg-gray-100 text-gray-600' }
+      return { label: t('analytics.status.draft'), className: 'bg-gray-100 text-gray-600' }
     case 'sent':
     case 'pending':
-      return { label: 'Gönderildi', className: 'bg-amber-100 text-amber-700' }
+      return { label: t('analytics.status.sent'), className: 'bg-amber-100 text-amber-700' }
     default:
       return { label: status, className: 'bg-gray-100 text-gray-600' }
   }
@@ -182,24 +205,19 @@ const buildBlockInteractions = (views: ProposalView[]) => {
   })
 }
 
-const rangeOptions = [
-  { days: 7, label: 'Son 7 Gün' },
-  { days: 30, label: 'Son 30 Gün' },
-  { days: 90, label: 'Son 90 Gün' },
-  { days: 180, label: 'Son 180 Gün' },
-]
+const rangeOptions = [7, 30, 90, 180]
 
 const getRangeDays = (value?: string) => {
   const parsed = Number(value)
-  const allowed = rangeOptions.map((option) => option.days)
+  const allowed = rangeOptions
   if (Number.isFinite(parsed) && allowed.includes(parsed)) {
     return parsed
   }
   return 30
 }
 
-const formatDate = (date: Date) =>
-  date.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })
+const formatDate = (date: Date, locale: 'tr' | 'en') =>
+  date.toLocaleDateString(localeMap[locale], { day: '2-digit', month: 'short', year: 'numeric' })
 
 const toDateInputValue = (date: Date) => date.toISOString().slice(0, 10)
 
@@ -215,6 +233,8 @@ export default async function AnalyticsPage({
 }: {
   searchParams?: { range?: string; from?: string; to?: string }
 }) {
+  const t = getServerT()
+  const locale = getServerLocale()
   const supabase = await createServerSupabaseClient()
   const {
     data: { user },
@@ -259,8 +279,8 @@ export default async function AnalyticsPage({
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-[#ced8e9] dark:border-[#2a3441] bg-white dark:bg-[#101722] p-10 text-center">
-          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white">Oturum bulunamadı</h2>
-          <p className="text-sm text-[#48679d] dark:text-[#a1b0cb]">Analitik verileri görmek için giriş yapın.</p>
+          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white">{t('analytics.errors.noSession')}</h2>
+          <p className="text-sm text-[#48679d] dark:text-[#a1b0cb]">{t('analytics.errors.noSessionHint')}</p>
         </div>
       </div>
     )
@@ -278,8 +298,8 @@ export default async function AnalyticsPage({
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-[#ced8e9] dark:border-[#2a3441] bg-white dark:bg-[#101722] p-10 text-center">
-          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white">Takım bilgisi bulunamadı</h2>
-          <p className="text-sm text-[#48679d] dark:text-[#a1b0cb]">Lütfen yönetici ile iletişime geçin.</p>
+          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white">{t('analytics.errors.noTeam')}</h2>
+          <p className="text-sm text-[#48679d] dark:text-[#a1b0cb]">{t('analytics.errors.noTeamHint')}</p>
         </div>
       </div>
     )
@@ -363,47 +383,47 @@ export default async function AnalyticsPage({
 
   const stats = [
     {
-      label: 'Gönderilen',
-      value: formatNumber(sentCount),
+      label: t('analytics.stats.sent'),
+      value: formatNumber(sentCount, locale),
       icon: 'send',
       iconColor: 'text-primary',
-      trend: buildTrend(sentCount, sentPrev),
+      trend: buildTrend(sentCount, sentPrev, t),
     },
     {
-      label: 'Görüntülenen',
-      value: formatNumber(viewedCount),
+      label: t('analytics.stats.viewed'),
+      value: formatNumber(viewedCount, locale),
       icon: 'visibility',
       iconColor: 'text-primary',
       trend: {
-        value: `${viewRate}% görüntülenme`,
+        value: t('analytics.trends.viewRate', { value: viewRate }),
         type: 'neutral' as const,
         color: 'text-primary',
       },
     },
     {
-      label: 'İmzalanan',
-      value: formatNumber(signedCount),
+      label: t('analytics.stats.signed'),
+      value: formatNumber(signedCount, locale),
       icon: 'verified',
       iconColor: 'text-[#07883b]',
       trend: {
-        value: `${signRate}% kapanış`,
+        value: t('analytics.trends.signRate', { value: signRate }),
         type: 'neutral' as const,
         color: 'text-primary',
       },
     },
     {
-      label: 'Dönüşüm',
+      label: t('analytics.stats.conversion'),
       value: `%${signRate}`,
       icon: 'insights',
       iconColor: 'text-primary',
-      trend: buildTrend(signRate, sentPrev ? Math.round((signedPrev / sentPrev) * 100) : 0),
+      trend: buildTrend(signRate, sentPrev ? Math.round((signedPrev / sentPrev) * 100) : 0, t),
     },
     {
-      label: 'Ortalama Süre',
+      label: t('analytics.stats.avgDuration'),
       value: formatDuration(avgDuration),
       icon: 'timer',
       iconColor: 'text-[#e73908]',
-      trend: buildDurationTrend(avgDuration, avgDurationPrev),
+      trend: buildDurationTrend(avgDuration, avgDurationPrev, t),
     },
   ]
 
@@ -411,10 +431,14 @@ export default async function AnalyticsPage({
   const hasBlockData = blockInteractions.length > 0
 
   const statusDistribution = [
-    { name: 'Gönderildi', value: lastRangeProposals.filter((p) => p.status === 'sent' || p.status === 'pending').length, color: '#f59e0b' },
-    { name: 'Görüntülendi', value: lastRangeProposals.filter((p) => p.status === 'viewed').length, color: '#3b82f6' },
-    { name: 'İmzalandı', value: lastRangeProposals.filter((p) => p.status === 'signed').length, color: '#16a34a' },
-    { name: 'Taslak', value: lastRangeProposals.filter((p) => p.status === 'draft').length, color: '#94a3b8' },
+    {
+      name: t('analytics.status.sent'),
+      value: lastRangeProposals.filter((p) => p.status === 'sent' || p.status === 'pending').length,
+      color: '#f59e0b',
+    },
+    { name: t('analytics.status.viewed'), value: lastRangeProposals.filter((p) => p.status === 'viewed').length, color: '#3b82f6' },
+    { name: t('analytics.status.signed'), value: lastRangeProposals.filter((p) => p.status === 'signed').length, color: '#16a34a' },
+    { name: t('analytics.status.draft'), value: lastRangeProposals.filter((p) => p.status === 'draft').length, color: '#94a3b8' },
   ].filter((slice) => slice.value > 0)
 
   const viewStats = new Map<string, number>()
@@ -458,7 +482,7 @@ export default async function AnalyticsPage({
   }
 
   const timeSeries = Array.from(timeSeriesMap.entries()).map(([key, value]) => ({
-    date: new Date(key).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }),
+    date: new Date(key).toLocaleDateString(localeMap[locale], { day: '2-digit', month: 'short' }),
     views: value.views,
     signed: value.signed,
     sent: sentSeriesMap.get(key) ?? 0,
@@ -477,14 +501,14 @@ export default async function AnalyticsPage({
 
   for (const view of lastRangeViews.slice(0, 6)) {
     if (!view.created_at) continue
-    const title = proposalMap.get(view.proposal_id) ?? 'Teklif'
+    const title = proposalMap.get(view.proposal_id) ?? t('analytics.fallback.proposal')
     activityEvents.push({
       date: view.created_at,
       icon: 'visibility',
       iconBg: 'bg-primary/10',
       iconColor: 'text-primary',
-      title: `${title} görüntülendi`,
-      description: 'Bir müşteri teklifi inceledi.',
+      title: t('analytics.activity.viewedTitle', { title }),
+      description: t('analytics.activity.viewedDescription'),
     })
   }
 
@@ -496,8 +520,8 @@ export default async function AnalyticsPage({
       icon: 'verified',
       iconBg: 'bg-[#07883b]/10',
       iconColor: 'text-[#07883b]',
-      title: `${proposal.title} imzalandı`,
-      description: 'Teklif başarıyla kapatıldı.',
+      title: t('analytics.activity.signedTitle', { title: proposal.title }),
+      description: t('analytics.activity.signedDescription'),
     })
   }
 
@@ -508,8 +532,8 @@ export default async function AnalyticsPage({
       icon: 'send',
       iconBg: 'bg-primary/10',
       iconColor: 'text-primary',
-      title: `${proposal.title} gönderildi`,
-      description: 'Teklif müşteriye ulaştırıldı.',
+      title: t('analytics.activity.sentTitle', { title: proposal.title }),
+      description: t('analytics.activity.sentDescription'),
     })
   }
 
@@ -518,7 +542,7 @@ export default async function AnalyticsPage({
     .slice(0, 6)
     .map((activity) => ({
       ...activity,
-      time: getTimeAgo(activity.date),
+      time: getTimeAgo(activity.date, t),
     }))
 
   const sentPercent = 100
@@ -527,8 +551,8 @@ export default async function AnalyticsPage({
   const signedPercent = sentCount ? Math.round((signedCount / sentCount) * 100) : 0
 
   const dateRangeLabel = isCustomRange
-    ? `${formatDate(rangeStart)} - ${formatDate(rangeEnd)}`
-    : `Son ${rangeDays} gün`
+    ? `${formatDate(rangeStart, locale)} - ${formatDate(rangeEnd, locale)}`
+    : t('analytics.range.lastDays', { days: rangeDays })
   const dateInputFrom = isCustomRange ? toDateInputValue(rangeStart) : toDateInputValue(rangeStart)
   const dateInputTo = isCustomRange ? toDateInputValue(rangeEnd) : toDateInputValue(rangeEnd)
 
@@ -537,20 +561,20 @@ export default async function AnalyticsPage({
       <div className="flex flex-wrap justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">
-            Spyglass Analytics
+            {t('analytics.title')}
           </h2>
           <p className="text-[#48679d] dark:text-[#a1b0cb]">
-            {dateRangeLabel} teklif performansı ve etkileşim özeti
+            {t('analytics.subtitle', { range: dateRangeLabel })}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1 rounded-lg border border-[#ced8e9] dark:border-[#2a3441] bg-white dark:bg-[#1e293b] p-1">
-            {rangeOptions.map((option) => {
-              const isActive = option.days === rangeDays
+            {rangeOptions.map((days) => {
+              const isActive = days === rangeDays
               return (
                 <Link
-                  key={option.days}
-                  href={`/analytics?range=${option.days}`}
+                  key={days}
+                  href={`/analytics?range=${days}`}
                   aria-current={isActive ? 'page' : undefined}
                   className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
                     isActive
@@ -558,7 +582,7 @@ export default async function AnalyticsPage({
                       : 'text-[#48679d] dark:text-[#a1b0cb] hover:bg-gray-50 dark:hover:bg-[#0f172a]'
                   }`}
                 >
-                  {option.label}
+                  {t('analytics.range.option', { days })}
                 </Link>
               )
             })}
@@ -584,7 +608,7 @@ export default async function AnalyticsPage({
               type="submit"
               className="h-10 px-4 rounded-lg bg-[#0d121c] text-white text-xs font-semibold hover:bg-[#0b111b]"
             >
-              Uygula
+              {t('analytics.actions.apply')}
             </button>
           </form>
           <a
@@ -596,7 +620,7 @@ export default async function AnalyticsPage({
             className="flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] shadow-lg shadow-primary/20"
           >
             <span className="material-symbols-outlined text-lg mr-2">ios_share</span>
-            <span className="truncate">Export Report</span>
+            <span className="truncate">{t('analytics.actions.export')}</span>
           </a>
         </div>
       </div>
@@ -623,12 +647,14 @@ export default async function AnalyticsPage({
         </div>
 
         <div className="bg-white dark:bg-[#101722] rounded-xl border border-[#ced8e9] dark:border-[#2a3441] shadow-sm overflow-hidden">
-          <h2 className="text-[#0d121c] dark:text-white text-lg font-bold leading-tight tracking-[-0.01em] px-4 pt-5 pb-3">Conversion Funnel</h2>
+          <h2 className="text-[#0d121c] dark:text-white text-lg font-bold leading-tight tracking-[-0.01em] px-4 pt-5 pb-3">
+            {t('analytics.funnel.title')}
+          </h2>
           <div className="pb-6">
             <div className="flex items-center px-4 gap-2">
               <div className="flex-1 relative">
                 <div className="h-12 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xs relative">
-                  Gönderildi ({sentCount})
+                  {t('analytics.funnel.sent', { count: sentCount })}
                   <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rotate-45 z-10"></div>
                 </div>
                 <p className="text-center text-xs mt-2 text-[#48679d] font-bold">{sentPercent}%</p>
@@ -640,7 +666,7 @@ export default async function AnalyticsPage({
 
               <div className="relative" style={{ flex: Math.max(0.32, viewedPercent / 100) }}>
                 <div className="h-12 bg-primary/80 rounded-lg flex items-center justify-center text-white font-bold text-xs relative">
-                  Görüntülendi ({viewedCount})
+                  {t('analytics.funnel.viewed', { count: viewedCount })}
                   <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-primary/80 rotate-45 z-10"></div>
                 </div>
                 <p className="text-center text-xs mt-2 text-[#48679d] font-bold">{viewedPercent}%</p>
@@ -652,7 +678,7 @@ export default async function AnalyticsPage({
 
               <div className="relative" style={{ flex: Math.max(0.28, engagedPercent / 100) }}>
                 <div className="h-12 bg-primary/60 rounded-lg flex items-center justify-center text-white font-bold text-xs relative">
-                  Etkileşim ({engagedCount})
+                  {t('analytics.funnel.engaged', { count: engagedCount })}
                   <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-primary/60 rotate-45 z-10"></div>
                 </div>
                 <p className="text-center text-xs mt-2 text-[#48679d] font-bold">{engagedPercent}%</p>
@@ -664,7 +690,7 @@ export default async function AnalyticsPage({
 
               <div className="relative" style={{ flex: Math.max(0.22, signedPercent / 100) }}>
                 <div className="h-12 bg-primary/50 rounded-lg flex items-center justify-center text-white font-bold text-xs">
-                  İmzalandı ({signedCount})
+                  {t('analytics.funnel.signed', { count: signedCount })}
                 </div>
                 <p className="text-center text-xs mt-2 text-[#48679d] font-bold">{signedPercent}%</p>
               </div>
@@ -675,21 +701,28 @@ export default async function AnalyticsPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 flex flex-col bg-white dark:bg-[#101722] border border-[#ced8e9] dark:border-[#2a3441] rounded-xl shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-[#0d121c] dark:text-white text-lg font-bold">Zaman Serisi</h3>
-            <span className="text-xs font-bold text-[#48679d] uppercase">Görüntülenme vs İmza</span>
+            <h3 className="text-[#0d121c] dark:text-white text-lg font-bold">{t('analytics.sections.timeSeries')}</h3>
+            <span className="text-xs font-bold text-[#48679d] uppercase">{t('analytics.sections.viewsVsSigned')}</span>
           </div>
           {timeSeries.length > 0 ? (
-            <AnalyticsLineChart data={timeSeries} />
+            <AnalyticsLineChart
+              data={timeSeries}
+              labels={{
+                sent: t('analytics.chartLabels.sent'),
+                views: t('analytics.chartLabels.views'),
+                signed: t('analytics.chartLabels.signed'),
+              }}
+            />
           ) : (
             <div className="rounded-xl border border-dashed border-[#ced8e9] dark:border-[#2a3441] p-6 text-sm text-[#48679d] dark:text-[#a1b0cb] text-center">
-              Henüz zaman serisi verisi yok.
+              {t('analytics.empty.timeSeries')}
             </div>
           )}
         </div>
 
         <div className="flex flex-col bg-white dark:bg-[#101722] border border-[#ced8e9] dark:border-[#2a3441] rounded-xl shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-[#0d121c] dark:text-white text-lg font-bold">Durum Dağılımı</h3>
+            <h3 className="text-[#0d121c] dark:text-white text-lg font-bold">{t('analytics.sections.statusBreakdown')}</h3>
           </div>
           {statusDistribution.length > 0 ? (
             <>
@@ -708,7 +741,7 @@ export default async function AnalyticsPage({
             </>
           ) : (
             <div className="rounded-xl border border-dashed border-[#ced8e9] dark:border-[#2a3441] p-6 text-sm text-[#48679d] dark:text-[#a1b0cb] text-center">
-              Henüz durum verisi yok.
+              {t('analytics.empty.status')}
             </div>
           )}
         </div>
@@ -717,8 +750,8 @@ export default async function AnalyticsPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 flex flex-col bg-white dark:bg-[#101722] border border-[#ced8e9] dark:border-[#2a3441] rounded-xl shadow-sm p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-[#0d121c] dark:text-white text-lg font-bold">Blok Etkileşim Haritası</h3>
-              <span className="text-xs font-bold text-[#48679d] uppercase">Ortalama Saniye / Blok</span>
+              <h3 className="text-[#0d121c] dark:text-white text-lg font-bold">{t('analytics.sections.blockHeatmap')}</h3>
+              <span className="text-xs font-bold text-[#48679d] uppercase">{t('analytics.sections.avgSeconds')}</span>
             </div>
             {hasBlockData ? (
               <div className="flex flex-col gap-6">
@@ -740,16 +773,18 @@ export default async function AnalyticsPage({
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-[#ced8e9] dark:border-[#2a3441] p-6 text-sm text-[#48679d] dark:text-[#a1b0cb] text-center">
-                Henüz blok etkileşim verisi yok.
+                {t('analytics.empty.blocks')}
               </div>
             )}
           </div>
 
           <div className="flex flex-col bg-white dark:bg-[#101722] border border-[#ced8e9] dark:border-[#2a3441] rounded-xl shadow-sm p-6">
-            <h3 className="text-[#0d121c] dark:text-white text-lg font-bold mb-6">Son Aktiviteler</h3>
+            <h3 className="text-[#0d121c] dark:text-white text-lg font-bold mb-6">
+              {t('analytics.sections.recent')}
+            </h3>
             {recentActivities.length === 0 ? (
               <div className="rounded-xl border border-dashed border-[#ced8e9] dark:border-[#2a3441] p-6 text-sm text-[#48679d] dark:text-[#a1b0cb] text-center">
-                Henüz aktivite kaydı yok.
+                {t('analytics.empty.activity')}
               </div>
             ) : (
               <div className="flex flex-col gap-6 flex-1">
@@ -768,43 +803,53 @@ export default async function AnalyticsPage({
               </div>
             )}
             <button className="mt-auto pt-6 text-primary text-xs font-bold uppercase tracking-widest text-center hover:underline">
-              Tümünü Gör
+              {t('analytics.actions.viewAll')}
             </button>
           </div>
       </div>
 
       <div className="bg-white dark:bg-[#101722] rounded-xl border border-[#ced8e9] dark:border-[#2a3441] shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
-          <h3 className="text-[#0d121c] dark:text-white text-lg font-bold">Teklifler</h3>
+          <h3 className="text-[#0d121c] dark:text-white text-lg font-bold">{t('analytics.sections.proposals')}</h3>
           <span className="text-xs font-bold text-[#48679d] uppercase">{dateRangeLabel}</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 dark:bg-[#0f172a] border-y border-[#e7ebf4] dark:border-[#2a3441]">
               <tr>
-                <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase tracking-wider">Teklif</th>
-                <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase tracking-wider">Gönderim</th>
-                <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase tracking-wider text-center">Görüntülenme</th>
-                <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase tracking-wider text-center">Durum</th>
-                <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase tracking-wider text-center">Eylem</th>
+                <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase tracking-wider">
+                  {t('analytics.table.proposal')}
+                </th>
+                <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase tracking-wider">
+                  {t('analytics.table.sent')}
+                </th>
+                <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase tracking-wider text-center">
+                  {t('analytics.table.views')}
+                </th>
+                <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase tracking-wider text-center">
+                  {t('analytics.table.status')}
+                </th>
+                <th className="px-6 py-3 text-xs font-bold text-[#48679d] uppercase tracking-wider text-center">
+                  {t('analytics.table.action')}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e7ebf4] dark:divide-[#2a3441]">
               {proposalTableRows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-sm text-[#48679d]">
-                    Bu aralıkta teklif bulunamadı.
+                    {t('analytics.empty.proposals')}
                   </td>
                 </tr>
               ) : (
                 proposalTableRows.map((proposal) => {
-                  const badge = getStatusBadge(proposal.status)
+                  const badge = getStatusBadge(proposal.status, t)
                   return (
                     <tr key={proposal.id} className="hover:bg-gray-50 dark:hover:bg-[#0f172a] transition-colors">
                       <td className="px-6 py-4 font-semibold text-[#0d121c] dark:text-white">
                         {proposal.title}
                       </td>
-                      <td className="px-6 py-4 text-[#48679d]">{getTimeAgo(proposal.createdAt)}</td>
+                      <td className="px-6 py-4 text-[#48679d]">{getTimeAgo(proposal.createdAt, t)}</td>
                       <td className="px-6 py-4 text-center font-semibold">{proposal.views}</td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold ${badge.className}`}>
@@ -816,7 +861,7 @@ export default async function AnalyticsPage({
                           href={`/proposals/${proposal.id}`}
                           className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                         >
-                          Detay
+                          {t('analytics.table.detail')}
                           <span className="material-symbols-outlined text-[16px]">arrow_outward</span>
                         </Link>
                       </td>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useI18n } from '@/lib/i18n'
 
 interface ErrorProps {
   error: Error & { digest?: string }
@@ -8,6 +9,7 @@ interface ErrorProps {
 }
 
 export default function Error({ error, reset }: ErrorProps) {
+  const { t } = useI18n()
   useEffect(() => {
     // Hata loglaması yapılabilir
     console.error('Application error:', error)
@@ -21,12 +23,12 @@ export default function Error({ error, reset }: ErrorProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         level: 'error',
-        message: error.message || 'Bilinmeyen hata',
+        message: error.message || t('errorPage.unknown'),
         source: 'app/error',
         context,
       }),
     }).catch(() => undefined)
-  }, [error])
+  }, [error, t])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-aero-slate-50 dark:bg-aero-slate-900 p-4">
@@ -50,11 +52,10 @@ export default function Error({ error, reset }: ErrorProps) {
 
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-aero-slate-900 dark:text-white">
-            Bir Şeyler Ters Gitti
+            {t('errorPage.title')}
           </h1>
           <p className="text-aero-slate-600 dark:text-aero-slate-400">
-            Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin veya 
-            sorun devam ederse destek ekibiyle iletişime geçin.
+            {t('errorPage.subtitle')}
           </p>
         </div>
 
@@ -63,13 +64,13 @@ export default function Error({ error, reset }: ErrorProps) {
             onClick={reset}
             className="btn-primary btn-md"
           >
-            Tekrar Dene
+            {t('errorPage.retry')}
           </button>
           <a
             href="/"
             className="btn-secondary btn-md"
           >
-            Ana Sayfaya Dön
+            {t('errorPage.backHome')}
           </a>
         </div>
 
@@ -77,7 +78,7 @@ export default function Error({ error, reset }: ErrorProps) {
         {process.env.NODE_ENV === 'development' && (
           <details className="mt-6 text-left">
             <summary className="text-sm text-aero-slate-500 cursor-pointer hover:text-aero-slate-700">
-              Hata Detayları (Geliştirici)
+              {t('errorPage.details')}
             </summary>
             <pre className="mt-2 p-4 bg-aero-slate-100 dark:bg-aero-slate-800 rounded-lg text-xs overflow-auto">
               {error.message}

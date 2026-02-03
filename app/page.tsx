@@ -1,6 +1,8 @@
 import Link from 'next/link'
+import { getServerT } from '@/lib/i18n/server'
 
 export default function HomePage() {
+  const t = getServerT()
   return (
     <div className="min-h-screen bg-gradient-hero flex flex-col items-center justify-center p-4">
       <div className="text-center space-y-6 max-w-2xl">
@@ -14,35 +16,34 @@ export default function HomePage() {
 
         {/* Tagline */}
         <p className="text-xl text-aero-blue-100">
-          Satış, Hızla Uçar.
+          {t('landing.tagline')}
         </p>
 
         <p className="text-aero-blue-200 text-lg">
-          Modern satış ekipleri için tasarlanmış kapsamlı müşteri ilişkileri yönetimi 
-          ve teklif hazırlama platformu.
+          {t('landing.description')}
         </p>
 
         {/* Features */}
         <div className="grid grid-cols-2 gap-4 mt-8">
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-left">
             <div className="text-2xl mb-2">🚀</div>
-            <h3 className="font-semibold text-white">Hızlı Teklif</h3>
-            <p className="text-sm text-aero-blue-200">3 tıkla profesyonel teklifler</p>
+            <h3 className="font-semibold text-white">{t('landing.features.fastProposal.title')}</h3>
+            <p className="text-sm text-aero-blue-200">{t('landing.features.fastProposal.description')}</p>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-left">
             <div className="text-2xl mb-2">📊</div>
-            <h3 className="font-semibold text-white">Kanban Yönetimi</h3>
-            <p className="text-sm text-aero-blue-200">Görsel satış pipeline</p>
+            <h3 className="font-semibold text-white">{t('landing.features.kanban.title')}</h3>
+            <p className="text-sm text-aero-blue-200">{t('landing.features.kanban.description')}</p>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-left">
             <div className="text-2xl mb-2">👁️</div>
-            <h3 className="font-semibold text-white">Spyglass</h3>
-            <p className="text-sm text-aero-blue-200">Gerçek zamanlı teklif izleme</p>
+            <h3 className="font-semibold text-white">{t('landing.features.spyglass.title')}</h3>
+            <p className="text-sm text-aero-blue-200">{t('landing.features.spyglass.description')}</p>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-left">
             <div className="text-2xl mb-2">🔗</div>
-            <h3 className="font-semibold text-white">Entegrasyonlar</h3>
-            <p className="text-sm text-aero-blue-200">Webhook ve API desteği</p>
+            <h3 className="font-semibold text-white">{t('landing.features.integrations.title')}</h3>
+            <p className="text-sm text-aero-blue-200">{t('landing.features.integrations.description')}</p>
           </div>
         </div>
 
@@ -52,19 +53,19 @@ export default function HomePage() {
             href="/login"
             className="btn btn-lg bg-white text-aero-blue-600 hover:bg-aero-blue-50 shadow-lg"
           >
-            Giriş Yap
+            {t('landing.cta.login')}
           </Link>
           <Link
             href="/register"
             className="btn btn-lg border-2 border-white text-white hover:bg-white/10"
           >
-            Ücretsiz Başla
+            {t('landing.cta.start')}
           </Link>
         </div>
 
         {/* Footer */}
         <p className="text-aero-blue-300 text-sm mt-12">
-          © 2025 AERO CRM. Tüm hakları saklıdır.
+          {t('landing.footer')}
         </p>
       </div>
     </div>

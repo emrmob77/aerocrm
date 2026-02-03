@@ -5,6 +5,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { useSupabase, useUser } from '@/hooks'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
+import { useI18n } from '@/lib/i18n'
 
 type FilterType = 'all' | 'unread' | 'proposal' | 'deal' | 'system'
 
@@ -61,6 +62,7 @@ const getNotificationBadge = (type: string) => {
 }
 
 export default function NotificationsPage() {
+  const { t } = useI18n()
   const supabase = useSupabase()
   const { authUser } = useUser()
   const userId = authUser?.id ?? null
@@ -80,7 +82,7 @@ export default function NotificationsPage() {
       .limit(100)
 
     if (error) {
-      toast.error('Bildirimler getirilemedi.')
+      toast.error(t('notificationsPage.errors.fetch'))
       setIsRefreshing(false)
       return
     }
@@ -142,7 +144,7 @@ export default function NotificationsPage() {
       .eq('user_id', userId)
       .eq('read', false)
     if (error) {
-      toast.error('Bildirimler güncellenemedi.')
+      toast.error(t('notificationsPage.errors.updateAll'))
     }
   }
 
@@ -158,7 +160,7 @@ export default function NotificationsPage() {
       .eq('id', notification.id)
       .eq('user_id', userId)
     if (error) {
-      toast.error('Bildirim güncellenemedi.')
+      toast.error(t('notificationsPage.errors.updateOne'))
     }
   }
 
@@ -169,6 +171,13 @@ export default function NotificationsPage() {
   }, [notifications, activeFilter])
 
   const unreadCount = notifications.filter((item) => !item.read).length
+  const filterLabel = (() => {
+    if (activeFilter === 'all') return t('notificationsPage.filters.all')
+    if (activeFilter === 'unread') return t('notificationsPage.filters.unread')
+    if (activeFilter === 'proposal') return t('notificationsPage.filters.proposal')
+    if (activeFilter === 'deal') return t('notificationsPage.filters.deal')
+    return t('notificationsPage.filters.system')
+  })()
 
   return (
     <div className="-m-8">
@@ -177,12 +186,14 @@ export default function NotificationsPage() {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
               <span className="material-symbols-outlined text-sm">notifications</span>
-              <span className="text-xs font-semibold uppercase tracking-wider">Notification Center</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                {t('notificationsPage.kicker')}
+              </span>
             </div>
             <h1 className="text-[#0f172a] dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">
-              Bildirim Merkezi
+              {t('notificationsPage.title')}
             </h1>
-            <p className="text-slate-500 text-sm">Teklif ve sistem bildirimlerini tek ekrandan yönetin.</p>
+            <p className="text-slate-500 text-sm">{t('notificationsPage.subtitle')}</p>
           </div>
           <div className="flex gap-3">
             <button
@@ -191,51 +202,41 @@ export default function NotificationsPage() {
               className="flex items-center gap-2 px-4 h-10 rounded-lg bg-white dark:bg-slate-800 border border-[#e2e8f0] dark:border-slate-700 text-slate-700 dark:text-white text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm disabled:opacity-70"
             >
               <span className="material-symbols-outlined text-lg">refresh</span>
-              <span>{isRefreshing ? 'Yenileniyor' : 'Yenile'}</span>
+              <span>{isRefreshing ? t('notificationsPage.refreshing') : t('notificationsPage.refresh')}</span>
             </button>
             <button
               onClick={markAllRead}
               className="flex items-center gap-2 px-4 h-10 rounded-lg bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
             >
               <span className="material-symbols-outlined text-lg">done_all</span>
-              <span>Tümünü okundu yap</span>
+              <span>{t('notificationsPage.markAllRead')}</span>
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
-            <p className="text-xs text-slate-500">Toplam Bildirim</p>
+            <p className="text-xs text-slate-500">{t('notificationsPage.stats.total')}</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{notifications.length}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
-            <p className="text-xs text-slate-500">Okunmamış</p>
+            <p className="text-xs text-slate-500">{t('notificationsPage.stats.unread')}</p>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{unreadCount}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
-            <p className="text-xs text-slate-500">Filtre</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">
-              {activeFilter === 'all'
-                ? 'Tümü'
-                : activeFilter === 'unread'
-                  ? 'Okunmadı'
-                  : activeFilter === 'proposal'
-                    ? 'Teklif'
-                    : activeFilter === 'deal'
-                      ? 'Anlaşma'
-                      : 'Sistem'}
-            </p>
+            <p className="text-xs text-slate-500">{t('notificationsPage.stats.filter')}</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{filterLabel}</p>
           </div>
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 mb-6 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
             {([
-              { id: 'all', label: 'Tümü' },
-              { id: 'unread', label: 'Okunmadı' },
-              { id: 'proposal', label: 'Teklifler' },
-              { id: 'deal', label: 'Anlaşmalar' },
-              { id: 'system', label: 'Sistem' },
+              { id: 'all', label: t('notificationsPage.filters.all') },
+              { id: 'unread', label: t('notificationsPage.filters.unread') },
+              { id: 'proposal', label: t('notificationsPage.filters.proposalPlural') },
+              { id: 'deal', label: t('notificationsPage.filters.dealPlural') },
+              { id: 'system', label: t('notificationsPage.filters.system') },
             ] as { id: FilterType; label: string }[]).map((item) => (
               <button
                 key={item.id}
@@ -255,11 +256,11 @@ export default function NotificationsPage() {
         <div className="space-y-3">
           {isLoading ? (
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-6 text-sm text-slate-500">
-              Bildirimler yükleniyor...
+              {t('notificationsPage.loading')}
             </div>
           ) : filteredNotifications.length === 0 ? (
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-6 text-sm text-slate-500">
-              Bu filtre için henüz bildirim yok.
+              {t('notificationsPage.empty')}
             </div>
           ) : (
             filteredNotifications.map((notification) => {
@@ -283,7 +284,9 @@ export default function NotificationsPage() {
                         {!notification.read && <span className="w-2 h-2 rounded-full bg-primary" />}
                       </div>
                       <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{notification.message}</p>
-                      <p className="text-xs text-slate-400 mt-2">{formatRelativeTime(notification.created_at)}</p>
+                      <p className="text-xs text-slate-400 mt-2">
+                        {formatRelativeTime(notification.created_at, t)}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-end md:self-auto">
@@ -297,14 +300,14 @@ export default function NotificationsPage() {
                         }}
                         className="px-3 py-1.5 rounded-lg text-sm font-semibold text-primary border border-primary/30 hover:bg-primary/10"
                       >
-                        Detay
+                        {t('notificationsPage.detail')}
                       </Link>
                     ) : null}
                     <button
                       onClick={() => toggleRead(notification)}
                       className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
                     >
-                      {notification.read ? 'Okunmadı yap' : 'Okundu yap'}
+                      {notification.read ? t('notificationsPage.markUnread') : t('notificationsPage.markRead')}
                     </button>
                   </div>
                 </div>

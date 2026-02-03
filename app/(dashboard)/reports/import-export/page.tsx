@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
+import { useI18n } from '@/lib/i18n'
 
 type EntityId = 'contacts' | 'deals' | 'proposals' | 'sales'
 
@@ -45,64 +46,64 @@ type ParsedCsv = {
   rows: string[][]
 }
 
-const entityConfigs: EntityConfig[] = [
+const buildEntityConfigs = (t: (key: string) => string): EntityConfig[] => [
   {
     id: 'contacts',
-    label: 'Kişiler',
-    description: 'Ad, e-posta, şirket ve iletişim bilgileri.',
+    label: t('importExport.entities.contacts.label'),
+    description: t('importExport.entities.contacts.description'),
     fields: [
-      { id: 'full_name', label: 'Ad Soyad', required: true },
-      { id: 'email', label: 'E-posta' },
-      { id: 'phone', label: 'Telefon' },
-      { id: 'company', label: 'Şirket' },
-      { id: 'position', label: 'Pozisyon' },
-      { id: 'address', label: 'Adres' },
+      { id: 'full_name', label: t('importExport.fields.fullName'), required: true },
+      { id: 'email', label: t('importExport.fields.email') },
+      { id: 'phone', label: t('importExport.fields.phone') },
+      { id: 'company', label: t('importExport.fields.company') },
+      { id: 'position', label: t('importExport.fields.position') },
+      { id: 'address', label: t('importExport.fields.address') },
     ],
   },
   {
     id: 'deals',
-    label: 'Anlaşmalar',
-    description: 'Pipeline ve değer bilgileri.',
+    label: t('importExport.entities.deals.label'),
+    description: t('importExport.entities.deals.description'),
     fields: [
-      { id: 'title', label: 'Anlaşma Adı', required: true },
-      { id: 'value', label: 'Tutar' },
-      { id: 'currency', label: 'Para Birimi' },
-      { id: 'stage', label: 'Aşama' },
-      { id: 'expected_close_date', label: 'Tahmini Kapanış' },
-      { id: 'probability', label: 'Olasılık' },
-      { id: 'notes', label: 'Notlar' },
-      { id: 'contact_name', label: 'Müşteri Adı' },
-      { id: 'contact_email', label: 'Müşteri E-posta' },
-      { id: 'contact_id', label: 'Müşteri ID' },
+      { id: 'title', label: t('importExport.fields.dealTitle'), required: true },
+      { id: 'value', label: t('importExport.fields.amount') },
+      { id: 'currency', label: t('importExport.fields.currency') },
+      { id: 'stage', label: t('importExport.fields.stage') },
+      { id: 'expected_close_date', label: t('importExport.fields.expectedClose') },
+      { id: 'probability', label: t('importExport.fields.probability') },
+      { id: 'notes', label: t('importExport.fields.notes') },
+      { id: 'contact_name', label: t('importExport.fields.contactName') },
+      { id: 'contact_email', label: t('importExport.fields.contactEmail') },
+      { id: 'contact_id', label: t('importExport.fields.contactId') },
     ],
   },
   {
     id: 'proposals',
-    label: 'Teklifler',
-    description: 'Teklif başlığı ve durum bilgileri.',
+    label: t('importExport.entities.proposals.label'),
+    description: t('importExport.entities.proposals.description'),
     fields: [
-      { id: 'title', label: 'Teklif Başlığı', required: true },
-      { id: 'status', label: 'Durum' },
-      { id: 'expires_at', label: 'Son Tarih' },
-      { id: 'deal_id', label: 'Anlaşma ID' },
-      { id: 'contact_name', label: 'Müşteri Adı' },
-      { id: 'contact_email', label: 'Müşteri E-posta' },
-      { id: 'contact_id', label: 'Müşteri ID' },
+      { id: 'title', label: t('importExport.fields.proposalTitle'), required: true },
+      { id: 'status', label: t('importExport.fields.status') },
+      { id: 'expires_at', label: t('importExport.fields.expiresAt') },
+      { id: 'deal_id', label: t('importExport.fields.dealId') },
+      { id: 'contact_name', label: t('importExport.fields.contactName') },
+      { id: 'contact_email', label: t('importExport.fields.contactEmail') },
+      { id: 'contact_id', label: t('importExport.fields.contactId') },
     ],
   },
   {
     id: 'sales',
-    label: 'Satışlar',
-    description: 'Kapanmış satışlar ve gelir bilgileri.',
+    label: t('importExport.entities.sales.label'),
+    description: t('importExport.entities.sales.description'),
     fields: [
-      { id: 'title', label: 'Satış Adı', required: true },
-      { id: 'value', label: 'Tutar' },
-      { id: 'currency', label: 'Para Birimi' },
-      { id: 'sales_date', label: 'Satış Tarihi' },
-      { id: 'notes', label: 'Notlar' },
-      { id: 'contact_name', label: 'Müşteri Adı' },
-      { id: 'contact_email', label: 'Müşteri E-posta' },
-      { id: 'contact_id', label: 'Müşteri ID' },
+      { id: 'title', label: t('importExport.fields.salesTitle'), required: true },
+      { id: 'value', label: t('importExport.fields.amount') },
+      { id: 'currency', label: t('importExport.fields.currency') },
+      { id: 'sales_date', label: t('importExport.fields.salesDate') },
+      { id: 'notes', label: t('importExport.fields.notes') },
+      { id: 'contact_name', label: t('importExport.fields.contactName') },
+      { id: 'contact_email', label: t('importExport.fields.contactEmail') },
+      { id: 'contact_id', label: t('importExport.fields.contactId') },
     ],
   },
 ]
@@ -226,6 +227,8 @@ const parseCsv = (content: string): ParsedCsv => {
 
 export default function ImportExportPage() {
   const searchParams = useSearchParams()
+  const { t } = useI18n()
+  const entityConfigs = useMemo(() => buildEntityConfigs(t), [t])
   const [entity, setEntity] = useState<EntityId>('contacts')
   const [exportEntity, setExportEntity] = useState<EntityId>('contacts')
   const [exportFormat, setExportFormat] = useState<'csv' | 'excel'>('csv')
@@ -246,7 +249,7 @@ export default function ImportExportPage() {
 
   const currentConfig = useMemo(
     () => entityConfigs.find((item) => item.id === entity) ?? entityConfigs[0],
-    [entity]
+    [entity, entityConfigs]
   )
 
   const requiredFields = useMemo(
@@ -314,19 +317,19 @@ export default function ImportExportPage() {
     setFileName(file.name)
     setImportResult(null)
     if (!parsed.headers.length) {
-      toast.error('CSV başlığı bulunamadı.')
+    toast.error(t('importExport.errors.headerMissing'))
     }
   }
 
   const handleImport = async () => {
     if (!parsedCsv) {
-      toast.error('Önce CSV dosyası yükleyin.')
+    toast.error(t('importExport.errors.uploadFirst'))
       return
     }
     const mappedFields = Object.values(mapping).filter(Boolean)
     const missingRequired = requiredFields.filter((field) => !mappedFields.includes(field))
     if (missingRequired.length > 0) {
-      toast.error('Zorunlu alanları eşleştirin.')
+    toast.error(t('importExport.errors.matchRequired'))
       return
     }
 
@@ -343,7 +346,7 @@ export default function ImportExportPage() {
       .filter((row) => Object.keys(row).length > 0)
 
     if (!rows.length) {
-      toast.error('İçe aktarılacak satır bulunamadı.')
+    toast.error(t('importExport.errors.noRows'))
       return
     }
 
@@ -359,7 +362,7 @@ export default function ImportExportPage() {
     })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      toast.error(payload?.error || 'İçe aktarma başarısız.')
+      toast.error(payload?.error || t('importExport.errors.importFailed'))
       setIsImporting(false)
       return
     }
@@ -370,7 +373,7 @@ export default function ImportExportPage() {
     })
     setIsImporting(false)
     await loadLogs()
-    toast.success('İçe aktarma tamamlandı.')
+    toast.success(t('importExport.success.imported'))
   }
 
   const handleExport = async () => {
@@ -378,7 +381,7 @@ export default function ImportExportPage() {
       `/api/data/export?entity=${exportEntity}&format=${exportFormat}&delimiter=${exportDelimiter}`
     )
     if (!response.ok) {
-      toast.error('Dışa aktarma başarısız.')
+      toast.error(t('importExport.errors.exportFailed'))
       return
     }
     const blob = await response.blob()
@@ -418,16 +421,16 @@ export default function ImportExportPage() {
               <span className="material-symbols-outlined text-sm">swap_vert</span>
               <span className="text-xs font-semibold uppercase tracking-wider">Data Operations</span>
             </div>
-            <h1 className="text-3xl font-black text-[#0f172a] dark:text-white">Veri İçe/Dışa Aktarma</h1>
-            <p className="text-sm text-slate-500">CSV ve Excel formatlarında veri taşıma işlemlerini yönetin.</p>
+            <h1 className="text-3xl font-black text-[#0f172a] dark:text-white">{t('importExport.title')}</h1>
+            <p className="text-sm text-slate-500">{t('importExport.subtitle')}</p>
           </div>
         </div>
 
         <section className="bg-white dark:bg-slate-800 rounded-2xl border border-[#e2e8f0] dark:border-slate-700 p-6 shadow-sm space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">İçe Aktar</h2>
-              <p className="text-xs text-slate-500 mt-1">CSV dosyanızı yükleyin ve alanları eşleştirin.</p>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('importExport.import.title')}</h2>
+              <p className="text-xs text-slate-500 mt-1">{t('importExport.import.subtitle')}</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -435,7 +438,7 @@ export default function ImportExportPage() {
                 className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#e2e8f0] text-slate-600 text-sm font-semibold hover:border-primary/40 hover:text-primary"
               >
                 <span className="material-symbols-outlined text-lg">file_download</span>
-                Şablon İndir
+                {t('importExport.import.downloadTemplate')}
               </button>
               <button
                 onClick={() => {
@@ -470,14 +473,14 @@ export default function ImportExportPage() {
           <div className="border border-dashed border-[#cbd5f5] rounded-xl p-4 bg-[#f8fafc]">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-slate-900">CSV Dosyası</p>
+                <p className="text-sm font-semibold text-slate-900">{t('importExport.import.csvFile')}</p>
                 <p className="text-xs text-slate-500">
-                  {fileName ? fileName : `${currentConfig.label} için CSV yükleyin.`}
+                  {fileName ? fileName : t('importExport.import.uploadHint', { entity: currentConfig.label })}
                 </p>
               </div>
               <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-white text-sm font-semibold cursor-pointer">
                 <span className="material-symbols-outlined text-lg">upload_file</span>
-                Dosya Seç
+                {t('importExport.import.chooseFile')}
                 <input
                   type="file"
                   accept=".csv"
@@ -507,7 +510,7 @@ export default function ImportExportPage() {
                       }}
                       className="mt-2 w-full px-2 py-1.5 rounded-lg border border-[#e2e8f0] text-sm"
                     >
-                      <option value="">Eşleştirme yok</option>
+                      <option value="">{t('importExport.import.noMapping')}</option>
                       {currentConfig.fields.map((field) => (
                         <option key={field.id} value={field.id}>
                           {field.label}{field.required ? ' *' : ''}
@@ -519,7 +522,7 @@ export default function ImportExportPage() {
               </div>
 
               <div className="bg-slate-50 rounded-xl p-4">
-                <p className="text-xs font-semibold text-slate-500 mb-2">Önizleme (ilk 5 satır)</p>
+                <p className="text-xs font-semibold text-slate-500 mb-2">{t('importExport.import.preview')}</p>
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-xs">
                     <thead>
@@ -552,22 +555,22 @@ export default function ImportExportPage() {
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition-colors disabled:opacity-70"
               >
                 <span className="material-symbols-outlined">download</span>
-                {isImporting ? 'İçe aktarılıyor...' : 'İçe Aktar'}
+                {isImporting ? t('importExport.import.importing') : t('importExport.import.cta')}
               </button>
             </div>
           )}
 
           {importResult && (
             <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50">
-              <p className="text-sm font-bold text-emerald-700">İçe aktarma tamamlandı</p>
+              <p className="text-sm font-bold text-emerald-700">{t('importExport.success.imported')}</p>
               <p className="text-xs text-emerald-600 mt-1">
-                Başarılı: {importResult.successCount} · Hatalı: {importResult.errorCount}
+                {t('importExport.import.result', { success: importResult.successCount, error: importResult.errorCount })}
               </p>
               {importResult.errors.length > 0 && (
                 <div className="mt-3 max-h-32 overflow-y-auto text-xs text-emerald-700 space-y-1">
                   {importResult.errors.slice(0, 6).map((error, index) => (
                     <p key={index}>
-                      Satır {error.row}: {error.message}
+                      {t('importExport.import.rowError', { row: error.row, message: error.message })}
                     </p>
                   ))}
                 </div>
@@ -579,15 +582,15 @@ export default function ImportExportPage() {
         <section className="bg-white dark:bg-slate-800 rounded-2xl border border-[#e2e8f0] dark:border-slate-700 p-6 shadow-sm space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Dışa Aktar</h2>
-              <p className="text-xs text-slate-500 mt-1">CSV veya Excel formatında veri alın.</p>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('importExport.export.title')}</h2>
+              <p className="text-xs text-slate-500 mt-1">{t('importExport.export.subtitle')}</p>
             </div>
             <button
               onClick={handleExport}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold"
             >
               <span className="material-symbols-outlined text-lg">file_download</span>
-              Dışa Aktar
+              {t('importExport.export.cta')}
             </button>
           </div>
 
@@ -629,21 +632,21 @@ export default function ImportExportPage() {
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-[#e2e8f0] dark:border-slate-700 p-6 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">İçe Aktarma Geçmişi</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('importExport.history.import')}</h3>
             <div className="mt-4 space-y-3">
               {logs.imports.length === 0 ? (
-                <p className="text-xs text-slate-500">Henüz işlem yok.</p>
+                <p className="text-xs text-slate-500">{t('importExport.history.empty')}</p>
               ) : (
                 logs.imports.map((item) => (
                   <div key={item.id} className="flex items-center justify-between text-xs">
                     <div>
                       <p className="text-sm font-semibold text-slate-700">{item.entity}</p>
-                      <p className="text-xs text-slate-400">{item.file_name || 'CSV içe aktarım'}</p>
+                      <p className="text-xs text-slate-400">{item.file_name || t('importExport.history.importFallback')}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-slate-500">{formatRelativeTime(item.created_at)}</p>
+                      <p className="text-xs text-slate-500">{formatRelativeTime(item.created_at, t)}</p>
                       <p className="text-xs text-slate-600">
-                        {item.success_count}/{item.total_rows} başarılı
+                        {t('importExport.history.success', { success: item.success_count, total: item.total_rows })}
                       </p>
                     </div>
                   </div>
@@ -652,20 +655,20 @@ export default function ImportExportPage() {
             </div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-[#e2e8f0] dark:border-slate-700 p-6 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Dışa Aktarma Geçmişi</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('importExport.history.export')}</h3>
             <div className="mt-4 space-y-3">
               {logs.exports.length === 0 ? (
-                <p className="text-xs text-slate-500">Henüz işlem yok.</p>
+                <p className="text-xs text-slate-500">{t('importExport.history.empty')}</p>
               ) : (
                 logs.exports.map((item) => (
                   <div key={item.id} className="flex items-center justify-between text-xs">
                     <div>
                       <p className="text-sm font-semibold text-slate-700">{item.entity}</p>
-                      <p className="text-xs text-slate-400">{item.file_name || 'Dışa aktarım'}</p>
+                      <p className="text-xs text-slate-400">{item.file_name || t('importExport.history.exportFallback')}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-slate-500">{formatRelativeTime(item.created_at)}</p>
-                      <p className="text-xs text-slate-600">{item.row_count} satır</p>
+                      <p className="text-xs text-slate-500">{formatRelativeTime(item.created_at, t)}</p>
+                      <p className="text-xs text-slate-600">{t('importExport.history.rows', { count: item.row_count })}</p>
                     </div>
                   </div>
                 ))
