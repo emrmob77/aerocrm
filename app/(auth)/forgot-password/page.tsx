@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { useI18n } from '@/lib/i18n'
 
 export default function ForgotPasswordPage() {
   const { resetPassword, loading: authLoading } = useAuth()
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -19,7 +21,7 @@ export default function ForgotPasswordPage() {
     const { error } = await resetPassword(email)
 
     if (error) {
-      setError('Şifre sıfırlama e-postası gönderilemedi. Lütfen e-posta adresinizi kontrol edin.')
+      setError(t('auth.forgot.error'))
       setIsLoading(false)
     } else {
       setEmailSent(true)
@@ -43,21 +45,20 @@ export default function ForgotPasswordPage() {
             <span className="material-symbols-outlined text-4xl text-aero-green-500">mark_email_read</span>
           </div>
           <h2 className="text-2xl font-bold text-aero-slate-900 dark:text-white mb-4">
-            E-postanızı Kontrol Edin
+            {t('auth.forgot.emailSentTitle')}
           </h2>
           <p className="text-aero-slate-600 dark:text-aero-slate-400 mb-8">
-            <strong className="text-aero-slate-800 dark:text-aero-slate-200">{email}</strong> adresine
-            şifre sıfırlama linki gönderdik. Lütfen gelen kutunuzu kontrol edin.
+            {t('auth.forgot.emailSentBody', { email })}
           </p>
           <div className="space-y-4">
             <Link
               href="/login"
               className="block w-full py-3 px-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors"
             >
-              Giriş Sayfasına Dön
+              {t('auth.forgot.backToLogin')}
             </Link>
             <p className="text-sm text-aero-slate-500">
-              E-posta gelmedi mi?{' '}
+              {t('auth.forgot.noEmail')}{' '}
               <button
                 onClick={() => {
                   setEmailSent(false)
@@ -65,7 +66,7 @@ export default function ForgotPasswordPage() {
                 }}
                 className="text-primary hover:underline"
               >
-                Tekrar gönder
+                {t('auth.forgot.resend')}
               </button>
             </p>
           </div>
@@ -93,10 +94,10 @@ export default function ForgotPasswordPage() {
               <span className="material-symbols-outlined text-3xl text-aero-blue-500">lock_reset</span>
             </div>
             <h2 className="text-2xl font-bold text-aero-slate-900 dark:text-white mb-2">
-              Şifrenizi mi Unuttunuz?
+              {t('auth.forgot.title')}
             </h2>
             <p className="text-aero-slate-500 dark:text-aero-slate-400 text-sm">
-              E-posta adresinizi girin, size şifre sıfırlama linki gönderelim.
+              {t('auth.forgot.subtitle')}
             </p>
           </div>
 
@@ -111,7 +112,7 @@ export default function ForgotPasswordPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-aero-slate-700 dark:text-aero-slate-300 mb-1.5">
-                E-posta
+                {t('auth.email')}
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-xl text-aero-slate-400">
@@ -122,7 +123,7 @@ export default function ForgotPasswordPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e-posta@adresiniz.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   className="input pl-12"
                   required
                   autoComplete="email"
@@ -141,10 +142,10 @@ export default function ForgotPasswordPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Gönderiliyor...
+                  {t('auth.forgot.submitting')}
                 </span>
               ) : (
-                'Sıfırlama Linki Gönder'
+                t('auth.forgot.submit')
               )}
             </button>
           </form>
@@ -156,7 +157,7 @@ export default function ForgotPasswordPage() {
               className="inline-flex items-center gap-2 text-sm text-aero-slate-500 hover:text-primary transition-colors"
             >
               <span className="material-symbols-outlined text-lg">arrow_back</span>
-              Giriş sayfasına dön
+              {t('auth.forgot.backLink')}
             </Link>
           </div>
         </div>

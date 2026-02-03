@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { buildTeamInviteEmail } from '@/lib/notifications/email-templates'
 
 const allowedRoles = ['admin', 'member', 'viewer']
 
@@ -7,22 +8,19 @@ const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() ||
 
 const buildInviteLink = (origin: string, token: string) => `${origin}/invite/${token}`
 
-const sendInviteEmail = async (params: { to: string; link: string; inviter: string }) => {
+const sendInviteEmail = async (params: { to: string; link: string; inviter: string; locale?: 'tr' | 'en' }) => {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.RESEND_FROM_EMAIL
   if (!apiKey || !from) {
     return false
   }
 
-  const subject = 'AERO CRM takım daveti (yenilendi)'
-  const text = `${params.inviter} sizi AERO CRM takımına tekrar davet etti. Katılmak için: ${params.link}`
-  const html = `
-    <div style="font-family:Arial, sans-serif; line-height:1.6">
-      <p>${params.inviter} sizi AERO CRM takımına tekrar davet etti.</p>
-      <p>Katılmak için aşağıdaki bağlantıyı kullanın:</p>
-      <p><a href="${params.link}">${params.link}</a></p>
-    </div>
-  `
+  const template = buildTeamInviteEmail({
+    inviter: params.inviter,
+    link: params.link,
+    locale: params.locale,
+    variant: 'renewed',
+  })
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -33,9 +31,9 @@ const sendInviteEmail = async (params: { to: string; link: string; inviter: stri
     body: JSON.stringify({
       from,
       to: [params.to],
-      subject,
-      text,
-      html,
+      subject: template.subject,
+      text: template.text,
+      html: template.html,
     }),
   })
 
@@ -61,7 +59,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('team_id, full_name')
+    .select('team_id, full_name, language')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -115,6 +113,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     to: updated.email,
     link: inviteLink,
     inviter: profile.full_name || 'AERO CRM ekibi',
+    locale: profile.language === 'en' ? 'en' : 'tr',
   })
 
   return NextResponse.json({ invite: updated, inviteLink })

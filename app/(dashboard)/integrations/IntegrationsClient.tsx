@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useI18n } from '@/lib/i18n'
 
 type TabType = 'all' | 'connected' | 'recommended'
 
@@ -9,11 +10,12 @@ export default function IntegrationsClient({ activeTab }: { activeTab: TabType }
   const router = useRouter()
   const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
+  const { t } = useI18n()
 
   const tabs: { id: TabType; label: string }[] = [
-    { id: 'all', label: 'Tumu' },
-    { id: 'connected', label: 'Bagli' },
-    { id: 'recommended', label: 'Onerilen' },
+    { id: 'all', label: t('integrations.tabs.all') },
+    { id: 'connected', label: t('integrations.tabs.connected') },
+    { id: 'recommended', label: t('integrations.tabs.recommended') },
   ]
 
   const handleTabChange = (tabId: TabType) => {
@@ -32,7 +34,7 @@ export default function IntegrationsClient({ activeTab }: { activeTab: TabType }
             </div>
             <input
               className="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:ring-0 text-[#0d121c] dark:text-white placeholder:text-[#48679d] px-4 text-base font-normal"
-              placeholder="Entegrasyonlarda ara..."
+              placeholder={t('integrations.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />

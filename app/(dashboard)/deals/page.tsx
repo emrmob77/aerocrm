@@ -3,6 +3,7 @@ import { DealsBoard } from '@/components/deals'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
 import { normalizeStage } from '@/components/deals'
+import { getServerT } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,7 @@ type DealOwner = {
 
 export default async function DealsPage() {
   const supabase = await createServerSupabaseClient()
+  const t = getServerT()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -57,7 +59,7 @@ export default async function DealsPage() {
     }
     const contact = Array.isArray(record.contacts) ? record.contacts[0] : record.contacts
     const owner = Array.isArray(record.users) ? record.users[0] : record.users
-    const contactName = contact?.full_name?.trim() || 'Bilinmeyen Kişi'
+    const contactName = contact?.full_name?.trim() || t('deals.unknownContact')
     const initials = contactName
       .split(' ')
       .filter(Boolean)
@@ -65,7 +67,7 @@ export default async function DealsPage() {
       .map((part) => part[0]?.toUpperCase())
       .join('')
 
-    const ownerName = owner?.full_name?.trim() || 'Sorumlu'
+    const ownerName = owner?.full_name?.trim() || t('deals.ownerFallback')
     const ownerInitials = ownerName
       .split(' ')
       .filter(Boolean)
@@ -76,7 +78,7 @@ export default async function DealsPage() {
     return {
       id: deal.id,
       title: deal.title,
-      company: contact?.company ?? 'Bilinmiyor',
+      company: contact?.company ?? t('common.unknown'),
       value: deal.value ?? 0,
       stage: normalizeStage(deal.stage),
       contactName,

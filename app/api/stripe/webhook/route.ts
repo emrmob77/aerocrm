@@ -74,17 +74,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true })
   }
 
-  const { data: integrations, error } = await admin
+  const { data, error } = await (admin as any)
     .from('integrations')
     .select('*')
     .eq('provider', 'stripe')
 
-  if (error || !integrations) {
+  const integrations = (data ?? []) as Array<{ id: string; team_id: string | null; settings?: Record<string, string> | null }>
+
+  if (error || integrations.length === 0) {
     return NextResponse.json({ error: 'Entegrasyonlar bulunamadi.' }, { status: 500 })
   }
 
   const matched = integrations.find((integration) => {
-    const settings = (integration.settings || {}) as Record<string, string>
+    const settings = integration.settings || {}
     return settings.customer_id === customerId
   })
 
@@ -126,7 +128,7 @@ export async function POST(request: Request) {
     nextPlan = 'free'
   }
 
-  await admin
+  await (admin as any)
     .from('integrations')
     .update({
       settings: updateSettings,
@@ -135,7 +137,7 @@ export async function POST(request: Request) {
     })
     .eq('id', matched.id)
 
-  if (nextPlan) {
+  if (nextPlan && matched.team_id) {
     await admin
       .from('teams')
       .update({ plan: nextPlan })

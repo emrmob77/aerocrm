@@ -5,6 +5,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { useSupabase } from '@/hooks/use-supabase'
 import type { Database } from '@/types/database'
+import { useI18n } from '@/lib/i18n'
 import {
   formatCurrency,
   formatRelativeTime,
@@ -43,13 +44,6 @@ const getAvatarStyle = (seed: string) => {
   return avatarPalette[hash % avatarPalette.length]
 }
 
-const filterOptions: { id: ContactFilterType; label: string }[] = [
-  { id: 'all', label: 'Tüm Kişiler' },
-  { id: 'new', label: 'Yeni Eklenenler' },
-  { id: 'highValue', label: 'Yüksek Değerli' },
-  { id: 'inactive', label: 'Hareketsiz' },
-]
-
 type ContactRow = Database['public']['Tables']['contacts']['Row']
 type DealRow = Database['public']['Tables']['deals']['Row']
 
@@ -63,6 +57,9 @@ export function ContactsDirectory({
   userId: string | null
 }) {
   const supabase = useSupabase()
+  const { t, get, locale } = useI18n()
+  const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
+  const currency = locale === 'en' ? 'USD' : 'TRY'
   const [contacts, setContacts] = useState<ContactListItem[]>(initialContacts)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [query, setQuery] = useState('')
@@ -72,6 +69,16 @@ export function ContactsDirectory({
   const [selectedContacts, setSelectedContacts] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(25)
+
+  const filterOptions = useMemo(
+    () => [
+      { id: 'all' as const, label: t('contacts.filters.all') },
+      { id: 'new' as const, label: t('contacts.filters.new') },
+      { id: 'highValue' as const, label: t('contacts.filters.highValue') },
+      { id: 'inactive' as const, label: t('contacts.filters.inactive') },
+    ],
+    [t]
+  )
 
   useEffect(() => {
     setContacts(initialContacts)
@@ -309,9 +316,9 @@ export function ContactsDirectory({
     if (!text) return
     try {
       await navigator.clipboard.writeText(text)
-      toast.success('Kopyalandı')
+      toast.success(t('common.copied'))
     } catch {
-      toast.error('Kopyalanamadı')
+      toast.error(t('common.copyFailed'))
     }
   }
 
@@ -319,7 +326,9 @@ export function ContactsDirectory({
     const selected = contacts.filter((contact) => selectedContacts.includes(contact.id))
     if (selected.length === 0) return
 
-    const header = ['Ad Soyad', 'E-posta', 'Telefon', 'Şirket', 'Toplam Değer', 'Son Aktivite']
+    const header =
+      (get('contacts.export.headers') as string[] | null) ??
+      ['Ad Soyad', 'E-posta', 'Telefon', 'Şirket', 'Toplam Değer', 'Son Aktivite']
     const rows = selected.map((contact) => [
       contact.fullName,
       contact.email ?? '',
@@ -334,7 +343,7 @@ export function ContactsDirectory({
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = 'contacts.csv'
+    link.download = t('contacts.export.fileName')
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -342,24 +351,24 @@ export function ContactsDirectory({
   const handleDelete = async (ids: string[]) => {
     if (ids.length === 0) return
 
-    if (!confirm('Seçilen kişileri silmek istediğinize emin misiniz?')) {
+    if (!confirm(t('contacts.confirmDelete'))) {
       return
     }
 
     const { error } = await supabase.from('contacts').delete().in('id', ids)
     if (error) {
       console.error('Delete contacts error:', error)
-      toast.error('Kişiler silinemedi')
+      toast.error(t('contacts.deleteError'))
       return
     }
 
     setContacts((prev) => prev.filter((contact) => !ids.includes(contact.id)))
     setSelectedContacts((prev) => prev.filter((id) => !ids.includes(id)))
-    toast.success('Kişiler silindi')
+    toast.success(t('contacts.deleted'))
   }
 
   const handleTag = () => {
-    toast('Etiketleme yakında geliyor')
+    toast(t('contacts.tagSoon'))
   }
 
   const renderSortIcon = (key: SortKey) => {
@@ -378,8 +387,8 @@ export function ContactsDirectory({
       <div className="px-6 lg:px-10 py-6 space-y-6 bg-[#f5f6f8] dark:bg-[#101722]">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-[#0d121c] dark:text-white">Kişiler</h1>
-            <p className="text-[#48679d] dark:text-gray-400 mt-1">Müşteri rehberini yönetin, filtreleyin ve paylaşın.</p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-[#0d121c] dark:text-white">{t('contacts.title')}</h1>
+            <p className="text-[#48679d] dark:text-gray-400 mt-1">{t('contacts.subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center bg-white dark:bg-slate-800 border border-[#ced8e9] dark:border-gray-700 rounded-lg p-1">
@@ -389,7 +398,7 @@ export function ContactsDirectory({
                   viewMode === 'list' ? 'bg-primary text-white' : 'text-[#48679d] dark:text-gray-300 hover:text-primary'
                 }`}
               >
-                Liste
+                {t('contacts.view.list')}
               </button>
               <button
                 onClick={() => setViewMode('card')}
@@ -397,7 +406,7 @@ export function ContactsDirectory({
                   viewMode === 'card' ? 'bg-primary text-white' : 'text-[#48679d] dark:text-gray-300 hover:text-primary'
                 }`}
               >
-                Kart
+                {t('contacts.view.card')}
               </button>
             </div>
             <Link
@@ -405,7 +414,7 @@ export function ContactsDirectory({
               className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors shadow-lg shadow-primary/20"
             >
               <span className="material-symbols-outlined text-lg">person_add</span>
-              Yeni Kişi
+              {t('contacts.new')}
             </Link>
           </div>
         </div>
@@ -417,12 +426,12 @@ export function ContactsDirectory({
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="İsim, e-posta, şirket veya telefon ara..."
+                placeholder={t('contacts.searchPlaceholder')}
                 className="w-full bg-white dark:bg-slate-800 border border-[#ced8e9] dark:border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-[#0d121c] dark:text-white placeholder:text-[#48679d] focus:ring-2 focus:ring-primary/40"
               />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-[#48679d] dark:text-gray-400">Filtre:</span>
+              <span className="text-sm font-semibold text-[#48679d] dark:text-gray-400">{t('contacts.filterLabel')}</span>
               <select
                 value={activeFilter}
                 onChange={(event) => setActiveFilter(event.target.value as ContactFilterType)}
@@ -464,26 +473,26 @@ export function ContactsDirectory({
                     </th>
                     <th className="px-4 py-4">
                       <button onClick={() => toggleSort('name')} className="flex items-center gap-2">
-                        İsim
+                        {t('contacts.table.name')}
                         {renderSortIcon('name')}
                       </button>
                     </th>
-                    <th className="px-4 py-4">E-posta</th>
-                    <th className="px-4 py-4">Telefon</th>
-                    <th className="px-4 py-4">Şirket</th>
+                    <th className="px-4 py-4">{t('contacts.table.email')}</th>
+                    <th className="px-4 py-4">{t('contacts.table.phone')}</th>
+                    <th className="px-4 py-4">{t('contacts.table.company')}</th>
                     <th className="px-4 py-4">
                       <button onClick={() => toggleSort('value')} className="flex items-center gap-2">
-                        Toplam Değer
+                        {t('contacts.table.totalValue')}
                         {renderSortIcon('value')}
                       </button>
                     </th>
                     <th className="px-4 py-4">
                       <button onClick={() => toggleSort('activity')} className="flex items-center gap-2">
-                        Son Aktivite
+                        {t('contacts.table.lastActivity')}
                         {renderSortIcon('activity')}
                       </button>
                     </th>
-                    <th className="px-6 py-4 text-right">İşlemler</th>
+                    <th className="px-6 py-4 text-right">{t('contacts.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#ced8e9] dark:divide-gray-800">
@@ -493,12 +502,12 @@ export function ContactsDirectory({
                         <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600 mb-3 block">
                           person_off
                         </span>
-                        <p className="text-[#48679d] dark:text-gray-400">Henüz kişi eklenmemiş.</p>
+                        <p className="text-[#48679d] dark:text-gray-400">{t('contacts.empty')}</p>
                         <Link
                           href="/contacts/new"
                           className="inline-flex items-center gap-2 mt-4 px-5 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:bg-blue-600 transition-colors"
                         >
-                          İlk kişinizi ekleyin
+                          {t('contacts.emptyAction')}
                         </Link>
                       </td>
                     </tr>
@@ -565,11 +574,11 @@ export function ContactsDirectory({
                           </td>
                           <td className="px-4 py-4">
                             <span className={`font-bold text-sm ${contact.totalValue >= 50000 ? 'text-green-600' : 'text-[#0d121c] dark:text-white'}`}>
-                              {formatCurrency(contact.totalValue)}
+                              {formatCurrency(contact.totalValue, formatLocale, currency)}
                             </span>
                           </td>
                           <td className="px-4 py-4 text-sm text-[#48679d] dark:text-gray-400">
-                            {formatRelativeTime(contact.lastActivityAt)}
+                            {formatRelativeTime(contact.lastActivityAt, t)}
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -603,11 +612,11 @@ export function ContactsDirectory({
 
             <div className="px-6 py-4 bg-gray-50/60 dark:bg-gray-900/50 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-[#ced8e9] dark:border-gray-800">
               <span className="text-sm text-[#48679d] dark:text-gray-400">
-                <span className="font-semibold text-[#0d121c] dark:text-white">
-                  {totalContacts === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1}-
-                  {totalContacts === 0 ? 0 : Math.min(currentPage * rowsPerPage, totalContacts)}
-                </span>{' '}
-                of <span className="font-semibold text-[#0d121c] dark:text-white">{totalContacts}</span> kişi
+                {t('contacts.pagination', {
+                  start: totalContacts === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1,
+                  end: totalContacts === 0 ? 0 : Math.min(currentPage * rowsPerPage, totalContacts),
+                  total: totalContacts,
+                })}
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -627,7 +636,7 @@ export function ContactsDirectory({
                 </button>
               </div>
               <div className="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
-                <span>Satır sayısı:</span>
+                <span>{t('contacts.rowsPerPage')}</span>
                 <select
                   value={rowsPerPage}
                   onChange={(event) => setRowsPerPage(Number(event.target.value))}
@@ -678,8 +687,10 @@ export function ContactsDirectory({
                     </div>
                   </div>
                   <div className="mt-4 flex items-center justify-between text-xs text-[#48679d] dark:text-gray-400">
-                    <span>{formatRelativeTime(contact.lastActivityAt)}</span>
-                    <span className="font-semibold text-[#0d121c] dark:text-white">{formatCurrency(contact.totalValue)}</span>
+                    <span>{formatRelativeTime(contact.lastActivityAt, t)}</span>
+                    <span className="font-semibold text-[#0d121c] dark:text-white">
+                      {formatCurrency(contact.totalValue, formatLocale, currency)}
+                    </span>
                   </div>
                 </Link>
               )
@@ -690,7 +701,9 @@ export function ContactsDirectory({
 
       {selectedContacts.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-900 shadow-2xl rounded-xl border border-primary/20 px-6 py-4 flex items-center gap-6 z-50">
-          <span className="text-sm font-bold text-primary">{selectedContacts.length} Kişi Seçildi</span>
+          <span className="text-sm font-bold text-primary">
+            {t('contacts.selectedCount', { count: selectedContacts.length })}
+          </span>
           <div className="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
           <div className="flex items-center gap-3">
             <button
@@ -698,21 +711,21 @@ export function ContactsDirectory({
               className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm font-medium"
             >
               <span className="material-symbols-outlined text-lg">file_download</span>
-              Dışa Aktar
+              {t('contacts.actions.export')}
             </button>
             <button
               onClick={handleTag}
               className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-sm font-medium"
             >
               <span className="material-symbols-outlined text-lg">sell</span>
-              Etiketle
+              {t('contacts.actions.tag')}
             </button>
             <button
               onClick={() => handleDelete(selectedContacts)}
               className="flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 text-red-600 rounded-lg text-sm font-medium"
             >
               <span className="material-symbols-outlined text-lg">delete</span>
-              Sil
+              {t('contacts.actions.delete')}
             </button>
           </div>
           <button

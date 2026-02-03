@@ -8,7 +8,8 @@ import { useDropzone } from 'react-dropzone'
 import DOMPurify from 'dompurify'
 import { useSupabase } from '@/hooks'
 import type { Database } from '@/types/database'
-import { formatRelativeTime, getDbStage, normalizeStage, stageConfigs, type StageId } from '@/components/deals/stage-utils'
+import { formatCurrency, formatRelativeTime, getDbStage, normalizeStage, getStageConfigs, type StageId } from '@/components/deals/stage-utils'
+import { useI18n } from '@/lib/i18n'
 import 'react-quill/dist/quill.snow.css'
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false })
@@ -26,11 +27,11 @@ const notesModules = {
 const notesFormats = ['header', 'bold', 'italic', 'underline', 'strike', 'list', 'bullet', 'link']
 
 const tabs = [
-  { id: 'products', label: 'Ürünler' },
-  { id: 'proposals', label: 'Teklifler' },
-  { id: 'notes', label: 'Notlar' },
-  { id: 'activity', label: 'Aktivite' },
-  { id: 'files', label: 'Dosyalar' },
+  { id: 'products', labelKey: 'deals.detail.tabs.products' },
+  { id: 'proposals', labelKey: 'deals.detail.tabs.proposals' },
+  { id: 'notes', labelKey: 'deals.detail.tabs.notes' },
+  { id: 'activity', labelKey: 'deals.detail.tabs.activity' },
+  { id: 'files', labelKey: 'deals.detail.tabs.files' },
 ] as const
 
 type TabType = (typeof tabs)[number]['id']
@@ -78,37 +79,19 @@ type DealDetailsClientProps = {
 
 const FILE_BUCKET = 'deal-files'
 
-const formatCurrency = (value: number, currency = 'TRY') => {
-  try {
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value)
-  } catch {
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value)
-  }
-}
-
-const formatDate = (value?: string | null) => {
+const formatDate = (value: string | null | undefined, locale: string) => {
   if (!value) return '-'
   const parsed = new Date(value)
   if (Number.isNaN(parsed.getTime())) return value
-  return parsed.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })
+  return parsed.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-const formatFileSize = (bytes?: number | null) => {
-  if (!bytes || bytes <= 0) return 'Boyut yok'
+const formatFileSize = (bytes: number | null | undefined, t: (key: string) => string) => {
+  if (!bytes || bytes <= 0) return t('deals.detail.files.noSize')
   const kb = Math.round(bytes / 1024)
-  if (kb < 1024) return `${kb} KB`
+  if (kb < 1024) return `${kb} ${t('deals.detail.files.kb')}`
   const mb = Math.round((kb / 1024) * 10) / 10
-  return `${mb} MB`
+  return `${mb} ${t('deals.detail.files.mb')}`
 }
 
 export default function DealDetailsClient({
@@ -129,6 +112,8 @@ export default function DealDetailsClient({
   initialError,
 }: DealDetailsClientProps) {
   const supabase = useSupabase()
+  const { t, locale } = useI18n()
+  const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
   const [activeTab, setActiveTab] = useState<TabType>('products')
   const [isLoading] = useState(!initialDeal && !initialError)
   const [error, setError] = useState<string | null>(initialError ?? null)
@@ -183,10 +168,12 @@ export default function DealDetailsClient({
     return teamMembers.find((item) => item.id === draft.ownerId) ?? owner
   }, [owner, teamMembers, draft.ownerId, isEditing])
 
+  const stageConfigs = useMemo(() => getStageConfigs(t), [t])
+
   const stageLabel = useMemo(() => {
     const stage = stageConfigs.find((item) => item.id === draft.stage)
-    return stage?.label ?? 'Aday'
-  }, [draft.stage])
+    return stage?.label ?? t('stages.lead')
+  }, [draft.stage, stageConfigs, t])
 
   const pipelineDays = useMemo(() => {
     if (!deal?.created_at) return 0
@@ -230,11 +217,11 @@ export default function DealDetailsClient({
   const handleSaveDeal = async () => {
     if (!deal) return
     if (!draft.title.trim()) {
-      toast.error('Başlık zorunludur.')
+      toast.error(t('deals.detail.toasts.titleRequired'))
       return
     }
     if (!draft.contactId) {
-      toast.error('İlgili kişi seçilmelidir.')
+      toast.error(t('deals.detail.toasts.contactRequired'))
       return
     }
 
@@ -249,7 +236,7 @@ export default function DealDetailsClient({
       })
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        toast.error(payload?.error || 'Aşama güncellenemedi.')
+        toast.error(payload?.error || t('deals.detail.toasts.stageUpdateError'))
         return
       }
     }
@@ -262,7 +249,7 @@ export default function DealDetailsClient({
       })
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        toast.error(payload?.error || 'Sorumlu güncellenemedi.')
+        toast.error(payload?.error || t('deals.detail.toasts.ownerUpdateError'))
         return
       }
     }
@@ -285,7 +272,7 @@ export default function DealDetailsClient({
       .single()
 
     if (updateError || !updated) {
-      toast.error('Anlaşma güncellenemedi.')
+      toast.error(t('deals.detail.toasts.updateError'))
       return
     }
 
@@ -293,7 +280,7 @@ export default function DealDetailsClient({
     setNotesValue(updated.notes ?? '')
     setContact(contacts.find((item) => item.id === updated.contact_id) ?? contact)
     setOwner(teamMembers.find((item) => item.id === updated.user_id) ?? owner)
-    toast.success('Fırsat güncellendi.')
+    toast.success(t('deals.detail.toasts.updated'))
     setIsEditing(false)
   }
 
@@ -306,13 +293,13 @@ export default function DealDetailsClient({
     })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      toast.error(payload?.error || 'Aşama güncellenemedi.')
+      toast.error(payload?.error || t('deals.detail.toasts.stageUpdateError'))
       return
     }
     const updatedStage = payload?.deal?.stage ?? getDbStage(nextStage)
     setDeal((prev) => (prev ? { ...prev, stage: updatedStage } : prev))
     setDraft((prev) => ({ ...prev, stage: nextStage }))
-    toast.success(nextStage === 'won' ? 'Fırsat kazanıldı.' : 'Fırsat kaybedildi.')
+    toast.success(nextStage === 'won' ? t('deals.detail.toasts.closeWon') : t('deals.detail.toasts.closeLost'))
   }
 
   const handleSaveNotes = async () => {
@@ -326,24 +313,24 @@ export default function DealDetailsClient({
       .single()
 
     if (updateError || !updated) {
-      toast.error('Not kaydedilemedi.')
+      toast.error(t('deals.detail.toasts.notesSaveError'))
       setIsSavingNotes(false)
       return
     }
     setDeal(updated)
-    toast.success('Not kaydedildi.')
+    toast.success(t('deals.detail.toasts.notesSaved'))
     setIsSavingNotes(false)
   }
 
   const handleAddProduct = async () => {
     if (!dealId) return
     if (!newProductId) {
-      toast.error('Ürün seçmelisiniz.')
+      toast.error(t('deals.detail.toasts.productSelect'))
       return
     }
     const product = products.find((item) => item.id === newProductId)
     if (!product) {
-      toast.error('Ürün bulunamadı.')
+      toast.error(t('deals.detail.toasts.productMissing'))
       return
     }
     const quantity = Math.max(1, Number(newProductQty))
@@ -364,7 +351,7 @@ export default function DealDetailsClient({
       .single()
 
     if (insertError || !inserted) {
-      toast.error('Ürün eklenemedi.')
+      toast.error(t('deals.detail.toasts.productAddError'))
       setIsAddingProduct(false)
       return
     }
@@ -374,7 +361,7 @@ export default function DealDetailsClient({
     setNewProductQty(1)
     setNewProductPrice('')
     setIsAddingProduct(false)
-    toast.success('Ürün eklendi.')
+    toast.success(t('deals.detail.toasts.productAdded'))
   }
 
   const handleUpdateProduct = async (item: DealProductItem) => {
@@ -391,7 +378,7 @@ export default function DealDetailsClient({
       .single()
 
     if (updateError || !updated) {
-      toast.error('Ürün güncellenemedi.')
+      toast.error(t('deals.detail.toasts.productUpdateError'))
       setIsSavingProduct(null)
       return
     }
@@ -400,23 +387,23 @@ export default function DealDetailsClient({
       prev.map((row) => (row.id === item.id ? { ...updated, product: row.product } : row))
     )
     setIsSavingProduct(null)
-    toast.success('Ürün güncellendi.')
+    toast.success(t('deals.detail.toasts.productUpdated'))
   }
 
   const handleRemoveProduct = async (id: string) => {
     const { error: deleteError } = await supabase.from('deal_products').delete().eq('id', id)
     if (deleteError) {
-      toast.error('Ürün silinemedi.')
+      toast.error(t('deals.detail.toasts.productDeleteError'))
       return
     }
     setDealProducts((prev) => prev.filter((row) => row.id !== id))
-    toast.success('Ürün silindi.')
+    toast.success(t('deals.detail.toasts.productDeleted'))
   }
 
   const handleAddFile = async () => {
     if (!dealId) return
     if (!fileName.trim() || !fileUrl.trim()) {
-      toast.error('Dosya adı ve linki zorunludur.')
+      toast.error(t('deals.detail.toasts.fileFieldsRequired'))
       return
     }
     setIsSavingFile(true)
@@ -436,7 +423,7 @@ export default function DealDetailsClient({
       .single()
 
     if (insertError || !data) {
-      toast.error('Dosya eklenemedi.')
+      toast.error(t('deals.detail.toasts.fileAddError'))
       setIsSavingFile(false)
       return
     }
@@ -446,18 +433,18 @@ export default function DealDetailsClient({
     setFileUrl('')
     setFileSize('')
     setIsSavingFile(false)
-    toast.success('Dosya eklendi.')
+    toast.success(t('deals.detail.toasts.fileAdded'))
   }
 
   const handleRemoveFile = async (id: string) => {
     const supabaseAny = supabase as unknown as { from: (table: string) => any }
     const { error: deleteError } = await supabaseAny.from('deal_files').delete().eq('id', id)
     if (deleteError) {
-      toast.error('Dosya silinemedi.')
+      toast.error(t('deals.detail.toasts.fileDeleteError'))
       return
     }
     setFiles((prev) => prev.filter((row) => row.id !== id))
-    toast.success('Dosya silindi.')
+    toast.success(t('deals.detail.toasts.fileDeleted'))
   }
 
   const handleDropFiles = async (acceptedFiles: File[]) => {
@@ -497,11 +484,11 @@ export default function DealDetailsClient({
 
         setFiles((prev) => [data as DealFileRow, ...prev])
       }
-      toast.success('Dosyalar yüklendi.')
+      toast.success(t('deals.detail.toasts.uploadSuccess'))
       setFilesError(null)
     } catch (uploadError) {
-      setFilesError('Dosya yükleme başarısız. Bucket ve izinleri kontrol edin.')
-      toast.error('Dosya yükleme başarısız.')
+      setFilesError(t('deals.detail.files.uploadErrorDetail'))
+      toast.error(t('deals.detail.toasts.uploadError'))
     } finally {
       setIsUploadingFile(false)
     }
@@ -515,14 +502,14 @@ export default function DealDetailsClient({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-gray-500">Yükleniyor...</div>
+      <div className="flex items-center justify-center h-full text-sm text-gray-500">{t('common.loading')}</div>
     )
   }
 
   if (error || !deal) {
     return (
       <div className="p-8 text-sm text-gray-500">
-        {error || 'Fırsat bulunamadı.'}
+        {error || t('deals.detail.notFound')}
       </div>
     )
   }
@@ -536,10 +523,10 @@ export default function DealDetailsClient({
             <div className="flex items-center gap-2 mb-4">
               <Link href="/deals" className="flex items-center text-primary text-sm font-semibold group">
                 <span className="material-symbols-outlined text-[18px] mr-1">arrow_back</span>
-                Fırsatlara Dön
+                {t('deals.detail.back')}
               </Link>
               <span className="text-gray-400 text-sm">/</span>
-              <span className="text-gray-500 text-sm">{selectedContact?.company || 'Fırsat'}</span>
+              <span className="text-gray-500 text-sm">{selectedContact?.company || t('deals.detail.breadcrumbFallback')}</span>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-col gap-2">
@@ -572,7 +559,11 @@ export default function DealDetailsClient({
                       {stageLabel}
                     </span>
                   )}
-                  <span className="text-xs text-gray-500">Son güncelleme: {formatRelativeTime(deal.updated_at ?? deal.created_at ?? new Date().toISOString())}</span>
+                  <span className="text-xs text-gray-500">
+                    {t('deals.detail.lastUpdated', {
+                      value: formatRelativeTime(deal.updated_at ?? deal.created_at ?? new Date().toISOString(), t),
+                    })}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -582,13 +573,13 @@ export default function DealDetailsClient({
                       onClick={handleSaveDeal}
                       className="bg-primary text-white px-6 py-2 rounded-lg font-bold text-sm shadow-md hover:bg-blue-600 transition-colors"
                     >
-                      Kaydet
+                      {t('common.save')}
                     </button>
                     <button
                       onClick={handleEditToggle}
                       className="px-5 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50"
                     >
-                      Vazgeç
+                      {t('common.cancel')}
                     </button>
                   </>
                 ) : (
@@ -596,7 +587,7 @@ export default function DealDetailsClient({
                     onClick={handleEditToggle}
                     className="bg-primary text-white px-6 py-2 rounded-lg font-bold text-sm shadow-md hover:bg-blue-600 transition-colors"
                   >
-                    Düzenle
+                    {t('common.edit')}
                   </button>
                 )}
               </div>
@@ -610,7 +601,7 @@ export default function DealDetailsClient({
               {/* Stats Row */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-white dark:bg-gray-900 flex flex-col gap-2 rounded-xl p-5 border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
-                  <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">Fırsat Değeri</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">{t('deals.detail.stats.value')}</p>
                   {isEditing ? (
                     <input
                       type="number"
@@ -620,13 +611,17 @@ export default function DealDetailsClient({
                     />
                   ) : (
                     <p className="text-[#0d121c] dark:text-white text-2xl font-extrabold">
-                      {formatCurrency(deal.value ?? 0, currentCurrency)}
+                      {formatCurrency(deal.value ?? 0, formatLocale, currentCurrency)}
                     </p>
                   )}
-                  <p className="text-[10px] text-gray-400">Ürün toplamı: {formatCurrency(totalProductsValue, currentCurrency)}</p>
+                  <p className="text-[10px] text-gray-400">
+                    {t('deals.detail.stats.productsTotal', {
+                      value: formatCurrency(totalProductsValue, formatLocale, currentCurrency),
+                    })}
+                  </p>
                 </div>
                 <div className="bg-white dark:bg-gray-900 flex flex-col gap-2 rounded-xl p-5 border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
-                  <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">Kapanış Tarihi</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">{t('deals.detail.stats.closeDate')}</p>
                   {isEditing ? (
                     <input
                       type="date"
@@ -636,12 +631,12 @@ export default function DealDetailsClient({
                     />
                   ) : (
                     <p className="text-[#0d121c] dark:text-white text-2xl font-extrabold">
-                      {formatDate(deal.expected_close_date)}
+                      {formatDate(deal.expected_close_date, formatLocale)}
                     </p>
                   )}
                 </div>
                 <div className="bg-white dark:bg-gray-900 flex flex-col gap-2 rounded-xl p-5 border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
-                  <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">Sorumlu</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">{t('deals.detail.stats.owner')}</p>
                   {isEditing ? (
                     <select
                       value={draft.ownerId}
@@ -665,7 +660,7 @@ export default function DealDetailsClient({
                           .join('')}
                       </div>
                       <p className="text-[#0d121c] dark:text-white text-lg font-bold">
-                        {selectedOwner?.full_name || 'Sorumlu'}
+                        {selectedOwner?.full_name || t('deals.detail.stats.ownerFallback')}
                       </p>
                     </div>
                   )}
@@ -676,7 +671,7 @@ export default function DealDetailsClient({
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">İlgili Kişi</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('deals.detail.edit.contact')}</label>
                       <select
                         value={draft.contactId}
                         onChange={(event) => setDraft((prev) => ({ ...prev, contactId: event.target.value }))}
@@ -690,7 +685,7 @@ export default function DealDetailsClient({
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Kazanma Olasılığı</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('deals.detail.edit.winProbability')}</label>
                       <div className="mt-2 flex items-center gap-3">
                         <input
                           type="range"
@@ -705,7 +700,7 @@ export default function DealDetailsClient({
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Özet Not</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('deals.detail.edit.summaryNote')}</label>
                     <textarea
                       value={draft.notes}
                       onChange={(event) => setDraft((prev) => ({ ...prev, notes: event.target.value }))}
@@ -729,7 +724,7 @@ export default function DealDetailsClient({
                             : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'
                         }`}
                       >
-                        {tab.label}
+                        {t(tab.labelKey)}
                       </button>
                     ))}
                   </nav>
@@ -738,7 +733,7 @@ export default function DealDetailsClient({
                   {activeTab === 'products' && (
                     <div>
                       <div className="p-6 border-b border-[#e7ebf4] dark:border-gray-800">
-                        <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">Ürün Ekle</h3>
+                        <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">{t('deals.detail.products.addTitle')}</h3>
                         <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
                           <select
                             value={newProductId}
@@ -752,16 +747,16 @@ export default function DealDetailsClient({
                             }}
                             className="px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm"
                           >
-                            <option value="">Ürün seçin</option>
+                            <option value="">{t('deals.detail.products.selectPlaceholder')}</option>
                             {products.map((product) => (
                               <option key={product.id} value={product.id}>
-                                {product.name} • {formatCurrency(product.price ?? 0, product.currency ?? currentCurrency)}
+                                {product.name} • {formatCurrency(product.price ?? 0, formatLocale, product.currency ?? currentCurrency)}
                               </option>
                             ))}
                           </select>
                           {products.length === 0 && (
                             <p className="text-xs text-gray-400 md:col-span-4">
-                              Ürün bulunamadı. Ürün kataloğuna ürün ekleyin.
+                              {t('deals.detail.products.emptyCatalog')}
                             </p>
                           )}
                           <input
@@ -770,34 +765,34 @@ export default function DealDetailsClient({
                             value={newProductQty}
                             onChange={(event) => setNewProductQty(Number(event.target.value))}
                             className="px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm"
-                            placeholder="Adet"
+                            placeholder={t('deals.detail.products.quantity')}
                           />
                           <input
                             type="number"
                             value={newProductPrice}
                             onChange={(event) => setNewProductPrice(Number(event.target.value))}
                             className="px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm"
-                            placeholder="Birim fiyat"
+                            placeholder={t('deals.detail.products.unitPrice')}
                           />
                           <button
                             onClick={handleAddProduct}
                             disabled={isAddingProduct}
                             className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 disabled:opacity-70"
                           >
-                            {isAddingProduct ? 'Ekleniyor' : 'Ekle'}
+                            {isAddingProduct ? t('common.adding') : t('common.add')}
                           </button>
                         </div>
                       </div>
                       {dealProducts.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500">Henüz ürün eklenmedi.</div>
+                        <div className="p-8 text-center text-gray-500">{t('deals.detail.products.empty')}</div>
                       ) : (
                         <table className="w-full text-left">
                           <thead>
                             <tr className="bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-[11px] uppercase tracking-widest font-bold">
-                              <th className="px-6 py-4">Ürün Adı</th>
-                              <th className="px-6 py-4 text-center">Adet</th>
-                              <th className="px-6 py-4 text-right">Birim Fiyat</th>
-                              <th className="px-6 py-4 text-right">Toplam</th>
+                              <th className="px-6 py-4">{t('deals.detail.products.table.name')}</th>
+                              <th className="px-6 py-4 text-center">{t('deals.detail.products.table.quantity')}</th>
+                              <th className="px-6 py-4 text-right">{t('deals.detail.products.table.unitPrice')}</th>
+                              <th className="px-6 py-4 text-right">{t('deals.detail.products.table.total')}</th>
                               <th className="px-6 py-4"></th>
                             </tr>
                           </thead>
@@ -805,7 +800,7 @@ export default function DealDetailsClient({
                             {dealProducts.map((product) => (
                               <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                 <td className="px-6 py-4 text-sm font-bold text-[#0d121c] dark:text-white">
-                                  {product.product?.name || `Ürün (${product.product_id.slice(0, 6)})`}
+                                  {product.product?.name || t('deals.detail.products.fallbackName', { id: product.product_id.slice(0, 6) })}
                                 </td>
                                 <td className="px-6 py-4 text-sm text-center">
                                   <input
@@ -841,7 +836,7 @@ export default function DealDetailsClient({
                                   />
                                 </td>
                                 <td className="px-6 py-4 text-sm text-right font-bold">
-                                  {formatCurrency(product.total_price ?? product.quantity * product.unit_price, currentCurrency)}
+                                  {formatCurrency(product.total_price ?? product.quantity * product.unit_price, formatLocale, currentCurrency)}
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                   <div className="flex items-center justify-end gap-2">
@@ -850,13 +845,13 @@ export default function DealDetailsClient({
                                       disabled={isSavingProduct === product.id}
                                       className="px-3 py-1.5 rounded-lg border border-[#e7ebf4] text-xs font-semibold text-gray-600 hover:text-primary"
                                     >
-                                      {isSavingProduct === product.id ? 'Kaydediliyor' : 'Kaydet'}
+                                      {isSavingProduct === product.id ? t('common.saving') : t('common.save')}
                                     </button>
                                     <button
                                       onClick={() => handleRemoveProduct(product.id)}
                                       className="px-3 py-1.5 rounded-lg border border-rose-200 text-xs font-semibold text-rose-600"
                                     >
-                                      Sil
+                                      {t('common.delete')}
                                     </button>
                                   </div>
                                 </td>
@@ -869,10 +864,10 @@ export default function DealDetailsClient({
                                 className="px-6 py-4 text-sm font-bold text-right text-gray-500 dark:text-gray-400 uppercase tracking-widest"
                                 colSpan={3}
                               >
-                                Genel Toplam
+                                {t('deals.detail.products.table.grandTotal')}
                               </td>
                               <td className="px-6 py-4 text-lg font-extrabold text-right text-primary">
-                                {formatCurrency(totalProductsValue, currentCurrency)}
+                                {formatCurrency(totalProductsValue, formatLocale, currentCurrency)}
                               </td>
                               <td />
                             </tr>
@@ -885,16 +880,16 @@ export default function DealDetailsClient({
                   {activeTab === 'proposals' && (
                     <div className="p-6 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">Teklifler</h3>
+                        <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">{t('deals.detail.proposals.title')}</h3>
                         <Link
                           href={`/proposals/new?dealId=${deal.id}`}
                           className="px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold"
                         >
-                          Yeni Teklif
+                          {t('deals.detail.proposals.new')}
                         </Link>
                       </div>
                       {proposals.length === 0 ? (
-                        <div className="text-sm text-gray-500">Henüz teklif oluşturulmadı.</div>
+                        <div className="text-sm text-gray-500">{t('deals.detail.proposals.empty')}</div>
                       ) : (
                         <div className="space-y-3">
                           {proposals.map((proposal) => (
@@ -904,17 +899,17 @@ export default function DealDetailsClient({
                             >
                               <div>
                                 <p className="text-sm font-semibold text-[#0d121c] dark:text-white">
-                                  {proposal.title || 'Teklif'}
+                                  {proposal.title || t('deals.detail.proposals.fallbackTitle')}
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                  {formatDate(proposal.created_at)} • {proposal.status}
+                                  {formatDate(proposal.created_at, formatLocale)} • {proposal.status}
                                 </p>
                               </div>
                               <Link
                                 href={`/proposals/${proposal.id}`}
                                 className="text-xs font-bold text-primary hover:underline"
                               >
-                                Aç
+                                {t('common.open')}
                               </Link>
                             </div>
                           ))}
@@ -926,12 +921,12 @@ export default function DealDetailsClient({
                   {activeTab === 'notes' && (
                     <div className="p-6 space-y-4">
                       <div>
-                        <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">Notlar</h3>
-                        <p className="text-xs text-gray-500">Bu alana fırsatla ilgili notlarınızı kaydedin.</p>
+                        <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">{t('deals.detail.notes.title')}</h3>
+                        <p className="text-xs text-gray-500">{t('deals.detail.notes.hint')}</p>
                       </div>
                       {notesValue.trim().length > 0 && (
                         <div className="rounded-lg border border-[#e7ebf4] dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40 p-4">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Önizleme</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">{t('deals.detail.notes.preview')}</p>
                           <div
                             className="prose prose-sm max-w-none text-[#0d121c] dark:text-gray-200"
                             dangerouslySetInnerHTML={{ __html: sanitizedNotes }}
@@ -953,7 +948,7 @@ export default function DealDetailsClient({
                         disabled={isSavingNotes}
                         className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold disabled:opacity-70"
                       >
-                        {isSavingNotes ? 'Kaydediliyor' : 'Notu Kaydet'}
+                        {isSavingNotes ? t('common.saving') : t('deals.detail.notes.save')}
                       </button>
                     </div>
                   )}
@@ -961,7 +956,7 @@ export default function DealDetailsClient({
                   {activeTab === 'activity' && (
                     <div className="p-6">
                       {activities.length === 0 ? (
-                        <div className="text-sm text-gray-500">Henüz aktivite yok.</div>
+                        <div className="text-sm text-gray-500">{t('deals.detail.activity.empty')}</div>
                       ) : (
                         <div className="space-y-6">
                           {activities.map((activity) => (
@@ -973,7 +968,9 @@ export default function DealDetailsClient({
                                   <p className="text-sm font-semibold text-[#0d121c] dark:text-white">
                                     {activity.title}
                                   </p>
-                                  <span className="text-xs text-gray-400">{formatRelativeTime(activity.created_at ?? new Date().toISOString())}</span>
+                                  <span className="text-xs text-gray-400">
+                                    {formatRelativeTime(activity.created_at ?? new Date().toISOString(), t)}
+                                  </span>
                                 </div>
                                 {activity.description && (
                                   <p className="text-xs text-gray-500 mt-1">{activity.description}</p>
@@ -993,7 +990,7 @@ export default function DealDetailsClient({
                       ) : (
                         <>
                           <div>
-                            <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">Dosya Yükle</h3>
+                            <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">{t('deals.detail.files.title')}</h3>
                             <div
                               {...getRootProps()}
                               className={`mt-3 border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
@@ -1003,34 +1000,34 @@ export default function DealDetailsClient({
                               <input {...getInputProps()} />
                               <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">
                                 {isUploadingFile
-                                  ? 'Dosyalar yükleniyor...'
+                                  ? t('deals.detail.files.uploading')
                                   : isDragActive
-                                    ? 'Dosyaları buraya bırakın'
-                                    : 'Dosya yüklemek için tıklayın veya sürükleyin'}
+                                    ? t('deals.detail.files.dropHere')
+                                    : t('deals.detail.files.dropHint')}
                               </p>
-                              <p className="text-xs text-gray-400 mt-1">PDF, DOCX, PNG, JPG (max 15MB)</p>
+                              <p className="text-xs text-gray-400 mt-1">{t('deals.detail.files.formats')}</p>
                             </div>
                           </div>
                           <div>
-                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Link ile Ekle</h4>
+                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('deals.detail.files.linkTitle')}</h4>
                             <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
                               <input
                                 value={fileName}
                                 onChange={(event) => setFileName(event.target.value)}
-                                placeholder="Dosya adı"
+                                placeholder={t('deals.detail.files.fileName')}
                                 className="px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm"
                               />
                               <input
                                 value={fileUrl}
                                 onChange={(event) => setFileUrl(event.target.value)}
-                                placeholder="Dosya linki"
+                                placeholder={t('deals.detail.files.fileUrl')}
                                 className="px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm"
                               />
                               <div className="flex gap-2">
                                 <input
                                   value={fileSize}
                                   onChange={(event) => setFileSize(event.target.value)}
-                                  placeholder="Boyut (KB)"
+                                  placeholder={t('deals.detail.files.fileSize')}
                                   className="flex-1 px-3 py-2 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-sm"
                                 />
                                 <button
@@ -1038,13 +1035,13 @@ export default function DealDetailsClient({
                                   disabled={isSavingFile}
                                   className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold"
                                 >
-                                  {isSavingFile ? 'Ekleniyor' : 'Ekle'}
+                                  {isSavingFile ? t('common.adding') : t('common.add')}
                                 </button>
                               </div>
                             </div>
                           </div>
                           {files.length === 0 ? (
-                            <div className="text-sm text-gray-500">Henüz dosya eklenmedi.</div>
+                            <div className="text-sm text-gray-500">{t('deals.detail.files.empty')}</div>
                           ) : (
                             <div className="space-y-2">
                               {files.map((file) => (
@@ -1054,10 +1051,10 @@ export default function DealDetailsClient({
                                 >
                                   <div>
                                     <p className="text-sm font-semibold text-[#0d121c] dark:text-white">
-                                      {file.name || 'Dosya'}
+                                      {file.name || t('deals.detail.files.fallbackName')}
                                     </p>
                                     <p className="text-xs text-gray-400">
-                                      {formatFileSize(file.file_size)} • {formatDate(file.created_at)}
+                                      {formatFileSize(file.file_size, t)} • {formatDate(file.created_at, formatLocale)}
                                     </p>
                                   </div>
                                   <div className="flex items-center gap-3">
@@ -1068,14 +1065,14 @@ export default function DealDetailsClient({
                                         rel="noreferrer"
                                         className="text-xs font-bold text-primary hover:underline"
                                       >
-                                        Aç
+                                        {t('common.open')}
                                       </a>
                                     )}
                                     <button
                                       onClick={() => handleRemoveFile(file.id)}
                                       className="text-xs font-semibold text-rose-500"
                                     >
-                                      Sil
+                                      {t('common.delete')}
                                     </button>
                                   </div>
                                 </div>
@@ -1105,10 +1102,10 @@ export default function DealDetailsClient({
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-[#0d121c] dark:text-white">
-                      {selectedContact?.full_name || 'Kişi'}
+                      {selectedContact?.full_name || t('deals.detail.contact.fallbackName')}
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedContact?.position || 'Pozisyon yok'}</p>
-                    <p className="text-xs font-bold text-primary mt-0.5">{selectedContact?.company || 'Şirket yok'}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedContact?.position || t('deals.detail.contact.noPosition')}</p>
+                    <p className="text-xs font-bold text-primary mt-0.5">{selectedContact?.company || t('deals.detail.contact.noCompany')}</p>
                   </div>
                 </div>
                 <div className="space-y-4 mb-6">
@@ -1131,32 +1128,32 @@ export default function DealDetailsClient({
                     className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-primary/10 transition-colors group"
                   >
                     <span className="material-symbols-outlined text-gray-500 group-hover:text-primary">call</span>
-                    <span className="text-[10px] font-bold text-gray-500 group-hover:text-primary">ARA</span>
+                    <span className="text-[10px] font-bold text-gray-500 group-hover:text-primary">{t('deals.detail.contact.call')}</span>
                   </a>
                   <a
                     href={selectedContact?.email ? `mailto:${selectedContact.email}` : undefined}
                     className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-primary/10 transition-colors group"
                   >
                     <span className="material-symbols-outlined text-gray-500 group-hover:text-primary">mail</span>
-                    <span className="text-[10px] font-bold text-gray-500 group-hover:text-primary">E-POSTA</span>
+                    <span className="text-[10px] font-bold text-gray-500 group-hover:text-primary">{t('deals.detail.contact.email')}</span>
                   </a>
                   <a
                     href={selectedContact?.phone ? `sms:${selectedContact.phone}` : undefined}
                     className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-primary/10 transition-colors group"
                   >
                     <span className="material-symbols-outlined text-gray-500 group-hover:text-primary">chat</span>
-                    <span className="text-[10px] font-bold text-gray-500 group-hover:text-primary">SMS</span>
+                    <span className="text-[10px] font-bold text-gray-500 group-hover:text-primary">{t('deals.detail.contact.sms')}</span>
                   </a>
                 </div>
               </div>
 
               {/* Quick Stats */}
               <div className="space-y-4">
-                <h4 className="text-sm font-bold text-[#0d121c] dark:text-white uppercase tracking-wider px-1">Performans Metrikleri</h4>
+                <h4 className="text-sm font-bold text-[#0d121c] dark:text-white uppercase tracking-wider px-1">{t('deals.detail.metrics.title')}</h4>
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-5">
                   <div className="flex justify-between items-center mb-1">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Pipeline Süresi</p>
-                    <span className="text-primary font-bold">{pipelineDays} Gün</span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{t('deals.detail.metrics.pipelineDuration')}</p>
+                    <span className="text-primary font-bold">{t('deals.detail.metrics.days', { count: pipelineDays })}</span>
                   </div>
                   <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-2">
                     <div
@@ -1165,12 +1162,12 @@ export default function DealDetailsClient({
                     />
                   </div>
                   <p className="text-[10px] text-gray-400">
-                    Ortalama süre {averageDays ?? '—'} gün.
+                    {t('deals.detail.metrics.avgDuration', { value: averageDays ?? '—' })}
                   </p>
                 </div>
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-5">
                   <div className="flex justify-between items-center mb-1">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Kazanma Olasılığı</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{t('deals.detail.metrics.winProbability')}</p>
                     <span className="text-green-500 font-bold">%{draft.probability}</span>
                   </div>
                   <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-2">
@@ -1179,7 +1176,7 @@ export default function DealDetailsClient({
                       style={{ width: `${draft.probability}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-gray-400">Manuel güncellenebilir.</p>
+                  <p className="text-[10px] text-gray-400">{t('deals.detail.metrics.manual')}</p>
                 </div>
               </div>
 
@@ -1190,21 +1187,21 @@ export default function DealDetailsClient({
                   className="w-full py-3 bg-white dark:bg-gray-900 border border-[#e7ebf4] dark:border-gray-800 rounded-lg text-sm font-bold text-[#0d121c] dark:text-white flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
                 >
                   <span className="material-symbols-outlined text-[20px]">history</span>
-                  Geçmişi Görüntüle
+                  {t('deals.detail.actions.viewHistory')}
                 </button>
                 <button
                   onClick={() => handleCloseDeal('won')}
                   className="w-full py-3 bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 rounded-lg text-sm font-bold text-emerald-600 flex items-center justify-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-all"
                 >
                   <span className="material-symbols-outlined text-[20px]">check_circle</span>
-                  Fırsatı Kapat (Kazanıldı)
+                  {t('deals.detail.actions.closeWon')}
                 </button>
                 <button
                   onClick={() => handleCloseDeal('lost')}
                   className="w-full py-3 bg-white dark:bg-gray-900 border border-[#e7ebf4] dark:border-gray-800 rounded-lg text-sm font-bold text-red-500 flex items-center justify-center gap-2 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
                 >
                   <span className="material-symbols-outlined text-[20px]">close</span>
-                  Fırsatı Kapat (Kaybedildi)
+                  {t('deals.detail.actions.closeLost')}
                 </button>
               </div>
             </div>

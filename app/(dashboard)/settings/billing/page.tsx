@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useI18n } from '@/lib/i18n'
 
 type BillingOverview = {
   status: string
@@ -14,6 +15,7 @@ type BillingOverview = {
 }
 
 export default function BillingSettingsPage() {
+  const { t } = useI18n()
   const [overview, setOverview] = useState<BillingOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [busyPlan, setBusyPlan] = useState<string | null>(null)
@@ -90,8 +92,8 @@ export default function BillingSettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">Faturalama ve Abonelik</h1>
-        <p className="text-[#48679d] dark:text-gray-400">Planinizi, odeme yonteminizi ve fatura gecmisinizi yonetin.</p>
+        <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">{t('billing.title')}</h1>
+        <p className="text-[#48679d] dark:text-gray-400">{t('billing.subtitle')}</p>
       </div>
 
       {error && (
@@ -117,10 +119,10 @@ export default function BillingSettingsPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-[#0d121c] dark:text-white">
-              Mevcut Plan: {overview?.plan ? overview.plan.toUpperCase() : 'Bilinmiyor'}
+              {t('billing.currentPlan')}: {overview?.plan ? overview.plan.toUpperCase() : t('billing.unknown')}
             </h2>
             <p className="text-sm text-[#48679d] dark:text-gray-400 mt-1">
-              Abonelik durumu: {overview?.subscription?.status || 'Bilinmiyor'}
+              {t('billing.subscriptionStatus')}: {overview?.subscription?.status || t('billing.unknown')}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -131,7 +133,7 @@ export default function BillingSettingsPage() {
                 disabled={busyPlan === plan.id || overview?.status !== 'connected'}
                 onClick={() => startCheckout(plan)}
               >
-                {busyPlan === plan.id ? 'Yonlendiriliyor...' : `${plan.name} Sec`}
+                {busyPlan === plan.id ? t('billing.redirecting') : `${plan.name} ${t('billing.planSelect')}`}
               </button>
             ))}
             {overview?.plans?.length === 0 && (
@@ -144,7 +146,7 @@ export default function BillingSettingsPage() {
       <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-[#0d121c] dark:text-white">Odeme Yontemi</h2>
+            <h2 className="text-xl font-bold text-[#0d121c] dark:text-white">{t('billing.paymentMethod')}</h2>
             <p className="text-sm text-[#48679d] dark:text-gray-400 mt-1">
               Kart bilgilerinizi Stripe uzerinden guvenli sekilde yonetin.
             </p>
@@ -154,14 +156,14 @@ export default function BillingSettingsPage() {
               href="/integrations/stripe"
               className="bg-white border border-[#ced8e9] dark:border-gray-700 text-[#0d121c] dark:text-white font-semibold px-4 py-2 rounded-lg hover:border-primary/40 transition-all"
             >
-              Stripe Ayarlari
+              {t('billing.stripeSettings')}
             </Link>
             <button
               onClick={openPortal}
               disabled={portalLoading || overview?.status !== 'connected'}
               className="bg-[#0d121c] dark:bg-white text-white dark:text-[#0d121c] font-semibold px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
             >
-              {portalLoading ? 'Acilıyor...' : 'Stripe Portal'}
+              {portalLoading ? 'Acilıyor...' : t('billing.stripePortal')}
             </button>
           </div>
         </div>
@@ -174,9 +176,9 @@ export default function BillingSettingsPage() {
 
       <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white">Fatura Gecmisi</h2>
+          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white">{t('billing.invoices')}</h2>
           <span className="text-xs text-[#48679d]">
-            {overview?.invoices?.length ? `${overview.invoices.length} kayit` : 'Kayit yok'}
+            {overview?.invoices?.length ? `${overview.invoices.length} ${t('billing.records')}` : t('billing.noRecords')}
           </span>
         </div>
         <div className="space-y-3">
@@ -202,16 +204,16 @@ export default function BillingSettingsPage() {
                       rel="noreferrer"
                       className="text-sm font-semibold text-primary hover:text-primary/80"
                     >
-                      PDF Indir
+                      {t('billing.pdf')}
                     </a>
                   ) : (
-                    <span className="text-xs text-[#93a1b8]">PDF yok</span>
+                    <span className="text-xs text-[#93a1b8]">{t('billing.noPdf')}</span>
                   )}
                 </div>
               </div>
             ))
           ) : (
-            <div className="text-sm text-[#48679d]">Henuz fatura olusmadi.</div>
+            <div className="text-sm text-[#48679d]">{t('billing.invoicesEmpty')}</div>
           )}
         </div>
       </div>

@@ -9,22 +9,23 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useAppStore } from '@/store'
 import { useSupabase, useTeamPresence, useUser } from '@/hooks'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
+import { useI18n } from '@/lib/i18n'
 
 // Breadcrumb mapping
-const pageTitles: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/deals': 'Anlaşmalar',
-  '/contacts': 'Kişiler',
-  '/products': 'Ürünler',
-  '/sales': 'Satışlar',
-  '/reports': 'Raporlar',
-  '/proposals': 'Teklifler',
-  '/templates': 'Şablonlar',
-  '/analytics': 'Analitik',
-  '/notifications': 'Bildirimler',
-  '/webhooks': 'Webhooks',
-  '/integrations': 'Entegrasyonlar',
-  '/settings': 'Ayarlar',
+const pageTitleKeys: Record<string, string> = {
+  '/dashboard': 'nav.dashboard',
+  '/deals': 'nav.deals',
+  '/contacts': 'nav.contacts',
+  '/products': 'nav.products',
+  '/sales': 'nav.sales',
+  '/reports': 'nav.reports',
+  '/proposals': 'nav.proposals',
+  '/templates': 'nav.templates',
+  '/analytics': 'nav.analytics',
+  '/notifications': 'nav.notifications',
+  '/webhooks': 'nav.webhooks',
+  '/integrations': 'nav.integrations',
+  '/settings': 'nav.settings',
 }
 
 interface HeaderProps {
@@ -71,6 +72,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { user: profile, authUser } = useUser()
   const supabase = useSupabase()
   const { theme, setTheme } = useAppStore()
+  const { t, locale, setLocale } = useI18n()
   const [showSearch, setShowSearch] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -89,7 +91,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const notificationsRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
-  const currentPageTitle = pageTitles[pathname] || 'Sayfa'
+  const currentPageTitle = pageTitleKeys[pathname] ? t(pageTitleKeys[pathname]) : t('header.pageFallback')
 
   // Get user initials
   const getUserInitials = (name: string) => {
@@ -105,7 +107,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     profile?.full_name ||
     (authUser?.user_metadata?.full_name as string | undefined) ||
     authUser?.email?.split('@')[0] ||
-    'Kullanıcı'
+    t('header.userFallback')
 
   const userEmail = authUser?.email || profile?.email || ''
   const avatarUrl =
@@ -116,10 +118,10 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   const roleLabel =
     profile?.role === 'owner'
-      ? 'Yönetici'
+      ? t('header.roleOwner')
       : profile?.role === 'admin'
-        ? 'Admin'
-        : 'Üye'
+        ? t('header.roleAdmin')
+        : t('header.roleMember')
 
   const closeSearch = () => {
     setShowSearch(false)
@@ -296,8 +298,8 @@ export function Header({ onMenuClick }: HeaderProps) {
             const next = [
               {
                 id: nextId,
-                message: row.message ?? 'Yeni bildirim',
-                time: row.created_at ? formatRelativeTime(row.created_at) : 'az önce',
+                message: row.message ?? t('header.newNotification'),
+                time: row.created_at ? formatRelativeTime(row.created_at) : t('header.justNow'),
                 read: row.read ?? false,
                 href: row.action_url ?? undefined,
               },
@@ -306,7 +308,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             return next.slice(0, 8)
           })
           if (!row.read) {
-            const messageText = row.title ? `${row.title}` : row.message ?? 'Yeni bildirim'
+            const messageText = row.title ? `${row.title}` : row.message ?? t('header.newNotification')
             if (row.type?.includes('signed')) {
               toast.success(messageText)
             } else {
@@ -372,7 +374,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
           <Link href="/dashboard" className="text-[#48679d] dark:text-gray-400 hover:text-primary transition-colors hidden sm:inline">
-            Ana Sayfa
+            {t('common.home')}
           </Link>
           <span className="text-[#48679d] dark:text-gray-600 hidden sm:inline">/</span>
           <span className="text-[#0d121c] dark:text-white font-semibold">{currentPageTitle}</span>
@@ -388,7 +390,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           <input
             onClick={() => setShowSearch(true)}
             className="block w-full pl-10 pr-12 py-2 border-none bg-[#f5f6f8] dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary/50 text-sm placeholder:text-[#48679d] transition-all"
-            placeholder="Müşteri, teklif veya rapor ara..."
+            placeholder={t('header.searchPlaceholder')}
             type="text"
             readOnly
           />
@@ -414,7 +416,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                       }
                     }}
                     type="text"
-                    placeholder="Müşteri, teklif veya rapor ara..."
+                    placeholder={t('header.searchPlaceholder')}
                     className="flex-1 bg-transparent border-none outline-none text-[#0d121c] dark:text-white placeholder:text-[#48679d]"
                     autoFocus
                   />
@@ -425,19 +427,19 @@ export function Header({ onMenuClick }: HeaderProps) {
                     ESC
                   </button>
                 </div>
-                <p className="mt-2 text-xs text-[#48679d]">Enter ile tüm sonuçlara git</p>
+                <p className="mt-2 text-xs text-[#48679d]">{t('header.searchHint')}</p>
               </div>
               <div className="p-4 max-h-[60vh] overflow-y-auto space-y-4">
                 {searchLoading && hasSearchQuery ? (
-                  <p className="text-sm text-[#48679d]">Aranıyor...</p>
+                  <p className="text-sm text-[#48679d]">{t('header.searchLoading')}</p>
                 ) : null}
 
                 {!hasSearchQuery ? (
                   <div className="space-y-4">
                     <div>
-                      <h4 className="text-xs font-bold text-[#48679d] mb-2">KAYITLI ARAMALAR</h4>
+                      <h4 className="text-xs font-bold text-[#48679d] mb-2">{t('header.searchSaved')}</h4>
                       {searchMeta.saved.length === 0 ? (
-                        <p className="text-sm text-[#48679d]">Henüz kayıtlı arama yok.</p>
+                        <p className="text-sm text-[#48679d]">{t('header.searchEmptySaved')}</p>
                       ) : (
                         <div className="space-y-2">
                           {searchMeta.saved.map((item) => (
@@ -457,9 +459,9 @@ export function Header({ onMenuClick }: HeaderProps) {
                       )}
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-[#48679d] mb-2">SON ARAMALAR</h4>
+                      <h4 className="text-xs font-bold text-[#48679d] mb-2">{t('header.searchHistory')}</h4>
                       {searchMeta.history.length === 0 ? (
-                        <p className="text-sm text-[#48679d]">Henüz arama geçmişi yok.</p>
+                        <p className="text-sm text-[#48679d]">{t('header.searchEmptyHistory')}</p>
                       ) : (
                         <div className="space-y-2">
                           {searchMeta.history.map((item) => (
@@ -476,12 +478,12 @@ export function Header({ onMenuClick }: HeaderProps) {
                     </div>
                   </div>
                 ) : searchTotal === 0 ? (
-                  <p className="text-sm text-[#48679d]">Sonuç bulunamadı.</p>
+                  <p className="text-sm text-[#48679d]">{t('header.searchNoResults')}</p>
                 ) : (
                   <div className="space-y-3">
                     {searchResults.deals.length > 0 && (
                       <div>
-                        <p className="text-xs font-bold text-[#48679d] mb-2">ANLAŞMALAR</p>
+                        <p className="text-xs font-bold text-[#48679d] mb-2">{t('header.searchDeals')}</p>
                         <div className="space-y-2">
                           {searchResults.deals.map((item) => (
                             <Link
@@ -493,7 +495,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                               <div>
                                 <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{item.title}</p>
                                 <p className="text-xs text-gray-500">
-                                  {item.contact?.full_name || item.contact?.company || 'Müşteri'}
+                                  {item.contact?.full_name || item.contact?.company || t('header.customerFallback')}
                                 </p>
                               </div>
                               <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at)}</span>
@@ -504,7 +506,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                     )}
                     {searchResults.proposals.length > 0 && (
                       <div>
-                        <p className="text-xs font-bold text-[#48679d] mb-2">TEKLİFLER</p>
+                        <p className="text-xs font-bold text-[#48679d] mb-2">{t('header.searchProposals')}</p>
                         <div className="space-y-2">
                           {searchResults.proposals.map((item) => (
                             <Link
@@ -515,7 +517,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                             >
                               <div>
                                 <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{item.title}</p>
-                                <p className="text-xs text-gray-500">{item.contact?.full_name || 'Müşteri'}</p>
+                                <p className="text-xs text-gray-500">{item.contact?.full_name || t('header.customerFallback')}</p>
                               </div>
                               <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at)}</span>
                             </Link>
@@ -525,7 +527,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                     )}
                     {searchResults.contacts.length > 0 && (
                       <div>
-                        <p className="text-xs font-bold text-[#48679d] mb-2">KİŞİLER</p>
+                        <p className="text-xs font-bold text-[#48679d] mb-2">{t('header.searchContacts')}</p>
                         <div className="space-y-2">
                           {searchResults.contacts.map((item) => (
                             <Link
@@ -536,7 +538,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                             >
                               <div>
                                 <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{item.full_name}</p>
-                                <p className="text-xs text-gray-500">{item.company || item.email || 'Kayıt'}</p>
+                                <p className="text-xs text-gray-500">{item.company || item.email || t('header.recordFallback')}</p>
                               </div>
                               <span className="text-xs text-gray-400">{formatRelativeTime(item.updated_at)}</span>
                             </Link>
@@ -553,7 +555,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                     onClick={openSearchPage}
                     className="w-full px-4 py-3 text-sm font-semibold text-primary hover:bg-primary/5 transition-colors"
                   >
-                    Tüm sonuçları gör ({searchTotal})
+                    {t('header.searchAllResults')} ({searchTotal})
                   </button>
                 </div>
               )}
@@ -566,7 +568,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="flex items-center gap-4">
         <div className="hidden lg:flex items-center gap-2 rounded-full border border-[#e7ebf4] dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1 text-xs font-semibold text-[#48679d] dark:text-gray-300">
           <span className="size-2 rounded-full bg-emerald-500"></span>
-          {onlineCount} aktif
+          {onlineCount} {t('header.online')}
         </div>
         {/* Notifications */}
         <div ref={notificationsRef} className="relative">
@@ -586,18 +588,18 @@ export function Header({ onMenuClick }: HeaderProps) {
           {showNotifications && (
             <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-[#161e2b] rounded-xl shadow-xl border border-[#e7ebf4] dark:border-gray-800 overflow-hidden z-50">
               <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800 flex items-center justify-between">
-                <h3 className="font-bold text-[#0d121c] dark:text-white">Bildirimler</h3>
+                <h3 className="font-bold text-[#0d121c] dark:text-white">{t('header.notifications')}</h3>
                 <button
                   onClick={markAllNotificationsRead}
                   className="text-sm text-primary hover:underline font-semibold"
                 >
-                  Tümünü okundu işaretle
+                  {t('header.notificationsAllRead')}
                 </button>
               </div>
               <div className="max-h-80 overflow-y-auto">
                 {notifications.length === 0 ? (
                   <div className="p-4 text-sm text-[#48679d] dark:text-gray-400">
-                    Henüz bildirim yok.
+                    {t('header.notificationsEmpty')}
                   </div>
                 ) : (
                   notifications.map((notification) => (
@@ -631,18 +633,34 @@ export function Header({ onMenuClick }: HeaderProps) {
                   href="/notifications"
                   className="block px-4 py-3 text-sm font-semibold text-primary hover:bg-primary/5 transition-colors"
                 >
-                  Tüm bildirimleri gör
+                  {t('header.notificationsViewAll')}
                 </Link>
               </div>
             </div>
           )}
         </div>
 
+        {/* Language Switcher */}
+        <div className="hidden md:flex items-center rounded-lg border border-[#e7ebf4] dark:border-gray-700 bg-white dark:bg-gray-800 p-1">
+          <button
+            onClick={() => setLocale('tr')}
+            className={`px-2 py-1 rounded-md text-xs font-semibold ${locale === 'tr' ? 'bg-primary text-white' : 'text-[#48679d] dark:text-gray-300'}`}
+          >
+            TR
+          </button>
+          <button
+            onClick={() => setLocale('en')}
+            className={`px-2 py-1 rounded-md text-xs font-semibold ${locale === 'en' ? 'bg-primary text-white' : 'text-[#48679d] dark:text-gray-300'}`}
+          >
+            EN
+          </button>
+        </div>
+
         {/* Dark Mode Toggle */}
         <button
           onClick={toggleDarkMode}
           className="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-          title={theme === 'dark' ? 'Açık Mod' : 'Koyu Mod'}
+          title={theme === 'dark' ? t('header.lightMode') : t('header.darkMode')}
         >
           <span className="material-symbols-outlined">
             {theme === 'dark' ? 'light_mode' : 'dark_mode'}
@@ -707,7 +725,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#0d121c] dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   <span className="material-symbols-outlined">settings</span>
-                  Hesap Ayarları
+                  {t('header.accountSettings')}
                 </Link>
                 <Link
                   href="/settings/team"
@@ -715,7 +733,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#0d121c] dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   <span className="material-symbols-outlined">group</span>
-                  Takım Yönetimi
+                  {t('header.teamManagement')}
                 </Link>
               </div>
               <div className="border-t border-[#e7ebf4] dark:border-gray-800 py-2">
@@ -724,7 +742,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
                   <span className="material-symbols-outlined">logout</span>
-                  Çıkış Yap
+                  {t('header.signOut')}
                 </button>
               </div>
             </div>

@@ -5,11 +5,13 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
+import { useI18n } from '@/lib/i18n'
 
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { signIn, signInWithGoogle, user, loading: authLoading } = useAuth()
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -31,15 +33,15 @@ export default function LoginPage() {
     const messageParam = searchParams.get('message')
 
     if (errorParam === 'auth_callback_error') {
-      setError('Kimlik doğrulama hatası oluştu. Lütfen tekrar deneyin.')
+      setError(t('auth.authError'))
     }
     if (messageParam === 'password_reset') {
-      toast.success('Şifreniz başarıyla güncellendi. Şimdi giriş yapabilirsiniz.')
+      toast.success(t('auth.resetSuccess'))
     }
     if (messageParam === 'email_verified') {
-      toast.success('E-postanız doğrulandı. Şimdi giriş yapabilirsiniz.')
+      toast.success(t('auth.verifySuccess'))
     }
-  }, [searchParams])
+  }, [searchParams, t])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,9 +52,9 @@ export default function LoginPage() {
 
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
-        setError('Geçersiz e-posta veya şifre')
+        setError(t('auth.invalidCredentials'))
       } else if (error.message.includes('Email not confirmed')) {
-        setError('E-posta adresiniz doğrulanmamış. Lütfen e-postanızı kontrol edin.')
+        setError(t('auth.emailNotConfirmed'))
       } else {
         setError(error.message)
       }
@@ -69,7 +71,7 @@ export default function LoginPage() {
     const { error } = await signInWithGoogle(rememberMe)
 
     if (error) {
-      setError('Google ile giriş yapılırken bir hata oluştu')
+      setError(t('auth.googleError'))
     }
   }
 
@@ -92,7 +94,7 @@ export default function LoginPage() {
         <div className="relative z-10 w-full max-w-lg">
           <div className="mb-12">
             <h1 className="text-white text-7xl font-extrabold tracking-tighter mb-4">AERO</h1>
-            <p className="text-white/90 text-2xl font-medium">Satış, Hızla Uçar.</p>
+            <p className="text-white/90 text-2xl font-medium">{t('auth.heroTagline')}</p>
           </div>
 
           {/* Floating Testimonial Card */}
@@ -102,12 +104,12 @@ export default function LoginPage() {
                 AY
               </div>
               <div>
-                <p className="text-white font-bold">Ahmet Y.</p>
-                <p className="text-white/70 text-sm">Satış Müdürü</p>
+                <p className="text-white font-bold">{t('auth.heroName')}</p>
+                <p className="text-white/70 text-sm">{t('auth.heroRole')}</p>
               </div>
             </div>
             <p className="text-white text-lg italic leading-relaxed">
-              &quot;Aero ile teklif hazırlama süremiz %50 azaldı. Artık sadece satışa odaklanabiliyoruz.&quot;
+              {t('auth.heroQuote')}
             </p>
           </div>
 
@@ -131,10 +133,10 @@ export default function LoginPage() {
           {/* Header Content */}
           <div className="mb-10 text-center lg:text-left">
             <h2 className="text-[#0d121c] dark:text-white text-3xl font-bold leading-tight mb-2">
-              Tekrar Hoş Geldiniz
+              {t('auth.loginTitle')}
             </h2>
             <p className="text-[#48679d] dark:text-gray-400">
-              Devam etmek için lütfen giriş yapın.
+              {t('auth.loginSubtitle')}
             </p>
           </div>
 
@@ -149,14 +151,14 @@ export default function LoginPage() {
             {/* Email Field */}
             <div className="flex flex-col gap-2">
               <label className="text-[#0d121c] dark:text-gray-200 text-base font-medium leading-normal">
-                E-posta
+                {t('auth.email')}
               </label>
               <div className="flex w-full items-stretch rounded-lg shadow-sm">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e-posta@adresiniz.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   className="flex w-full min-w-0 flex-1 rounded-l-lg text-[#0d121c] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] h-14 placeholder:text-[#48679d]/50 p-[15px] border-r-0 pr-2 text-base font-normal leading-normal transition-colors"
                   required
                   autoComplete="email"
@@ -170,14 +172,14 @@ export default function LoginPage() {
             {/* Password Field */}
             <div className="flex flex-col gap-2">
               <label className="text-[#0d121c] dark:text-gray-200 text-base font-medium leading-normal">
-                Şifre
+                {t('auth.password')}
               </label>
               <div className="flex w-full items-stretch rounded-lg shadow-sm">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder={t('auth.passwordPlaceholder')}
                   className="flex w-full min-w-0 flex-1 rounded-l-lg text-[#0d121c] dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-[#1a2230] h-14 placeholder:text-[#48679d]/50 p-[15px] border-r-0 pr-2 text-base font-normal leading-normal transition-colors"
                   required
                   autoComplete="current-password"
@@ -207,14 +209,14 @@ export default function LoginPage() {
                   />
                 </div>
                 <label htmlFor="remember" className="text-[#0d121c] dark:text-gray-300 text-sm font-medium cursor-pointer">
-                  Beni Hatırla
+                  {t('auth.rememberMe')}
                 </label>
               </div>
               <Link
                 href="/forgot-password"
                 className="text-primary hover:text-primary/80 text-sm font-semibold transition-colors"
               >
-                Şifremi Unuttum
+                {t('auth.forgotPassword')}
               </Link>
             </div>
 
@@ -230,17 +232,17 @@ export default function LoginPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Giriş yapılıyor...
+                  {t('auth.loginLoading')}
                 </span>
               ) : (
-                <span className="truncate">Giriş Yap</span>
+                <span className="truncate">{t('auth.loginButton')}</span>
               )}
             </button>
 
             {/* Divider */}
             <div className="relative py-4 flex items-center">
               <div className="flex-grow border-t border-[#ced8e9] dark:border-gray-700"></div>
-              <span className="flex-shrink mx-4 text-[#48679d] dark:text-gray-500 text-sm font-medium">veya</span>
+              <span className="flex-shrink mx-4 text-[#48679d] dark:text-gray-500 text-sm font-medium">{t('auth.divider')}</span>
               <div className="flex-grow border-t border-[#ced8e9] dark:border-gray-700"></div>
             </div>
 
@@ -256,25 +258,25 @@ export default function LoginPage() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
-              <span>Google ile Devam Et</span>
+              <span>{t('auth.loginGoogle')}</span>
             </button>
           </form>
 
           {/* Footer Registration */}
           <div className="mt-10 text-center">
             <p className="text-[#48679d] dark:text-gray-400 font-medium">
-              Hesabınız yok mu?
+              {t('auth.noAccount')}
               <Link href="/register" className="text-primary font-bold hover:underline ml-1">
-                Kayıt Ol
+                {t('auth.registerLink')}
               </Link>
             </p>
           </div>
 
           {/* Footer Links */}
           <div className="mt-20 flex justify-center gap-6 text-xs text-[#48679d]/60 dark:text-gray-500 font-medium">
-            <Link href="/terms" className="hover:text-primary transition-colors">Kullanım Koşulları</Link>
-            <Link href="/privacy" className="hover:text-primary transition-colors">Gizlilik Politikası</Link>
-            <Link href="/help" className="hover:text-primary transition-colors">Yardım Merkezi</Link>
+            <Link href="/terms" className="hover:text-primary transition-colors">{t('auth.terms')}</Link>
+            <Link href="/privacy" className="hover:text-primary transition-colors">{t('auth.privacy')}</Link>
+            <Link href="/help" className="hover:text-primary transition-colors">{t('auth.help')}</Link>
           </div>
         </div>
       </div>

@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
 import { formatCurrency, formatRelativeTime, getInitials } from '@/components/contacts/contact-utils'
-import { normalizeStage, stageConfigs } from '@/components/deals'
+import { normalizeStage, getStageConfigs, type StageId } from '@/components/deals'
+import { getServerLocale, getServerT } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +15,7 @@ type ContactCore = Pick<
 >
 type DealRow = Database['public']['Tables']['deals']['Row']
 
-const closedStages = new Set(['Kazanıldı', 'Kaybedildi', 'won', 'lost', 'closed_won', 'closed_lost'])
+const closedStages = new Set<StageId>(['won', 'lost'])
 
 const avatarPalette = [
   { bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-600 dark:text-blue-200' },
@@ -41,6 +42,11 @@ const getLastActivity = (contact: ContactCore, deals: DealRow[]) => {
 
 export default async function ContactDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createServerSupabaseClient()
+  const t = getServerT()
+  const locale = getServerLocale()
+  const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
+  const currency = locale === 'en' ? 'USD' : 'TRY'
+  const stageConfigs = getStageConfigs(t)
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -88,7 +94,7 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
   const deals = (dealsData ?? []) as DealRow[]
 
   const totalValue = deals.reduce((sum, deal) => sum + (deal.value ?? 0), 0)
-  const openDeals = deals.filter((deal) => !closedStages.has(deal.stage)).length
+  const openDeals = deals.filter((deal) => !closedStages.has(normalizeStage(deal.stage))).length
   const lastActivityAt = getLastActivity(contact, deals)
 
   const initials = getInitials(contact.full_name)
@@ -100,7 +106,7 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
         <div className="flex items-center gap-2 mb-4">
           <Link href="/contacts" className="flex items-center text-primary text-sm font-semibold hover:underline">
             <span className="material-symbols-outlined text-[18px] mr-1">arrow_back</span>
-            Kişilere Dön
+            {t('contacts.detail.back')}
           </Link>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -110,7 +116,9 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
             </div>
             <div>
               <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">{contact.full_name}</h1>
-              <p className="text-[#48679d] dark:text-gray-400">{contact.company ?? '—'} {contact.position ? `• ${contact.position}` : ''}</p>
+              <p className="text-[#48679d] dark:text-gray-400">
+                {contact.company ?? '—'} {contact.position ? `• ${contact.position}` : ''}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -118,13 +126,13 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
               href={`/contacts/${contact.id}/edit`}
               className="px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg text-sm font-semibold text-[#48679d] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
-              Düzenle
+              {t('contacts.detail.edit')}
             </Link>
             <Link
               href={`/deals/new?contact=${contact.id}`}
               className="px-5 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors"
             >
-              Yeni Anlaşma
+              {t('contacts.detail.newDeal')}
             </Link>
           </div>
         </div>
@@ -134,37 +142,39 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
         <div className="lg:col-span-8 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white dark:bg-[#101722] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#48679d] dark:text-gray-400">Toplam Değer</p>
-              <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white">{formatCurrency(totalValue)}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#48679d] dark:text-gray-400">{t('contacts.detail.totalValue')}</p>
+              <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white">
+                {formatCurrency(totalValue, formatLocale, currency)}
+              </p>
             </div>
             <div className="bg-white dark:bg-[#101722] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#48679d] dark:text-gray-400">Açık Anlaşmalar</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#48679d] dark:text-gray-400">{t('contacts.detail.openDeals')}</p>
               <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white">{openDeals}</p>
             </div>
             <div className="bg-white dark:bg-[#101722] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#48679d] dark:text-gray-400">Son Aktivite</p>
-              <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white">{formatRelativeTime(lastActivityAt)}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#48679d] dark:text-gray-400">{t('contacts.detail.lastActivity')}</p>
+              <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white">{formatRelativeTime(lastActivityAt, t)}</p>
             </div>
           </div>
 
           <div className="bg-white dark:bg-[#101722] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-[#e7ebf4] dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/50">
-              <h2 className="font-bold text-[#0d121c] dark:text-white">Anlaşmalar</h2>
+              <h2 className="font-bold text-[#0d121c] dark:text-white">{t('contacts.detail.dealsTitle')}</h2>
             </div>
             {deals.length === 0 ? (
               <div className="px-6 py-12 text-center">
                 <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600 mb-3 block">assignment</span>
-                <p className="text-[#48679d] dark:text-gray-400">Bu kişi için henüz anlaşma yok.</p>
+                <p className="text-[#48679d] dark:text-gray-400">{t('contacts.detail.noDeals')}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-gray-50/60 dark:bg-gray-900/50 text-xs uppercase tracking-widest font-bold text-[#48679d] dark:text-gray-400">
-                      <th className="px-6 py-4">Anlaşma</th>
-                      <th className="px-6 py-4">Aşama</th>
-                      <th className="px-6 py-4 text-right">Değer</th>
-                      <th className="px-6 py-4 text-right">Güncelleme</th>
+                      <th className="px-6 py-4">{t('contacts.detail.table.deal')}</th>
+                      <th className="px-6 py-4">{t('contacts.detail.table.stage')}</th>
+                      <th className="px-6 py-4 text-right">{t('contacts.detail.table.value')}</th>
+                      <th className="px-6 py-4 text-right">{t('contacts.detail.table.updated')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e7ebf4] dark:divide-gray-800">
@@ -179,10 +189,10 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right text-sm font-bold text-[#0d121c] dark:text-white">
-                            {formatCurrency(deal.value ?? 0)}
+                            {formatCurrency(deal.value ?? 0, formatLocale, currency)}
                           </td>
                           <td className="px-6 py-4 text-right text-sm text-[#48679d] dark:text-gray-400">
-                            {formatRelativeTime(deal.updated_at ?? deal.created_at ?? new Date().toISOString())}
+                            {formatRelativeTime(deal.updated_at ?? deal.created_at ?? new Date().toISOString(), t)}
                           </td>
                         </tr>
                       )
@@ -196,7 +206,7 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
 
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white dark:bg-[#101722] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
-            <h3 className="font-bold text-[#0d121c] dark:text-white mb-4">İletişim</h3>
+            <h3 className="font-bold text-[#0d121c] dark:text-white mb-4">{t('contacts.detail.contactTitle')}</h3>
             <div className="space-y-4 text-sm text-[#48679d] dark:text-gray-400">
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-[20px]">mail</span>
@@ -214,19 +224,21 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
           </div>
 
           <div className="bg-white dark:bg-[#101722] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
-            <h3 className="font-bold text-[#0d121c] dark:text-white mb-4">Özet</h3>
+            <h3 className="font-bold text-[#0d121c] dark:text-white mb-4">{t('contacts.detail.summaryTitle')}</h3>
             <div className="space-y-3 text-sm text-[#48679d] dark:text-gray-400">
               <div className="flex items-center justify-between">
-                <span>Toplam Anlaşma</span>
+                <span>{t('contacts.detail.summary.deals')}</span>
                 <span className="font-semibold text-[#0d121c] dark:text-white">{deals.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Toplam Değer</span>
-                <span className="font-semibold text-[#0d121c] dark:text-white">{formatCurrency(totalValue)}</span>
+                <span>{t('contacts.detail.summary.value')}</span>
+                <span className="font-semibold text-[#0d121c] dark:text-white">
+                  {formatCurrency(totalValue, formatLocale, currency)}
+                </span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Son Güncelleme</span>
-                <span className="font-semibold text-[#0d121c] dark:text-white">{formatRelativeTime(lastActivityAt)}</span>
+                <span>{t('contacts.detail.summary.updated')}</span>
+                <span className="font-semibold text-[#0d121c] dark:text-white">{formatRelativeTime(lastActivityAt, t)}</span>
               </div>
             </div>
           </div>

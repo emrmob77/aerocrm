@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { normalizeStage, stageConfigs } from '@/components/deals'
+import { normalizeStage, getStageConfigs } from '@/components/deals'
 import RevenueChart from './RevenueChart'
+import { getServerLocale, getServerT } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,8 +35,8 @@ type DealRow = {
   users?: { full_name?: string | null; avatar_url?: string | null } | { full_name?: string | null; avatar_url?: string | null }[] | null
 }
 
-const formatMoney = (value: number, currency: string) =>
-  new Intl.NumberFormat('tr-TR', {
+const formatMoney = (locale: string, value: number, currency: string) =>
+  new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currency || 'TRY',
     minimumFractionDigits: 0,
@@ -51,10 +52,12 @@ const sumByCurrency = (items: Array<{ value: number; currency: string }>) => {
   return map
 }
 
-const formatCurrencyMap = (map: Map<string, number>) => {
+const formatCurrencyMap = (locale: string, map: Map<string, number>) => {
   const entries = Array.from(map.entries()).sort((a, b) => b[1] - a[1])
-  if (entries.length === 0) return '₺0'
-  const top = entries.slice(0, 2).map(([currency, value]) => formatMoney(value, currency))
+  if (entries.length === 0) {
+    return formatMoney(locale, 0, locale.startsWith('en') ? 'USD' : 'TRY')
+  }
+  const top = entries.slice(0, 2).map(([currency, value]) => formatMoney(locale, value, currency))
   const suffix = entries.length > 2 ? ` +${entries.length - 2}` : ''
   return `${top.join(' / ')}${suffix}`
 }
@@ -72,20 +75,20 @@ const getPrimaryCurrency = (items: Array<{ currency: string }>) => {
 const getDealDate = (deal: DealRow) =>
   deal.expected_close_date ?? deal.updated_at ?? deal.created_at ?? new Date().toISOString()
 
-const rangeOptions = [
-  { days: 30, label: 'Son 30 Gün' },
-  { days: 90, label: 'Son 90 Gün' },
-  { days: 180, label: 'Son 180 Gün' },
-  { days: 365, label: 'Son 12 Ay' },
+const buildRangeOptions = (t: (key: string) => string) => [
+  { days: 30, label: t('sales.ranges.days30') },
+  { days: 90, label: t('sales.ranges.days90') },
+  { days: 180, label: t('sales.ranges.days180') },
+  { days: 365, label: t('sales.ranges.days365') },
 ]
 
-const buildMonthOptions = () => {
+const buildMonthOptions = (locale: string) => {
   const now = new Date()
   const items: Array<{ key: string; label: string }> = []
   for (let i = 0; i < 12; i += 1) {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-    const label = date.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })
+    const label = date.toLocaleDateString(locale, { month: 'long', year: 'numeric' })
     items.push({ key, label })
   }
   return items
@@ -100,9 +103,9 @@ const parseDateInput = (value?: string) => {
   return date
 }
 
-const getRangeDays = (value?: string) => {
+const getRangeDays = (value: string | undefined, options: Array<{ days: number }>) => {
   const parsed = Number(value)
-  const allowed = rangeOptions.map((option) => option.days)
+  const allowed = options.map((option) => option.days)
   if (Number.isFinite(parsed) && allowed.includes(parsed)) {
     return parsed
   }
@@ -111,6 +114,9 @@ const getRangeDays = (value?: string) => {
 
 export default async function SalesPage({ searchParams }: SalesPageProps) {
   const supabase = await createServerSupabaseClient()
+  const t = getServerT()
+  const locale = getServerLocale() === 'en' ? 'en-US' : 'tr-TR'
+  const rangeOptions = buildRangeOptions(t)
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -173,7 +179,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
     })
     return Array.from(map.entries())
       .map(([id, label]) => ({ id, label }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'tr'))
+      .sort((a, b) => a.label.localeCompare(b.label, locale))
   })()
 
   const contactFilter = searchParams?.contact ?? 'all'
@@ -199,7 +205,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
   })
 
   const now = new Date()
-  const rangeDays = getRangeDays(searchParams?.range)
+  const rangeDays = getRangeDays(searchParams?.range, rangeOptions)
   const rangeStart = new Date(now.getTime() - rangeDays * 24 * 60 * 60 * 1000)
   const rangeDeals = normalizedDeals.filter((deal) => new Date(deal.created_at) >= rangeStart)
 
@@ -237,6 +243,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
 
   const primaryCurrency = getPrimaryCurrency(normalizedDeals)
 
+  const stageConfigs = getStageConfigs(t)
   const stageTotals = stageConfigs.map((stage) => {
     const count = normalizedDeals.filter((deal) => deal.stage === stage.id).length
     const value = normalizedDeals
@@ -274,7 +281,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
     months.push({
       key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
-      label: date.toLocaleDateString('tr-TR', { month: 'short' }),
+      label: date.toLocaleDateString(locale, { month: 'short' }),
     })
   }
 
@@ -297,16 +304,16 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
     return { ...stage, percentage }
   })
 
-  const rangeLabel = rangeOptions.find((option) => option.days === rangeDays)?.label ?? 'Son 90 Gün'
-  const monthOptions = buildMonthOptions()
+  const rangeLabel = rangeOptions.find((option) => option.days === rangeDays)?.label ?? t('sales.ranges.days90')
+  const monthOptions = buildMonthOptions(locale)
   const filteredRecentSales = filteredSales.slice(0, 8)
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-start gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">Satış Performansı</h1>
-          <p className="text-[#48679d] dark:text-gray-400 mt-1">Pipeline, gelir ve ekip performansını takip edin.</p>
+          <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">{t('sales.title')}</h1>
+          <p className="text-[#48679d] dark:text-gray-400 mt-1">{t('sales.subtitle')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
@@ -314,7 +321,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
             className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-slate-800 border border-[#e7ebf4] dark:border-gray-700 text-[#48679d] hover:text-primary hover:border-primary/40"
           >
             <span className="material-symbols-outlined text-[14px] mr-1 align-middle">swap_vert</span>
-            Satış İçe/Dışa Aktar
+            {t('sales.export')}
           </Link>
           {rangeOptions.map((option) => (
             <Link
@@ -334,44 +341,44 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-[#161e2b] p-5 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
-          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">Toplam Pipeline</p>
+          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">{t('sales.cards.pipeline')}</p>
           <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white mt-2">
-            {formatCurrencyMap(pipelineMap)}
+            {formatCurrencyMap(locale, pipelineMap)}
           </p>
-          <p className="text-xs text-[#48679d] mt-1">{openDeals.length} açık anlaşma</p>
+          <p className="text-xs text-[#48679d] mt-1">{t('sales.hints.openDeals', { count: openDeals.length })}</p>
         </div>
         <div className="bg-white dark:bg-[#161e2b] p-5 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
-          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">Aylık Kazanç</p>
+          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">{t('sales.cards.monthlyRevenue')}</p>
           <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white mt-2">
-            {formatCurrencyMap(monthlyRevenueMap)}
+            {formatCurrencyMap(locale, monthlyRevenueMap)}
           </p>
-          <p className="text-xs text-[#48679d] mt-1">Son 30 gün</p>
+          <p className="text-xs text-[#48679d] mt-1">{t('sales.hints.last30Days')}</p>
         </div>
         <div className="bg-white dark:bg-[#161e2b] p-5 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
-          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">Yıllık Kazanç</p>
+          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">{t('sales.cards.yearlyRevenue')}</p>
           <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white mt-2">
-            {formatCurrencyMap(yearlyRevenueMap)}
+            {formatCurrencyMap(locale, yearlyRevenueMap)}
           </p>
-          <p className="text-xs text-[#48679d] mt-1">Son 12 ay</p>
+          <p className="text-xs text-[#48679d] mt-1">{t('sales.hints.last12Months')}</p>
         </div>
         <div className="bg-white dark:bg-[#161e2b] p-5 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
-          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">Win Rate</p>
+          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">{t('sales.cards.winRate')}</p>
           <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white mt-2">%{winRate}</p>
-          <p className="text-xs text-[#48679d] mt-1">{wonDeals.length} kazanıldı · {lostDeals.length} kaybedildi</p>
+          <p className="text-xs text-[#48679d] mt-1">{t('sales.hints.wonLost', { won: wonDeals.length, lost: lostDeals.length })}</p>
         </div>
         <div className="bg-white dark:bg-[#161e2b] p-5 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
-          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">Ortalama Deal</p>
+          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">{t('sales.cards.avgDeal')}</p>
           <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white mt-2">
-            {formatMoney(avgDealSize, primaryCurrency)}
+            {formatMoney(locale, avgDealSize, primaryCurrency)}
           </p>
-          <p className="text-xs text-[#48679d] mt-1">{wonDeals.length} kapanan anlaşma</p>
+          <p className="text-xs text-[#48679d] mt-1">{t('sales.hints.closedDeals', { count: wonDeals.length })}</p>
         </div>
         <div className="bg-white dark:bg-[#161e2b] p-5 rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm">
-          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">Sales Velocity</p>
+          <p className="text-xs font-semibold text-[#48679d] uppercase tracking-wider">{t('sales.cards.velocity')}</p>
           <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white mt-2">
-            {formatMoney(salesVelocity, primaryCurrency)}
+            {formatMoney(locale, salesVelocity, primaryCurrency)}
           </p>
-          <p className="text-xs text-[#48679d] mt-1">Günlük ortalama gelir</p>
+          <p className="text-xs text-[#48679d] mt-1">{t('sales.hints.dailyRevenue')}</p>
         </div>
       </div>
 
@@ -379,16 +386,16 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
         <div className="lg:col-span-2 bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-bold text-[#0d121c] dark:text-white">Gelir Trendi</h3>
-              <p className="text-xs text-[#48679d]">Para birimi: {primaryCurrency} · {rangeLabel}</p>
+              <h3 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('sales.charts.revenueTrend')}</h3>
+              <p className="text-xs text-[#48679d]">{t('sales.charts.currency')}: {primaryCurrency} · {rangeLabel}</p>
             </div>
-            <span className="text-xs text-[#48679d]">{formatMoney(maxRevenue, primaryCurrency)} max</span>
+            <span className="text-xs text-[#48679d]">{formatMoney(locale, maxRevenue, primaryCurrency)} max</span>
           </div>
           <RevenueChart data={revenueSeries.map((item) => ({ label: item.label, value: item.value }))} currency={primaryCurrency} />
         </div>
 
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
-          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-4">Aşama Dönüşüm</h3>
+          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-4">{t('sales.charts.stageConversion')}</h3>
           <div className="space-y-3">
             {stageConversions.map((stage) => (
               <div key={stage.id}>
@@ -407,7 +414,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
-          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-4">Stage Dağılımı</h3>
+          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-4">{t('sales.charts.stageDistribution')}</h3>
           <div className="space-y-3">
             {stageTotals.map((stage) => (
               <div key={stage.id} className="flex items-center justify-between text-sm">
@@ -417,7 +424,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{stage.count}</p>
-                  <p className="text-xs text-[#48679d]">{formatMoney(stage.value, primaryCurrency)}</p>
+                  <p className="text-xs text-[#48679d]">{formatMoney(locale, stage.value, primaryCurrency)}</p>
                 </div>
               </div>
             ))}
@@ -425,10 +432,10 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
         </div>
 
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
-          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-4">Top Performers</h3>
+          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-4">{t('sales.charts.topPerformers')}</h3>
           <div className="space-y-3">
             {topPerformers.length === 0 ? (
-              <p className="text-sm text-[#48679d]">Henüz veri yok.</p>
+              <p className="text-sm text-[#48679d]">{t('sales.topPerformers.empty')}</p>
             ) : (
               topPerformers.map((person) => (
                 <div key={person.name} className="flex items-center justify-between">
@@ -443,10 +450,10 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{person.name}</p>
-                      <p className="text-xs text-[#48679d]">{person.count} satış</p>
+                      <p className="text-xs text-[#48679d]">{t('sales.topPerformers.salesCount', { count: person.count })}</p>
                     </div>
                   </div>
-                  <p className="text-sm font-bold text-primary">{formatMoney(person.value, primaryCurrency)}</p>
+                  <p className="text-sm font-bold text-primary">{formatMoney(locale, person.value, primaryCurrency)}</p>
                 </div>
               ))
             )}
@@ -454,21 +461,24 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
         </div>
 
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
-          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-4">Forecast Projeksiyonu</h3>
+          <h3 className="text-lg font-bold text-[#0d121c] dark:text-white mb-4">{t('sales.charts.forecast')}</h3>
           <div className="space-y-3">
             <div>
-              <p className="text-xs text-[#48679d]">Tahmini gelir</p>
+              <p className="text-xs text-[#48679d]">{t('sales.forecast.estimatedRevenue')}</p>
               <p className="text-2xl font-extrabold text-[#0d121c] dark:text-white">
-                {formatMoney(forecastValue, primaryCurrency)}
+                {formatMoney(locale, forecastValue, primaryCurrency)}
               </p>
             </div>
             <div className="text-xs text-[#48679d]">
-              {openDeals.length} açık anlaşma · Ortalama olasılık %{Math.round(
-                openDeals.reduce((sum, deal) => sum + (deal.probability ?? 30), 0) / (openDeals.length || 1)
-              )}
+              {t('sales.forecast.openDeals', {
+                count: openDeals.length,
+                percent: Math.round(
+                  openDeals.reduce((sum, deal) => sum + (deal.probability ?? 30), 0) / (openDeals.length || 1)
+                ),
+              })}
             </div>
             <div className="text-xs text-[#48679d]">
-              {rangeLabel} içinde {rangeDeals.length} yeni fırsat
+              {t('sales.forecast.newDeals', { range: rangeLabel, count: rangeDeals.length })}
             </div>
           </div>
         </div>
@@ -477,23 +487,23 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
       <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-bold text-[#0d121c] dark:text-white">Son Satışlar</h3>
-            <p className="text-xs text-[#48679d]">Kapanan anlaşmaların özeti</p>
+            <h3 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('sales.charts.recentSales')}</h3>
+            <p className="text-xs text-[#48679d]">{t('sales.charts.recentSummary')}</p>
           </div>
           <Link href="/deals" className="text-xs font-semibold text-primary hover:underline">
-            Tüm anlaşmalar
+            {t('nav.deals')}
           </Link>
         </div>
         <form className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4" action="/sales" method="get">
           <input type="hidden" name="range" value={rangeDays} />
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-[#48679d]">Kişi</label>
+            <label className="text-[11px] font-semibold text-[#48679d]">{t('sales.filters.contact')}</label>
             <select
               name="contact"
               defaultValue={contactFilter}
               className="px-3 py-2 rounded-lg border border-[#e7ebf4] text-sm"
             >
-              <option value="all">Tüm kişiler</option>
+              <option value="all">{t('sales.filters.allContacts')}</option>
               {contactOptions.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.label}
@@ -502,13 +512,13 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-[#48679d]">Ay</label>
+            <label className="text-[11px] font-semibold text-[#48679d]">{t('sales.filters.month')}</label>
             <select
               name="month"
               defaultValue={monthFilter}
               className="px-3 py-2 rounded-lg border border-[#e7ebf4] text-sm"
             >
-              <option value="all">Tüm aylar</option>
+              <option value="all">{t('sales.filters.allMonths')}</option>
               {monthOptions.map((option) => (
                 <option key={option.key} value={option.key}>
                   {option.label}
@@ -517,7 +527,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-[#48679d]">Başlangıç</label>
+            <label className="text-[11px] font-semibold text-[#48679d]">{t('sales.filters.start')}</label>
             <input
               type="date"
               name="closedFrom"
@@ -526,7 +536,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-[#48679d]">Bitiş</label>
+            <label className="text-[11px] font-semibold text-[#48679d]">{t('sales.filters.end')}</label>
             <input
               type="date"
               name="closedTo"
@@ -535,19 +545,19 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
             />
           </div>
           <div className="md:col-span-4 flex items-center justify-between">
-            <p className="text-xs text-[#48679d]">{filteredSales.length} kapanan satış bulundu</p>
+            <p className="text-xs text-[#48679d]">{t('sales.filters.results', { count: filteredSales.length })}</p>
             <div className="flex items-center gap-2">
               <Link
                 href={`/sales?range=${rangeDays}`}
                 className="text-xs font-semibold text-[#48679d] hover:text-primary"
               >
-                Filtreyi temizle
+                {t('sales.filters.reset')}
               </Link>
               <button
                 type="submit"
                 className="px-4 py-2 rounded-lg bg-primary text-white text-xs font-semibold"
               >
-                Filtrele
+                {t('sales.filters.apply')}
               </button>
             </div>
           </div>
@@ -556,17 +566,17 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-[#48679d] uppercase tracking-wider border-b border-[#e7ebf4]">
-                <th className="py-2 pr-4">Anlaşma</th>
-                <th className="py-2 pr-4">Müşteri</th>
-                <th className="py-2 pr-4">Değer</th>
-                <th className="py-2 pr-4">Kapanış</th>
+                <th className="py-2 pr-4">{t('sales.table.deal')}</th>
+                <th className="py-2 pr-4">{t('sales.table.customer')}</th>
+                <th className="py-2 pr-4">{t('sales.table.value')}</th>
+                <th className="py-2 pr-4">{t('sales.table.closed')}</th>
               </tr>
             </thead>
             <tbody>
               {filteredRecentSales.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-4 text-[#48679d] text-sm">
-                    Henüz kapanan anlaşma yok.
+                    {t('sales.table.empty')}
                   </td>
                 </tr>
               ) : (
@@ -574,13 +584,13 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
                   <tr key={deal.id} className="border-b border-[#e7ebf4]">
                     <td className="py-3 pr-4 font-semibold text-[#0d121c] dark:text-white">{deal.title}</td>
                     <td className="py-3 pr-4 text-[#48679d]">
-                      {deal.contacts?.full_name || deal.contacts?.company || 'Müşteri'}
+                      {deal.contacts?.full_name || deal.contacts?.company || t('header.customerFallback')}
                     </td>
                     <td className="py-3 pr-4 text-primary font-semibold">
-                      {formatMoney(deal.value, deal.currency)}
+                      {formatMoney(locale, deal.value, deal.currency)}
                     </td>
                     <td className="py-3 pr-4 text-xs text-[#48679d]">
-                      {new Date(getDealDate(deal)).toLocaleDateString('tr-TR')}
+                      {new Date(getDealDate(deal)).toLocaleDateString(locale)}
                     </td>
                   </tr>
                 ))

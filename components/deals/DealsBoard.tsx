@@ -7,7 +7,8 @@ import { CSS } from '@dnd-kit/utilities'
 import toast from 'react-hot-toast'
 import { getSupabaseClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database'
-import { formatCurrency, formatRelativeTime, getActivityMeta, normalizeStage, stageConfigs, type StageId } from './stage-utils'
+import { formatCurrency, formatRelativeTime, getActivityMeta, normalizeStage, getStageConfigs, type StageId } from './stage-utils'
+import { useI18n } from '@/lib/i18n'
 
 export type DealCardData = {
   id: string
@@ -50,6 +51,9 @@ const getAvatarStyle = (seed: string) => {
 
 export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
   const supabase = useMemo(() => getSupabaseClient(), [])
+  const { t, locale } = useI18n()
+  const stageConfigs = useMemo(() => getStageConfigs(t), [t])
+  const currency = locale === 'en' ? 'USD' : 'TRY'
   const [deals, setDeals] = useState<DealCardData[]>(initialDeals)
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
   const [showLost, setShowLost] = useState(false)
@@ -82,8 +86,8 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                 .single()
             : null
 
-          const contactName = contactInfo?.data?.full_name ?? 'Yeni Kayıt'
-          const company = contactInfo?.data?.company ?? 'Bilinmiyor'
+          const contactName = contactInfo?.data?.full_name ?? t('deals.newRecord')
+          const company = contactInfo?.data?.company ?? t('common.unknown')
 
           const ownerInfo = row.user_id
             ? await supabase
@@ -93,7 +97,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                 .single()
             : null
 
-          const ownerName = ownerInfo?.data?.full_name ?? 'Sorumlu'
+          const ownerName = ownerInfo?.data?.full_name ?? t('deals.ownerFallback')
 
           setDeals(prev => {
             if (prev.some(deal => deal.id === row.id)) {
@@ -232,7 +236,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
               : deal
           )
         )
-        toast.error(payload?.error || 'Aşama güncellenemedi. Lütfen tekrar deneyin.')
+        toast.error(payload?.error || t('deals.stageUpdateError'))
         return
       }
 
@@ -261,7 +265,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
             : deal
         )
       )
-      toast.error(error instanceof Error ? error.message : 'Aşama güncellenemedi. Lütfen tekrar deneyin.')
+      toast.error(error instanceof Error ? error.message : t('deals.stageUpdateError'))
     }
   }
 
@@ -271,14 +275,14 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
     <div className="flex min-h-full flex-col -mx-4 -mt-4 lg:-mx-8 lg:-mt-8">
       <div className="px-6 lg:px-10 py-6 space-y-4 bg-[#f5f6f8] dark:bg-[#101722]">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-[#0d121c] dark:text-white text-3xl font-black tracking-tight">Anlaşmalar</h1>
+          <h1 className="text-[#0d121c] dark:text-white text-3xl font-black tracking-tight">{t('nav.deals')}</h1>
           <div className="flex items-center gap-4">
             <Link
               href="/deals/new"
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
             >
               <span className="material-symbols-outlined text-lg">add</span>
-              Yeni Anlaşma
+              {t('dashboard.quickActions.newDeal')}
             </Link>
             <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
               <button
@@ -290,7 +294,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                 }`}
               >
                 <span className="material-symbols-outlined text-[18px]">view_kanban</span>
-                Board
+                {t('deals.viewBoard')}
               </button>
               <button
                 onClick={() => setViewMode('list')}
@@ -301,7 +305,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                 }`}
               >
                 <span className="material-symbols-outlined text-[18px]">list</span>
-                Liste
+                {t('deals.viewList')}
               </button>
             </div>
           </div>
@@ -310,23 +314,23 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
         <div className="flex gap-3 flex-wrap items-center">
           <button className="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 px-3 hover:bg-slate-50 transition-colors">
             <span className="material-symbols-outlined text-[18px] text-slate-500">person</span>
-            <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">Tüm Sorumlular</span>
+            <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{t('deals.allOwners')}</span>
             <span className="material-symbols-outlined text-[18px] text-slate-400">expand_more</span>
           </button>
           <button className="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 px-3 hover:bg-slate-50 transition-colors">
             <span className="material-symbols-outlined text-[18px] text-slate-500">calendar_today</span>
-            <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">Bu Ay</span>
+            <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{t('deals.thisMonth')}</span>
             <span className="material-symbols-outlined text-[18px] text-slate-400">expand_more</span>
           </button>
           <button className="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-9 px-3 hover:bg-slate-50 transition-colors">
             <span className="material-symbols-outlined text-[18px] text-slate-500">sort</span>
-            <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">Sıralama: En Yeni</span>
+            <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{t('deals.sortNewest')}</span>
             <span className="material-symbols-outlined text-[18px] text-slate-400">expand_more</span>
           </button>
           <div className="h-6 w-[1px] bg-slate-300 dark:bg-slate-700 mx-1"></div>
           <button className="flex items-center gap-2 rounded-lg bg-primary/10 text-primary h-9 px-3 hover:bg-primary/20 transition-colors">
             <span className="material-symbols-outlined text-[18px]">filter_list</span>
-            <span className="text-sm font-bold">Filtreler</span>
+            <span className="text-sm font-bold">{t('deals.filters')}</span>
           </button>
         </div>
       </div>
@@ -357,7 +361,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                             {totals.count}
                           </span>
                         </div>
-                        <span className="text-sm font-semibold text-slate-500">{formatCurrency(totals.value)}</span>
+                        <span className="text-sm font-semibold text-slate-500">{formatCurrency(totals.value, locale === 'en' ? 'en-US' : 'tr-TR', currency)}</span>
                       </div>
                       <div className="flex flex-col gap-3">
                         {dealsByStage(stage.id).map((deal) => (
@@ -381,7 +385,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                   <span className="material-symbols-outlined text-slate-400 group-hover:text-primary">unfold_more</span>
                   <div className="flex items-center flex-col gap-1 h-full">
                     <p className="[writing-mode:vertical-lr] font-bold text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300 uppercase tracking-widest text-sm">
-                      Kaybedildi
+                      {t('stages.lost')}
                     </p>
                     <span className="mt-4 px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full text-[11px] font-bold text-slate-500">
                       {getStageTotals('lost').count}
@@ -393,7 +397,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                 <DroppableColumn stageId="lost">
                   <div className="flex items-center justify-between px-2 py-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-red-600 dark:text-red-400">Kaybedildi</span>
+                      <span className="font-bold text-red-600 dark:text-red-400">{t('stages.lost')}</span>
                       <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 rounded-full text-[11px] font-bold text-red-600 dark:text-red-400">
                         {getStageTotals('lost').count}
                       </span>
@@ -420,11 +424,11 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
             <table className="w-full">
               <thead className="bg-slate-50 dark:bg-slate-900">
                 <tr>
-                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">Şirket</th>
-                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">Anlaşma</th>
-                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">Aşama</th>
-                  <th className="text-right px-6 py-3 text-xs font-bold text-slate-500 uppercase">Değer</th>
-                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">Son Aktivite</th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">{t('deals.table.company')}</th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">{t('deals.table.deal')}</th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">{t('deals.table.stage')}</th>
+                  <th className="text-right px-6 py-3 text-xs font-bold text-slate-500 uppercase">{t('deals.table.value')}</th>
+                  <th className="text-left px-6 py-3 text-xs font-bold text-slate-500 uppercase">{t('deals.table.lastActivity')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -449,9 +453,9 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <span className="text-primary font-extrabold">{formatCurrency(deal.value)}</span>
+                        <span className="text-primary font-extrabold">{formatCurrency(deal.value, locale === 'en' ? 'en-US' : 'tr-TR', currency)}</span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-400">{formatRelativeTime(deal.updatedAt)}</td>
+                      <td className="px-6 py-4 text-sm text-slate-400">{formatRelativeTime(deal.updatedAt, t)}</td>
                     </tr>
                   )
                 })}
@@ -468,12 +472,12 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
             <div className="size-6 rounded-full border border-white dark:border-slate-800 bg-slate-300"></div>
             <div className="size-6 rounded-full border border-white dark:border-slate-800 bg-slate-300 flex items-center justify-center text-[8px] text-slate-600">+3</div>
           </div>
-          <span>5 aktif takım üyesi çevrimiçi</span>
+          <span>{t('deals.footer.online', { count: 5 })}</span>
         </div>
         <div className="flex items-center gap-4">
-          <span>Toplam Pipeline Değeri: <strong className="text-slate-600 dark:text-slate-300">{formatCurrency(totalPipelineValue)}</strong></span>
+          <span>{t('deals.footer.totalPipeline')}: <strong className="text-slate-600 dark:text-slate-300">{formatCurrency(totalPipelineValue, locale === 'en' ? 'en-US' : 'tr-TR', currency)}</strong></span>
           <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
-          <span>Güncelleme: {formatRelativeTime(new Date().toISOString())}</span>
+          <span>{t('deals.footer.updated')}: {formatRelativeTime(new Date().toISOString(), t)}</span>
         </div>
       </footer>
 
@@ -545,9 +549,11 @@ function DraggableDeal({ deal, highlight, won }: { deal: DealCardData; highlight
 }
 
 function DealCard({ deal, highlight, disableLink }: { deal: DealCardData; highlight?: boolean; disableLink?: boolean }) {
-  const activity = getActivityMeta(deal.stage, deal.updatedAt)
+  const { t, locale } = useI18n()
+  const activity = getActivityMeta(deal.stage, deal.updatedAt, t)
   const avatarStyle = getAvatarStyle(deal.ownerInitials)
   const isLost = deal.stage === 'lost'
+  const currency = locale === 'en' ? 'USD' : 'TRY'
 
   return (
     <Link
@@ -573,21 +579,21 @@ function DealCard({ deal, highlight, disableLink }: { deal: DealCardData; highli
       {deal.stage === 'proposal' && (
         <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold mb-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
           <span className="material-symbols-outlined text-[14px]">description</span>
-          TEKLİF GÖNDERİLDİ
+          {t('deals.badges.proposalSent')}
         </div>
       )}
 
       {deal.stage === 'negotiation' && (
         <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-blue-50 text-blue-600 text-[10px] font-bold mb-3">
           <span className="material-symbols-outlined text-[14px]">forum</span>
-          TOPLANTI BEKLENİYOR
+          {t('deals.badges.meetingWaiting')}
         </div>
       )}
 
       <div className="flex justify-between items-end">
         <div className="space-y-2">
           <div className={`font-extrabold text-lg ${isLost ? 'text-red-600 dark:text-red-400' : 'text-primary'}`}>
-            {formatCurrency(deal.value)}
+            {formatCurrency(deal.value, locale === 'en' ? 'en-US' : 'tr-TR', currency)}
           </div>
           <div
             className={`flex items-center gap-1.5 text-xs ${
@@ -618,8 +624,10 @@ function DealCard({ deal, highlight, disableLink }: { deal: DealCardData; highli
 }
 
 function WonDealCard({ deal, disableLink }: { deal: DealCardData; disableLink?: boolean }) {
-  const activity = getActivityMeta(deal.stage, deal.updatedAt)
+  const { t, locale } = useI18n()
+  const activity = getActivityMeta(deal.stage, deal.updatedAt, t)
   const avatarStyle = getAvatarStyle(deal.ownerInitials)
+  const currency = locale === 'en' ? 'USD' : 'TRY'
 
   return (
     <Link
@@ -642,12 +650,12 @@ function WonDealCard({ deal, disableLink }: { deal: DealCardData; disableLink?: 
       <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-2 leading-snug">{deal.title}</h3>
 
       <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold mb-3">
-        TAMAMLANDI
+        {t('deals.badges.completed')}
       </div>
 
       <div className="flex justify-between items-end">
         <div className="space-y-1">
-          <div className="text-emerald-600 font-extrabold text-lg">{formatCurrency(deal.value)}</div>
+          <div className="text-emerald-600 font-extrabold text-lg">{formatCurrency(deal.value, locale === 'en' ? 'en-US' : 'tr-TR', currency)}</div>
           <div className="text-slate-400 text-xs">{activity.label}</div>
         </div>
         {deal.ownerAvatarUrl ? (

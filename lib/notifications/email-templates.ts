@@ -4,6 +4,8 @@ type EmailTemplate = {
   html: string
 }
 
+type Locale = 'tr' | 'en'
+
 const toHtmlLines = (value: string) =>
   value
     .split('\n')
@@ -42,16 +44,76 @@ const baseTemplate = (params: {
   `
 }
 
-export const buildTeamInviteEmail = (params: { inviter: string; link: string }): EmailTemplate => {
-  const subject = 'AERO CRM takım daveti'
-  const text = `${params.inviter} sizi AERO CRM takımına davet etti. Katılmak için: ${params.link}`
+const emailCopy: Record<Locale, Record<string, string>> = {
+  tr: {
+    inviteSubject: 'AERO CRM takım daveti',
+    inviteSubjectRenewed: 'AERO CRM takım daveti (yenilendi)',
+    inviteTitle: 'Takım Daveti',
+    inviteIntro: '{inviter} sizi AERO CRM takımına davet etti.',
+    inviteIntroRenewed: '{inviter} sizi AERO CRM takımına tekrar davet etti.',
+    inviteBody: 'Katılmak için aşağıdaki bağlantıyı kullanın.',
+    inviteAction: 'Daveti Kabul Et',
+    inviteFooter: 'Bu davet 7 gün boyunca geçerlidir.',
+    proposalIntro: 'AERO CRM üzerinden yeni bir teklif gönderildi.',
+    proposalAction: 'Teklifi Görüntüle',
+    proposalAnchor: 'Teklifi görüntülemek için:',
+    proposalDefaultSubject: '{client} için Teklif',
+    proposalDefaultMessage:
+      'Merhaba {client},\n\nTeklifinizi paylaşmak istedim.\n\nTeklifi görüntülemek için:\n\nİyi çalışmalar,\nAERO CRM',
+  },
+  en: {
+    inviteSubject: 'AERO CRM team invitation',
+    inviteSubjectRenewed: 'AERO CRM team invitation (renewed)',
+    inviteTitle: 'Team Invitation',
+    inviteIntro: '{inviter} invited you to the AERO CRM team.',
+    inviteIntroRenewed: '{inviter} invited you again to the AERO CRM team.',
+    inviteBody: 'Use the link below to join.',
+    inviteAction: 'Accept Invite',
+    inviteFooter: 'This invite is valid for 7 days.',
+    proposalIntro: 'A new proposal was sent via AERO CRM.',
+    proposalAction: 'View Proposal',
+    proposalAnchor: 'To view the proposal:',
+    proposalDefaultSubject: 'Proposal for {client}',
+    proposalDefaultMessage:
+      'Hello {client},\n\nI wanted to share your proposal.\n\nTo view the proposal:\n\nBest regards,\nAERO CRM',
+  },
+}
+
+const interpolate = (template: string, vars?: Record<string, string>) =>
+  vars ? template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? `{${key}}`) : template
+
+const getCopy = (locale?: Locale) => emailCopy[locale === 'en' ? 'en' : 'tr']
+
+export const getProposalDefaults = (params: { locale?: Locale; client: string }) => {
+  const copy = getCopy(params.locale)
+  return {
+    subject: interpolate(copy.proposalDefaultSubject, { client: params.client }),
+    message: interpolate(copy.proposalDefaultMessage, { client: params.client }),
+    anchor: copy.proposalAnchor,
+  }
+}
+
+export const buildTeamInviteEmail = (params: {
+  inviter: string
+  link: string
+  locale?: Locale
+  variant?: 'initial' | 'renewed'
+}): EmailTemplate => {
+  const copy = getCopy(params.locale)
+  const intro =
+    params.variant === 'renewed'
+      ? interpolate(copy.inviteIntroRenewed, { inviter: params.inviter })
+      : interpolate(copy.inviteIntro, { inviter: params.inviter })
+
+  const subject = params.variant === 'renewed' ? copy.inviteSubjectRenewed : copy.inviteSubject
+  const text = `${intro} ${copy.inviteBody} ${params.link}`
   const html = baseTemplate({
-    title: 'Takım Daveti',
-    intro: `${params.inviter} sizi AERO CRM takımına davet etti.`,
-    body: 'Katılmak için aşağıdaki bağlantıyı kullanın.',
-    actionLabel: 'Daveti Kabul Et',
+    title: copy.inviteTitle,
+    intro,
+    body: copy.inviteBody,
+    actionLabel: copy.inviteAction,
     actionUrl: params.link,
-    footer: 'Bu davet 7 gün boyunca geçerlidir.',
+    footer: copy.inviteFooter,
   })
   return { subject, text, html }
 }
@@ -60,13 +122,15 @@ export const buildProposalDeliveryEmail = (params: {
   subject: string
   message: string
   link?: string
+  locale?: Locale
 }): EmailTemplate => {
   const text = params.message
+  const copy = getCopy(params.locale)
   const html = baseTemplate({
     title: params.subject,
-    intro: 'AERO CRM üzerinden yeni bir teklif gönderildi.',
+    intro: copy.proposalIntro,
     body: params.message,
-    actionLabel: params.link ? 'Teklifi Görüntüle' : undefined,
+    actionLabel: params.link ? copy.proposalAction : undefined,
     actionUrl: params.link,
   })
   return { subject: params.subject, text, html }

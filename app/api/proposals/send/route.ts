@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
-import { buildProposalDeliveryEmail } from '@/lib/notifications/email-templates'
+import { buildProposalDeliveryEmail, getProposalDefaults } from '@/lib/notifications/email-templates'
 import { sendTwilioMessage, getCredentialsFromEnv } from '@/lib/integrations/twilio'
 import type { TwilioCredentials } from '@/types/database'
 
@@ -42,13 +42,18 @@ const buildExpiryDate = (enabled?: boolean, duration?: string) => {
 
 const normalizeText = (value?: string | null) => value?.trim() || null
 
-const buildMessageWithLink = (message: string, link: string, includeLink?: boolean) => {
+const buildMessageWithLink = (
+  message: string,
+  link: string,
+  includeLink?: boolean,
+  anchor?: string
+) => {
   if (includeLink === false) {
     return message
   }
-  const anchor = 'Teklifi görüntülemek için:'
-  if (message.includes(anchor)) {
-    return message.replace(anchor, `${anchor}\n${link}`)
+  const anchorText = anchor || 'Teklifi görüntülemek için:'
+  if (message.includes(anchorText)) {
+    return message.replace(anchorText, `${anchorText}\n${link}`)
   }
   return `${message}\n\n${link}`
 }
@@ -120,7 +125,7 @@ export async function POST(request: Request) {
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('team_id, full_name')
+    .select('team_id, full_name, language')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -213,11 +218,14 @@ export async function POST(request: Request) {
   }
 
   const method = payload.method ?? 'email'
+  const locale = profile.language === 'en' ? 'en' : 'tr'
+  const proposalDefaults = getProposalDefaults({ locale, client: clientName })
+
   const messageBody = buildMessageWithLink(
-    payload.message?.trim() ||
-      `Merhaba ${clientName},\n\nTeklifinizi paylaşmak istedim.\n\nTeklifi görüntülemek için:\n\nİyi çalışmalar,\nAERO CRM`,
+    payload.message?.trim() || proposalDefaults.message,
     publicUrl,
-    payload.includeLink
+    payload.includeLink,
+    proposalDefaults.anchor
   )
 
   try {
@@ -226,11 +234,12 @@ export async function POST(request: Request) {
       if (!recipient) {
         throw new Error('E-posta gönderimi için alıcı e-posta gerekli.')
       }
-      const subject = payload.subject?.trim() || `${clientName} için Teklif`
+      const subject = payload.subject?.trim() || proposalDefaults.subject
       const template = buildProposalDeliveryEmail({
         subject,
         message: messageBody,
         link: payload.includeLink === false ? undefined : publicUrl,
+        locale,
       })
       await sendEmail({
         to: recipient,

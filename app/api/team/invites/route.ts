@@ -8,14 +8,14 @@ const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() ||
 
 const buildInviteLink = (origin: string, token: string) => `${origin}/invite/${token}`
 
-const sendInviteEmail = async (params: { to: string; link: string; inviter: string }) => {
+const sendInviteEmail = async (params: { to: string; link: string; inviter: string; locale?: 'tr' | 'en' }) => {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.RESEND_FROM_EMAIL
   if (!apiKey || !from) {
     return false
   }
 
-  const template = buildTeamInviteEmail({ inviter: params.inviter, link: params.link })
+  const template = buildTeamInviteEmail({ inviter: params.inviter, link: params.link, locale: params.locale })
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('team_id, full_name')
+    .select('team_id, full_name, language')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -126,6 +126,7 @@ export async function POST(request: Request) {
     to: email,
     link: inviteLink,
     inviter: profile.full_name || 'AERO CRM ekibi',
+    locale: profile.language === 'en' ? 'en' : 'tr',
   })
 
   return NextResponse.json({ invite: data, inviteLink })

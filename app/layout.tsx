@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Toaster } from 'react-hot-toast'
 import './globals.css'
 import { Providers } from './providers'
+import { cookies } from 'next/headers'
 
 export const metadata: Metadata = {
   title: {
@@ -37,8 +38,10 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const cookieStore = cookies()
+  const locale = cookieStore.get('aero_locale')?.value === 'en' ? 'en' : 'tr'
   return (
-    <html lang="tr" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <link 
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500&display=swap" 

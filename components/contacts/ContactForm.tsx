@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { useSupabase } from '@/hooks/use-supabase'
 import { useUser } from '@/hooks'
+import { useI18n } from '@/lib/i18n'
 
 type ContactFormData = {
   full_name: string
@@ -25,6 +26,7 @@ type ContactFormProps = {
 export function ContactForm({ mode, contactId, initialData }: ContactFormProps) {
   const router = useRouter()
   const supabase = useSupabase()
+  const { t } = useI18n()
   const { user: profile, authUser, loading: userLoading } = useUser()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<ContactFormData>({
@@ -44,17 +46,17 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (userLoading) {
-      toast.error('Kullanıcı bilgileri yükleniyor')
+      toast.error(t('contacts.form.loadingUser'))
       return
     }
 
     if (!authUser?.id) {
-      toast.error('Oturum bulunamadı')
+      toast.error(t('contacts.form.noSession'))
       return
     }
 
     if (!formData.full_name.trim()) {
-      toast.error('Ad soyad alanı zorunlu')
+      toast.error(t('contacts.form.nameRequired'))
       return
     }
 
@@ -63,7 +65,7 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
       const contactsTable = supabase.from('contacts')
       if (mode === 'create') {
         if (!profile?.team_id) {
-          toast.error('Takım bilgisi bulunamadı')
+          toast.error(t('contacts.form.teamMissing'))
           return
         }
 
@@ -83,17 +85,17 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
 
         if (error || !data) {
           console.error('Create contact error:', error)
-          toast.error(error?.message || 'Kişi oluşturulamadı')
+          toast.error(error?.message || t('contacts.form.createError'))
           return
         }
 
-        toast.success('Kişi oluşturuldu')
+        toast.success(t('contacts.form.created'))
         router.push(`/contacts/${data.id}`)
         return
       }
 
       if (!contactId) {
-        toast.error('Kişi bulunamadı')
+        toast.error(t('contacts.form.contactMissing'))
         return
       }
 
@@ -110,11 +112,11 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
 
       if (error) {
         console.error('Update contact error:', error)
-        toast.error(error.message || 'Kişi güncellenemedi')
+        toast.error(error.message || t('contacts.form.updateError'))
         return
       }
 
-      toast.success('Kişi güncellendi')
+      toast.success(t('contacts.form.updated'))
       router.push(`/contacts/${contactId}`)
     } finally {
       setLoading(false)
@@ -127,14 +129,14 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
         <div className="flex items-center gap-2 mb-4">
           <Link href="/contacts" className="flex items-center text-primary text-sm font-semibold hover:underline">
             <span className="material-symbols-outlined text-[18px] mr-1">arrow_back</span>
-            Kişilere Dön
+            {t('contacts.form.back')}
           </Link>
         </div>
         <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">
-          {mode === 'create' ? 'Yeni Kişi Oluştur' : 'Kişiyi Düzenle'}
+          {mode === 'create' ? t('contacts.form.createTitle') : t('contacts.form.editTitle')}
         </h1>
         <p className="text-[#48679d] dark:text-gray-400 mt-1">
-          {mode === 'create' ? 'Yeni bir kişi ekleyin.' : 'Kişi bilgilerini güncelleyin.'}
+          {mode === 'create' ? t('contacts.form.createSubtitle') : t('contacts.form.editSubtitle')}
         </p>
       </div>
 
@@ -143,41 +145,41 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
           <div className="px-6 py-4 border-b border-[#e7ebf4] dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
             <h2 className="font-bold text-[#0d121c] dark:text-white flex items-center gap-2">
               <span className="material-symbols-outlined text-primary">person</span>
-              Temel Bilgiler
+              {t('contacts.form.sections.basics')}
             </h2>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">
-                Ad Soyad <span className="text-red-500">*</span>
+                {t('contacts.form.fields.fullName')} <span className="text-red-500">*</span>
               </label>
               <input
                 name="full_name"
                 value={formData.full_name}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white"
-                placeholder="Örn: Ayşe Yıldız"
+                placeholder={t('contacts.form.placeholders.fullName')}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">Şirket</label>
+              <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">{t('contacts.form.fields.company')}</label>
               <input
                 name="company"
                 value={formData.company}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white"
-                placeholder="Örn: Aero CRM"
+                placeholder={t('contacts.form.placeholders.company')}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">Pozisyon</label>
+              <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">{t('contacts.form.fields.position')}</label>
               <input
                 name="position"
                 value={formData.position}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white"
-                placeholder="Örn: Satış Müdürü"
+                placeholder={t('contacts.form.placeholders.position')}
               />
             </div>
           </div>
@@ -187,39 +189,39 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
           <div className="px-6 py-4 border-b border-[#e7ebf4] dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
             <h2 className="font-bold text-[#0d121c] dark:text-white flex items-center gap-2">
               <span className="material-symbols-outlined text-primary">contact_mail</span>
-              İletişim Bilgileri
+              {t('contacts.form.sections.contact')}
             </h2>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">E-posta</label>
+              <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">{t('contacts.form.fields.email')}</label>
               <input
                 name="email"
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white"
-                placeholder="ayse@ornek.com"
+                placeholder={t('contacts.form.placeholders.email')}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">Telefon</label>
+              <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">{t('contacts.form.fields.phone')}</label>
               <input
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white"
-                placeholder="+90 5xx xxx xx xx"
+                placeholder={t('contacts.form.placeholders.phone')}
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">Adres</label>
+              <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">{t('contacts.form.fields.address')}</label>
               <textarea
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white min-h-[100px]"
-                placeholder="Örn: Ataşehir, İstanbul"
+                placeholder={t('contacts.form.placeholders.address')}
               />
             </div>
           </div>
@@ -227,14 +229,14 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
 
         <div className="flex justify-end gap-3">
           <Link href="/contacts" className="px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg text-sm font-semibold text-[#48679d] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
-            Vazgeç
+            {t('common.cancel')}
           </Link>
           <button
             type="submit"
             disabled={loading || userLoading}
             className="px-6 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors disabled:opacity-70"
           >
-            {loading || userLoading ? 'Kaydediliyor...' : 'Kaydet'}
+            {loading || userLoading ? t('common.saving') : t('common.save')}
           </button>
         </div>
       </form>

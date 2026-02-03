@@ -12,6 +12,7 @@ import {
   BarChart,
   Bar,
 } from 'recharts'
+import { useI18n } from '@/lib/i18n'
 
 type MonitoringOverview = {
   uptimeSeconds: number
@@ -34,6 +35,7 @@ const formatUptime = (seconds: number) => {
 }
 
 export default function MonitoringSettingsPage() {
+  const { t, formatDate } = useI18n()
   const [overview, setOverview] = useState<MonitoringOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -61,27 +63,27 @@ export default function MonitoringSettingsPage() {
     if (!overview) return []
     return [
       {
-        label: 'Uptime',
+        label: t('monitoring.cards.uptime'),
         value: formatUptime(overview.uptimeSeconds),
-        hint: `Son 7 gun: ${new Date(overview.since).toLocaleDateString('tr-TR')}`,
+        hint: `${t('monitoring.hints.last7Days')}: ${formatDate(overview.since, { dateStyle: 'medium' })}`,
       },
       {
-        label: 'Webhook Basari',
-        value: overview.webhookRate || 'Veri yok',
-        hint: `${overview.webhookTotal} deneme`,
+        label: t('monitoring.cards.webhookSuccess'),
+        value: overview.webhookRate || t('monitoring.empty.noData'),
+        hint: t('monitoring.hints.attempts', { count: overview.webhookTotal }),
       },
       {
-        label: 'API Istegi',
+        label: t('monitoring.cards.apiRequests'),
         value: overview.apiRequestsCount.toString(),
-        hint: 'Son 7 gun',
+        hint: t('monitoring.hints.last7Days'),
       },
       {
-        label: 'Hata Kaydi',
+        label: t('monitoring.cards.errorLogs'),
         value: overview.errorCount.toString(),
-        hint: 'Son 10 hata',
+        hint: t('monitoring.hints.last10Errors'),
       },
     ]
-  }, [overview])
+  }, [overview, t])
 
   if (loading) {
     return (
@@ -94,8 +96,8 @@ export default function MonitoringSettingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">Sistem Sagligi</h1>
-        <p className="text-[#48679d] dark:text-gray-400">Uptime, hata loglari ve API kullanimini takip edin.</p>
+        <h1 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">{t('monitoring.title')}</h1>
+        <p className="text-[#48679d] dark:text-gray-400">{t('monitoring.subtitle')}</p>
       </div>
 
       {error && (
@@ -116,7 +118,7 @@ export default function MonitoringSettingsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white mb-4">API Kullanim Trend</h2>
+          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white mb-4">{t('monitoring.charts.apiTrend')}</h2>
           {overview?.apiSeries?.length ? (
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
@@ -130,12 +132,12 @@ export default function MonitoringSettingsPage() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-sm text-[#48679d]">Veri yok.</p>
+            <p className="text-sm text-[#48679d]">{t('monitoring.empty.noData')}</p>
           )}
         </div>
 
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white mb-4">Webhook Basari Orani</h2>
+          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white mb-4">{t('monitoring.charts.webhookTrend')}</h2>
           {overview?.webhookSeries?.length ? (
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
@@ -149,14 +151,14 @@ export default function MonitoringSettingsPage() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-sm text-[#48679d]">Veri yok.</p>
+            <p className="text-sm text-[#48679d]">{t('monitoring.empty.noData')}</p>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white mb-4">Top API Endpointler</h2>
+          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white mb-4">{t('monitoring.charts.topEndpoints')}</h2>
           <div className="space-y-3">
             {overview?.topEndpoints?.length ? (
               overview.topEndpoints.map((item) => (
@@ -166,13 +168,13 @@ export default function MonitoringSettingsPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-[#48679d]">Veri yok.</p>
+              <p className="text-sm text-[#48679d]">{t('monitoring.empty.noData')}</p>
             )}
           </div>
         </div>
 
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white mb-4">Son Hatalar</h2>
+          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white mb-4">{t('monitoring.charts.recentErrors')}</h2>
           <div className="space-y-3">
             {overview?.recentErrors?.length ? (
               overview.recentErrors.map((log) => (
@@ -180,12 +182,12 @@ export default function MonitoringSettingsPage() {
                   <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{log.message}</p>
                   <div className="text-xs text-[#48679d] dark:text-gray-400 mt-1 flex items-center justify-between">
                     <span>{log.source || 'unknown'}</span>
-                    <span>{log.created_at ? new Date(log.created_at).toLocaleString('tr-TR') : '-'}</span>
+                    <span>{log.created_at ? formatDate(log.created_at, { dateStyle: 'medium', timeStyle: 'short' }) : '-'}</span>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-[#48679d]">Hata kaydi bulunmuyor.</p>
+              <p className="text-sm text-[#48679d]">{t('monitoring.empty.noErrors')}</p>
             )}
           </div>
         </div>

@@ -3,6 +3,7 @@ import DealDetailsClient from './DealDetailsClient'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
 import { normalizeStage } from '@/components/deals/stage-utils'
+import { getServerT } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,6 +32,7 @@ type DealFileRow = {
 
 export default async function DealDetailsPage({ params }: { params: { id: string } }) {
   const supabase = await createServerSupabaseClient()
+  const t = getServerT()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -68,7 +70,7 @@ export default async function DealDetailsPage({ params }: { params: { id: string
         initialTeamMembers={[]}
         initialProducts={[]}
         averageDays={null}
-        initialError="Fırsat bulunamadı."
+        initialError={t('deals.detail.notFound')}
       />
     )
   }
@@ -87,7 +89,7 @@ export default async function DealDetailsPage({ params }: { params: { id: string
   if (dealRow.user_id) {
     const { data: ownerRow } = await supabase
       .from('users')
-      .select('id, full_name, avatar_url, email, role, team_id, created_at, updated_at')
+      .select('id, full_name, avatar_url, email, role, team_id, created_at, updated_at, language')
       .eq('id', dealRow.user_id)
       .maybeSingle()
     owner = ownerRow ?? null

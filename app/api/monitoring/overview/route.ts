@@ -52,7 +52,7 @@ export async function GET() {
           .select('success, created_at')
           .in('webhook_id', webhookIds)
           .gte('created_at', since)
-      : Promise.resolve({ data: [] as Array<{ success: boolean }> }),
+      : Promise.resolve({ data: [] as Array<{ success: boolean; created_at: string | null }> }),
     supabase
       .from('system_logs')
       .select('id, level, message, created_at, source')

@@ -6,13 +6,26 @@ export type StageConfig = {
   dbValues: string[]
 }
 
-export const stageConfigs: StageConfig[] = [
-  { id: 'lead', label: 'Aday', dbValues: ['lead', 'aday'] },
-  { id: 'proposal', label: 'Teklif Gönderildi', dbValues: ['proposal', 'proposal_sent', 'teklif', 'teklif gönderildi'] },
-  { id: 'negotiation', label: 'Görüşme', dbValues: ['negotiation', 'görüşme', 'meeting'] },
-  { id: 'won', label: 'Kazanıldı', dbValues: ['won', 'kazanıldı', 'closed_won'] },
-  { id: 'lost', label: 'Kaybedildi', dbValues: ['lost', 'kaybedildi', 'closed_lost'] },
+type BaseStageConfig = {
+  id: StageId
+  labelKey: string
+  dbValues: string[]
+}
+
+const baseStageConfigs: BaseStageConfig[] = [
+  { id: 'lead', labelKey: 'stages.lead', dbValues: ['lead', 'aday'] },
+  { id: 'proposal', labelKey: 'stages.proposal', dbValues: ['proposal', 'proposal_sent', 'teklif', 'teklif gönderildi'] },
+  { id: 'negotiation', labelKey: 'stages.negotiation', dbValues: ['negotiation', 'görüşme', 'meeting'] },
+  { id: 'won', labelKey: 'stages.won', dbValues: ['won', 'kazanıldı', 'closed_won'] },
+  { id: 'lost', labelKey: 'stages.lost', dbValues: ['lost', 'kaybedildi', 'closed_lost'] },
 ]
+
+export const getStageConfigs = (t: (key: string) => string): StageConfig[] =>
+  baseStageConfigs.map((stage) => ({
+    id: stage.id,
+    label: t(stage.labelKey),
+    dbValues: stage.dbValues,
+  }))
 
 export const normalizeStage = (value?: string | null): StageId => {
   if (!value) {
@@ -20,7 +33,7 @@ export const normalizeStage = (value?: string | null): StageId => {
   }
 
   const normalized = value.toLowerCase()
-  const match = stageConfigs.find(stage =>
+  const match = baseStageConfigs.find(stage =>
     stage.dbValues.some(dbValue => dbValue.toLowerCase() === normalized)
   )
 
@@ -28,19 +41,22 @@ export const normalizeStage = (value?: string | null): StageId => {
 }
 
 export const getDbStage = (stageId: StageId) => {
-  const stage = stageConfigs.find(item => item.id === stageId)
+  const stage = baseStageConfigs.find(item => item.id === stageId)
   return stage?.dbValues[0] ?? stageId
 }
 
-export const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('tr-TR', {
+export const formatCurrency = (value: number, locale = 'tr-TR', currency = 'TRY') =>
+  new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: 'TRY',
+    currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value)
 
-export const formatRelativeTime = (isoDate: string) => {
+export const formatRelativeTime = (
+  isoDate: string,
+  t: (key: string, vars?: Record<string, string | number>) => string
+) => {
   const target = new Date(isoDate)
   const now = new Date()
   const diffMs = target.getTime() - now.getTime()
@@ -48,31 +64,37 @@ export const formatRelativeTime = (isoDate: string) => {
   const absSeconds = Math.abs(diffSeconds)
 
   if (absSeconds < 60) {
-    return diffSeconds <= 0 ? 'Az önce' : 'Birazdan'
+    return diffSeconds <= 0 ? t('time.justNow') : t('time.soon')
   }
 
   const diffMinutes = Math.round(diffSeconds / 60)
   const absMinutes = Math.abs(diffMinutes)
 
   if (absMinutes < 60) {
-    return diffMinutes < 0 ? `${Math.abs(diffMinutes)} dk önce` : `${diffMinutes} dk sonra`
+    return diffMinutes < 0
+      ? t('time.minutesAgo', { count: Math.abs(diffMinutes) })
+      : t('time.minutesFromNow', { count: diffMinutes })
   }
 
   const diffHours = Math.round(diffMinutes / 60)
   const absHours = Math.abs(diffHours)
 
   if (absHours < 24) {
-    return diffHours < 0 ? `${Math.abs(diffHours)} saat önce` : `${diffHours} saat sonra`
+    return diffHours < 0
+      ? t('time.hoursAgo', { count: Math.abs(diffHours) })
+      : t('time.hoursFromNow', { count: diffHours })
   }
 
   const diffDays = Math.round(diffHours / 24)
   if (diffDays === -1) {
-    return 'Dün'
+    return t('time.yesterday')
   }
   if (diffDays === 1) {
-    return 'Yarın'
+    return t('time.tomorrow')
   }
-  return diffDays < 0 ? `${Math.abs(diffDays)} gün önce` : `${diffDays} gün sonra`
+  return diffDays < 0
+    ? t('time.daysAgo', { count: Math.abs(diffDays) })
+    : t('time.daysFromNow', { count: diffDays })
 }
 
 const isSameDay = (a: Date, b: Date) =>
@@ -93,38 +115,42 @@ export type ActivityMeta = {
   icon?: string
 }
 
-export const getActivityMeta = (stage: StageId, updatedAt: string): ActivityMeta => {
+export const getActivityMeta = (
+  stage: StageId,
+  updatedAt: string,
+  t: (key: string, vars?: Record<string, string | number>) => string
+): ActivityMeta => {
   const target = new Date(updatedAt)
   const now = new Date()
-  const relative = formatRelativeTime(updatedAt)
+  const relative = formatRelativeTime(updatedAt, t)
 
   if (stage === 'lead') {
     if (isSameDay(target, now)) {
-      return { label: 'Bugün', tone: 'urgent', icon: 'priority_high' }
+      return { label: t('time.today'), tone: 'urgent', icon: 'priority_high' }
     }
     if (isYesterday(target, now)) {
-      return { label: 'Dün', tone: 'urgent', icon: 'priority_high' }
+      return { label: t('time.yesterday'), tone: 'urgent', icon: 'priority_high' }
     }
     return { label: relative, tone: 'muted', icon: 'schedule' }
   }
 
   if (stage === 'proposal') {
-    return { label: `Bekliyor • ${relative}`, tone: 'muted' }
+    return { label: t('time.awaiting', { value: relative }), tone: 'muted' }
   }
 
   if (stage === 'negotiation') {
-    return { label: `Son görüşme: ${relative}`, tone: 'muted' }
+    return { label: t('time.lastMeeting', { value: relative }), tone: 'muted' }
   }
 
   if (stage === 'won') {
     if (isSameDay(target, now)) {
-      return { label: 'Bugün kapatıldı', tone: 'muted' }
+      return { label: t('time.closedToday'), tone: 'muted' }
     }
-    return { label: `Kapatıldı • ${relative}`, tone: 'muted' }
+    return { label: t('time.closed', { value: relative }), tone: 'muted' }
   }
 
   if (stage === 'lost') {
-    return { label: `Kaybedildi • ${relative}`, tone: 'muted' }
+    return { label: t('time.lost', { value: relative }), tone: 'muted' }
   }
 
   return { label: relative, tone: 'muted' }

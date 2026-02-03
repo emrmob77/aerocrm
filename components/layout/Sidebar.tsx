@@ -3,34 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 interface NavItem {
   label: string
   href: string
   icon: string
 }
-
-// Tüm sayfalar
-const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
-  { label: 'Anlaşmalar', href: '/deals', icon: 'database' },
-  { label: 'Kişiler', href: '/contacts', icon: 'group' },
-  { label: 'Ürünler', href: '/products', icon: 'inventory_2' },
-  { label: 'Teklifler', href: '/proposals', icon: 'description' },
-  { label: 'Şablonlar', href: '/templates', icon: 'auto_awesome' },
-  { label: 'Satışlar', href: '/sales', icon: 'handshake' },
-  { label: 'Raporlar', href: '/reports', icon: 'bar_chart' },
-  { label: 'Analitik', href: '/analytics', icon: 'analytics' },
-  { label: 'Bildirimler', href: '/notifications', icon: 'notifications' },
-  { label: 'Webhooks', href: '/webhooks', icon: 'webhook' },
-  { label: 'Entegrasyonlar', href: '/integrations', icon: 'extension' },
-  { label: 'Ayarlar', href: '/settings', icon: 'settings' },
-]
-
-const generalItems: NavItem[] = [
-  { label: 'Arama', href: '/search', icon: 'search' },
-  { label: 'Veri Aktarımı', href: '/reports/import-export', icon: 'swap_vert' },
-]
 
 interface SidebarProps {
   onClose?: () => void
@@ -40,7 +19,29 @@ interface SidebarProps {
 
 export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: SidebarProps) {
   const pathname = usePathname()
+  const { t } = useI18n()
   const toggleCollapsed = () => onToggleCollapsed?.()
+
+  const navItems: NavItem[] = [
+    { label: t('nav.dashboard'), href: '/dashboard', icon: 'dashboard' },
+    { label: t('nav.deals'), href: '/deals', icon: 'database' },
+    { label: t('nav.contacts'), href: '/contacts', icon: 'group' },
+    { label: t('nav.products'), href: '/products', icon: 'inventory_2' },
+    { label: t('nav.proposals'), href: '/proposals', icon: 'description' },
+    { label: t('nav.templates'), href: '/templates', icon: 'auto_awesome' },
+    { label: t('nav.sales'), href: '/sales', icon: 'handshake' },
+    { label: t('nav.reports'), href: '/reports', icon: 'bar_chart' },
+    { label: t('nav.analytics'), href: '/analytics', icon: 'analytics' },
+    { label: t('nav.notifications'), href: '/notifications', icon: 'notifications' },
+    { label: t('nav.webhooks'), href: '/webhooks', icon: 'webhook' },
+    { label: t('nav.integrations'), href: '/integrations', icon: 'extension' },
+    { label: t('nav.settings'), href: '/settings', icon: 'settings' },
+  ]
+
+  const generalItems: NavItem[] = [
+    { label: t('nav.search'), href: '/search', icon: 'search' },
+    { label: t('nav.importExport'), href: '/reports/import-export', icon: 'swap_vert' },
+  ]
 
   return (
     <aside
@@ -66,7 +67,7 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
           {!collapsed && (
             <div className="flex flex-col">
               <h1 className="text-[#0d121c] dark:text-white text-sm font-bold leading-none">AERO CRM</h1>
-              <p className="text-[#48679d] dark:text-gray-400 text-[11px] font-medium">Satış Yönetimi</p>
+              <p className="text-[#48679d] dark:text-gray-400 text-[11px] font-medium">{t('sidebar.tagline')}</p>
             </div>
           )}
         </Link>
@@ -74,8 +75,8 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
           <div className="flex items-center gap-2">
             <button
               onClick={toggleCollapsed}
-              title="Daralt"
-              aria-label="Daralt"
+              title={t('sidebar.collapse')}
+              aria-label={t('sidebar.collapse')}
               className="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
               <span className="material-symbols-outlined text-[18px]">chevron_left</span>
@@ -92,8 +93,8 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={toggleCollapsed}
-              title="Genişlet"
-              aria-label="Genişlet"
+              title={t('sidebar.expand')}
+              aria-label={t('sidebar.expand')}
               className="p-2 text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
               <span className="material-symbols-outlined text-[18px]">chevron_right</span>
@@ -136,7 +137,9 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
 
         <div>
           {!collapsed && (
-            <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Genel</p>
+            <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              {t('sidebar.general')}
+            </p>
           )}
           <div className="space-y-1">
             {generalItems.map((item) => {
@@ -169,14 +172,14 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
         <Link
           href="/deals/new"
           onClick={onClose}
-          title={collapsed ? 'Yeni Kayıt' : undefined}
+          title={collapsed ? t('sidebar.newRecord') : undefined}
           className={cn(
             'w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-lg py-2.5 font-bold text-sm transition-all shadow-lg shadow-primary/20',
             collapsed && 'px-0'
           )}
         >
           <span className="material-symbols-outlined text-sm">add</span>
-          {!collapsed && <span>Yeni Kayıt</span>}
+          {!collapsed && <span>{t('sidebar.newRecord')}</span>}
         </Link>
       </div>
     </aside>

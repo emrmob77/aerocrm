@@ -18,7 +18,7 @@ export {
 // Deals Components
 export {
   DealsBoard,
-  stageConfigs,
+  getStageConfigs,
   normalizeStage,
   getDbStage,
   formatCurrency,
