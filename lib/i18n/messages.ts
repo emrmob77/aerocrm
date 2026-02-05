@@ -1360,6 +1360,7 @@ export const messages = {
         backToEdit: 'Düzenlemeye dön',
         sendTitle: 'Teklifi Gönder',
         preview: 'Önizle',
+        previewTitle: 'Önizleme Modu',
         send: 'Gönder',
         saveTemplate: 'Şablon olarak kaydet',
         saveDraft: 'Taslak olarak kaydet',
@@ -1470,6 +1471,19 @@ export const messages = {
           ctaLabel: 'Operasyon Raporunu Gör',
         },
       },
+      palette: {
+        hero: 'Hero',
+        heading: 'Başlık',
+        text: 'Metin',
+        pricing: 'Fiyat Tablosu',
+        video: 'Video',
+        gallery: 'Galeri',
+        testimonial: 'Referans',
+        timeline: 'Zaman Çizelgesi',
+        countdown: 'Geri Sayım',
+        cta: 'CTA',
+        signature: 'İmza',
+      },
       paletteGroups: {
         basic: 'Temel',
         content: 'İçerik',
@@ -1530,6 +1544,12 @@ export const messages = {
         videoUrl: 'Video URL',
         description: 'Açıklama',
         date: 'Tarih',
+      },
+      options: {
+        columns: {
+          2: '2 kolon',
+          3: '3 kolon',
+        },
       },
       align: {
         left: 'Sol',
@@ -3904,6 +3924,7 @@ export const messages = {
         backToEdit: 'Back to edit',
         sendTitle: 'Send proposal',
         preview: 'Preview',
+        previewTitle: 'Preview Mode',
         send: 'Send',
         saveTemplate: 'Save as template',
         saveDraft: 'Save draft',
@@ -4014,6 +4035,19 @@ export const messages = {
           ctaLabel: 'View Operations Report',
         },
       },
+      palette: {
+        hero: 'Hero',
+        heading: 'Heading',
+        text: 'Text',
+        pricing: 'Pricing',
+        video: 'Video',
+        gallery: 'Gallery',
+        testimonial: 'Testimonial',
+        timeline: 'Timeline',
+        countdown: 'Countdown',
+        cta: 'CTA',
+        signature: 'Signature',
+      },
       paletteGroups: {
         basic: 'Basics',
         content: 'Content',
@@ -4074,6 +4108,12 @@ export const messages = {
         videoUrl: 'Video URL',
         description: 'Description',
         date: 'Date',
+      },
+      options: {
+        columns: {
+          2: '2 columns',
+          3: '3 columns',
+        },
       },
       align: {
         left: 'Left',
