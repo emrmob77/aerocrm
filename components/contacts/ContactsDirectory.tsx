@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { useSupabase } from '@/hooks/use-supabase'
 import type { Database } from '@/types/database'
@@ -11,6 +12,10 @@ import {
   formatRelativeTime,
   getInitials,
   filterContacts,
+  isWithinDays,
+  getCustomFields,
+  parseContactTags,
+  normalizeTagInput,
   type ContactFilterInput,
   type ContactFilterType,
 } from './contact-utils'
@@ -27,10 +32,31 @@ export type ContactListItem = {
   totalValue: number
   lastActivityAt: string | null
   dealsCount: number
+  customFields?: Database['public']['Tables']['contacts']['Row']['custom_fields'] | null
+  tags?: string[]
 }
 
 type ViewMode = 'list' | 'card'
 type SortKey = 'name' | 'value' | 'activity'
+type Density = 'comfortable' | 'compact'
+type ColumnKey = 'email' | 'phone' | 'company' | 'value' | 'activity'
+type ColumnVisibility = Record<ColumnKey, boolean>
+type AdvancedFilters = {
+  minValue: string
+  maxValue: string
+  lastActivityDays: 'all' | '7' | '30' | '90' | '365'
+  hasEmail: boolean
+  hasPhone: boolean
+  hasCompany: boolean
+  hasDeals: boolean
+}
+
+type ViewSettingsPayload = {
+  viewMode?: ViewMode
+  rowsPerPage?: number
+  density?: Density
+  columnVisibility?: Partial<ColumnVisibility>
+}
 
 const avatarPalette = [
   { bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-600 dark:text-blue-200' },
@@ -47,6 +73,28 @@ const getAvatarStyle = (seed: string) => {
 type ContactRow = Database['public']['Tables']['contacts']['Row']
 type DealRow = Database['public']['Tables']['deals']['Row']
 
+const settingsStorageKey = 'aero:contacts:view-settings'
+const settingsContext = 'contacts'
+
+const defaultColumns: ColumnVisibility = {
+  email: true,
+  phone: true,
+  company: true,
+  value: true,
+  activity: true,
+}
+
+const defaultAdvancedFilters: AdvancedFilters = {
+  minValue: '',
+  maxValue: '',
+  lastActivityDays: 'all',
+  hasEmail: false,
+  hasPhone: false,
+  hasCompany: false,
+  hasDeals: false,
+}
+
+
 export function ContactsDirectory({
   initialContacts,
   teamId,
@@ -56,6 +104,9 @@ export function ContactsDirectory({
   teamId: string | null
   userId: string | null
 }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const supabase = useSupabase()
   const { t, get, locale } = useI18n()
   const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
@@ -69,6 +120,18 @@ export function ContactsDirectory({
   const [selectedContacts, setSelectedContacts] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(25)
+  const [density, setDensity] = useState<Density>('comfortable')
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>(defaultColumns)
+  const [showFilterPanel, setShowFilterPanel] = useState(false)
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false)
+  const [showTagModal, setShowTagModal] = useState(false)
+  const [tagInput, setTagInput] = useState('')
+  const [tagSaving, setTagSaving] = useState(false)
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(defaultAdvancedFilters)
+  const [settingsReady, setSettingsReady] = useState(false)
+  const [filtersReady, setFiltersReady] = useState(false)
+  const settingsSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hasLoadedSettings = useRef(false)
 
   const filterOptions = useMemo(
     () => [
@@ -80,9 +143,150 @@ export function ContactsDirectory({
     [t]
   )
 
+  const readBooleanParam = (value: string | null) => value === '1' || value === 'true'
+
+  const readFiltersFromUrl = () => {
+    const rawFilter = searchParams.get('filter')
+    const filterValue: ContactFilterType =
+      rawFilter === 'new' || rawFilter === 'highValue' || rawFilter === 'inactive' ? rawFilter : 'all'
+    const lastActivity = searchParams.get('activity')
+    const lastActivityDays =
+      lastActivity === '7' || lastActivity === '30' || lastActivity === '90' || lastActivity === '365'
+        ? lastActivity
+        : 'all'
+
+    return {
+      query: searchParams.get('q') ?? '',
+      activeFilter: filterValue,
+      advancedFilters: {
+        minValue: searchParams.get('min') ?? '',
+        maxValue: searchParams.get('max') ?? '',
+        lastActivityDays,
+        hasEmail: readBooleanParam(searchParams.get('hasEmail')),
+        hasPhone: readBooleanParam(searchParams.get('hasPhone')),
+        hasCompany: readBooleanParam(searchParams.get('hasCompany')),
+        hasDeals: readBooleanParam(searchParams.get('hasDeals')),
+      } as AdvancedFilters,
+    }
+  }
+
+  const applyViewSettings = (settings: ViewSettingsPayload | null | undefined) => {
+    if (!settings) return
+    if (settings.viewMode === 'list' || settings.viewMode === 'card') {
+      setViewMode(settings.viewMode)
+    }
+    if (typeof settings.rowsPerPage === 'number' && [25, 50, 100].includes(settings.rowsPerPage)) {
+      setRowsPerPage(settings.rowsPerPage)
+    }
+    if (settings.density === 'comfortable' || settings.density === 'compact') {
+      setDensity(settings.density)
+    }
+    if (settings.columnVisibility) {
+      setColumnVisibility({ ...defaultColumns, ...settings.columnVisibility })
+    }
+  }
+
   useEffect(() => {
-    setContacts(initialContacts)
+    if (!userId || hasLoadedSettings.current) return
+    hasLoadedSettings.current = true
+
+    const load = async () => {
+      let applied = false
+      const { data } = await supabase
+        .from('user_view_settings')
+        .select('settings')
+        .eq('user_id', userId)
+        .eq('context', settingsContext)
+        .maybeSingle()
+
+      if (data?.settings) {
+        applyViewSettings(data.settings as ViewSettingsPayload)
+        applied = true
+      }
+
+      if (!applied && typeof window !== 'undefined') {
+        const saved = window.localStorage.getItem(settingsStorageKey)
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved) as ViewSettingsPayload
+            applyViewSettings(parsed)
+          } catch {
+            // ignore invalid local storage
+          }
+        }
+      }
+
+      setSettingsReady(true)
+    }
+
+    load()
+  }, [supabase, userId])
+
+  useEffect(() => {
+    if (!settingsReady || !userId) return
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(
+        settingsStorageKey,
+        JSON.stringify({
+          viewMode,
+          rowsPerPage,
+          density,
+          columnVisibility,
+        })
+      )
+    }
+
+    if (settingsSaveTimeout.current) {
+      clearTimeout(settingsSaveTimeout.current)
+    }
+    settingsSaveTimeout.current = setTimeout(async () => {
+      await supabase.from('user_view_settings').upsert(
+        {
+          user_id: userId,
+          context: settingsContext,
+          settings: {
+            viewMode,
+            rowsPerPage,
+            density,
+            columnVisibility,
+          },
+        },
+        { onConflict: 'user_id,context' }
+      )
+    }, 600)
+
+    return () => {
+      if (settingsSaveTimeout.current) {
+        clearTimeout(settingsSaveTimeout.current)
+      }
+    }
+  }, [settingsReady, userId, viewMode, rowsPerPage, density, columnVisibility, supabase])
+
+  useEffect(() => {
+    setContacts(
+      initialContacts.map((contact) => ({
+        ...contact,
+        customFields: getCustomFields(contact.customFields) ?? contact.customFields ?? null,
+        tags: contact.tags ?? parseContactTags(getCustomFields(contact.customFields)),
+      }))
+    )
   }, [initialContacts])
+
+  useEffect(() => {
+    const next = readFiltersFromUrl()
+    if (next.query !== query) {
+      setQuery(next.query)
+    }
+    if (next.activeFilter !== activeFilter) {
+      setActiveFilter(next.activeFilter)
+    }
+    if (JSON.stringify(next.advancedFilters) !== JSON.stringify(advancedFilters)) {
+      setAdvancedFilters(next.advancedFilters)
+    }
+    setFiltersReady(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   useEffect(() => {
     if (!teamId && !userId) {
@@ -167,6 +371,8 @@ export function ContactsDirectory({
                 totalValue: 0,
                 lastActivityAt: row.updated_at ?? row.created_at,
                 dealsCount: 0,
+                customFields: getCustomFields(row.custom_fields),
+                tags: parseContactTags(getCustomFields(row.custom_fields)),
               },
               ...prev,
             ]
@@ -189,6 +395,7 @@ export function ContactsDirectory({
               }
 
               const updatedAt = row.updated_at ?? contact.updatedAt
+              const customFields = getCustomFields(row.custom_fields) ?? contact.customFields ?? null
               const lastActivityAt =
                 updatedAt && contact.lastActivityAt && new Date(updatedAt) > new Date(contact.lastActivityAt)
                   ? updatedAt
@@ -204,6 +411,8 @@ export function ContactsDirectory({
                 createdAt: row.created_at,
                 updatedAt,
                 lastActivityAt,
+                customFields,
+                tags: parseContactTags(customFields),
               }
             })
           )
@@ -263,12 +472,78 @@ export function ContactsDirectory({
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [query, activeFilter, rowsPerPage])
+  }, [query, activeFilter, rowsPerPage, advancedFilters])
 
-  const filteredContacts = useMemo(
-    () => filterContacts(contacts as ContactFilterInput[], query, activeFilter),
-    [contacts, query, activeFilter]
-  )
+  useEffect(() => {
+    if (!filtersReady) return
+    const params = new URLSearchParams()
+    if (query.trim()) {
+      params.set('q', query.trim())
+    }
+    if (activeFilter !== 'all') {
+      params.set('filter', activeFilter)
+    }
+    if (advancedFilters.minValue) {
+      params.set('min', advancedFilters.minValue)
+    }
+    if (advancedFilters.maxValue) {
+      params.set('max', advancedFilters.maxValue)
+    }
+    if (advancedFilters.lastActivityDays !== 'all') {
+      params.set('activity', advancedFilters.lastActivityDays)
+    }
+    if (advancedFilters.hasEmail) params.set('hasEmail', '1')
+    if (advancedFilters.hasPhone) params.set('hasPhone', '1')
+    if (advancedFilters.hasCompany) params.set('hasCompany', '1')
+    if (advancedFilters.hasDeals) params.set('hasDeals', '1')
+
+    const next = params.toString()
+    const current = searchParams.toString()
+    if (next !== current) {
+      const nextUrl = next ? `${pathname}?${next}` : pathname
+      router.replace(nextUrl, { scroll: false })
+    }
+  }, [filtersReady, query, activeFilter, advancedFilters, pathname, router, searchParams])
+
+  const filteredContacts = useMemo(() => {
+    const base = filterContacts(contacts as ContactFilterInput[], query, activeFilter) as ContactListItem[]
+    const minValue = Number(advancedFilters.minValue)
+    const maxValue = Number(advancedFilters.maxValue)
+    const hasMinValue = Number.isFinite(minValue) && advancedFilters.minValue !== ''
+    const hasMaxValue = Number.isFinite(maxValue) && advancedFilters.maxValue !== ''
+    return base.filter((contact) => {
+      if (advancedFilters.hasEmail && !contact.email) return false
+      if (advancedFilters.hasPhone && !contact.phone) return false
+      if (advancedFilters.hasCompany && !contact.company) return false
+      if (advancedFilters.hasDeals && contact.dealsCount === 0) return false
+
+      if (hasMinValue && contact.totalValue < minValue) return false
+      if (hasMaxValue && contact.totalValue > maxValue) return false
+
+      if (advancedFilters.lastActivityDays !== 'all') {
+        const days = Number(advancedFilters.lastActivityDays)
+        const lastActivityAt =
+          contact.lastActivityAt ?? contact.updatedAt ?? contact.createdAt ?? new Date().toISOString()
+        if (!isWithinDays(lastActivityAt, days)) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [contacts, query, activeFilter, advancedFilters])
+
+  const activeAdvancedFilters = useMemo(() => {
+    let count = 0
+    if (advancedFilters.hasEmail) count += 1
+    if (advancedFilters.hasPhone) count += 1
+    if (advancedFilters.hasCompany) count += 1
+    if (advancedFilters.hasDeals) count += 1
+    if (advancedFilters.minValue) count += 1
+    if (advancedFilters.maxValue) count += 1
+    if (advancedFilters.lastActivityDays !== 'all') count += 1
+    return count
+  }, [advancedFilters])
 
   const sortedContacts = useMemo(() => {
     const sorted = [...filteredContacts]
@@ -374,7 +649,65 @@ export function ContactsDirectory({
   }
 
   const handleTag = () => {
-    toast(t('contacts.tagSoon'))
+    setTagInput('')
+    setShowTagModal(true)
+  }
+
+  const applyTags = async () => {
+    if (selectedContacts.length === 0) return
+    const tags = normalizeTagInput(tagInput)
+    if (tags.length === 0) {
+      toast.error(t('contacts.tags.errors.empty'))
+      return
+    }
+
+    setTagSaving(true)
+    try {
+      const updates = selectedContacts.map(async (contactId) => {
+        const contact = contacts.find((item) => item.id === contactId)
+        const baseFields = getCustomFields(contact?.customFields) ?? {}
+        const existingTags = parseContactTags(baseFields)
+        const mergedTags = Array.from(new Set([...existingTags, ...tags]))
+        const customFields = { ...baseFields, tags: mergedTags }
+        const { error } = await supabase.from('contacts').update({ custom_fields: customFields }).eq('id', contactId)
+        if (error) {
+          throw error
+        }
+        return { contactId, customFields, tags: mergedTags }
+      })
+
+      const results = await Promise.all(updates)
+      setContacts((prev) =>
+        prev.map((contact) => {
+          const updated = results.find((item) => item.contactId === contact.id)
+          if (!updated) return contact
+          return {
+            ...contact,
+            customFields: updated.customFields,
+            tags: updated.tags,
+          }
+        })
+      )
+      toast.success(t('contacts.tags.success'))
+      setShowTagModal(false)
+      setTagInput('')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('contacts.tags.errors.failed')
+      toast.error(message)
+    } finally {
+      setTagSaving(false)
+    }
+  }
+
+  const clearAdvancedFilters = () => {
+    setAdvancedFilters(defaultAdvancedFilters)
+  }
+
+  const resetViewSettings = () => {
+    setViewMode('list')
+    setRowsPerPage(25)
+    setDensity('comfortable')
+    setColumnVisibility(defaultColumns)
   }
 
   const renderSortIcon = (key: SortKey) => {
@@ -388,8 +721,13 @@ export function ContactsDirectory({
     )
   }
 
+  const visibleColumnCount = Object.values(columnVisibility).filter(Boolean).length
+  const tableColSpan = 2 + visibleColumnCount + 1
+  const rowPadding = density === 'compact' ? 'py-2' : 'py-4'
+  const headerPadding = density === 'compact' ? 'py-3' : 'py-4'
+
   return (
-    <div className="-mx-4 -mt-4 lg:-mx-8 lg:-mt-8">
+    <div className="w-full">
       <div className="px-6 lg:px-10 py-6 space-y-6 bg-[#f5f6f8] dark:bg-[#101722]">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -452,10 +790,21 @@ export function ContactsDirectory({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="p-2 text-[#48679d] hover:bg-white/70 dark:hover:bg-slate-800 rounded-lg">
+            <button
+              onClick={() => setShowFilterPanel(true)}
+              className="relative p-2 text-[#48679d] hover:bg-white/70 dark:hover:bg-slate-800 rounded-lg"
+            >
               <span className="material-symbols-outlined">filter_list</span>
+              {activeAdvancedFilters > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                  {activeAdvancedFilters}
+                </span>
+              )}
             </button>
-            <button className="p-2 text-[#48679d] hover:bg-white/70 dark:hover:bg-slate-800 rounded-lg">
+            <button
+              onClick={() => setShowSettingsPanel(true)}
+              className="p-2 text-[#48679d] hover:bg-white/70 dark:hover:bg-slate-800 rounded-lg"
+            >
               <span className="material-symbols-outlined">settings</span>
             </button>
           </div>
@@ -465,11 +814,11 @@ export function ContactsDirectory({
       {viewMode === 'list' && (
         <div className="px-6 lg:px-10 pb-10">
           <div className="bg-white dark:bg-[#101722] border border-[#ced8e9] dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto lg:overflow-x-visible">
               <table className="w-full text-left border-collapse">
                 <thead className="bg-gray-50/80 dark:bg-gray-900/50 sticky top-0 z-10">
                   <tr className="border-b border-[#ced8e9] dark:border-gray-800 text-xs uppercase tracking-widest font-bold text-[#48679d]">
-                    <th className="px-6 py-4 w-10">
+                    <th className={`px-6 ${headerPadding} w-10`}>
                       <input
                         type="checkbox"
                         checked={selectedContacts.length === filteredContacts.length && filteredContacts.length > 0}
@@ -477,34 +826,38 @@ export function ContactsDirectory({
                         className="rounded border-gray-300 dark:border-gray-700 text-primary focus:ring-primary"
                       />
                     </th>
-                    <th className="px-4 py-4">
+                    <th className={`px-4 ${headerPadding}`}>
                       <button onClick={() => toggleSort('name')} className="flex items-center gap-2">
                         {t('contacts.table.name')}
                         {renderSortIcon('name')}
                       </button>
                     </th>
-                    <th className="px-4 py-4">{t('contacts.table.email')}</th>
-                    <th className="px-4 py-4">{t('contacts.table.phone')}</th>
-                    <th className="px-4 py-4">{t('contacts.table.company')}</th>
-                    <th className="px-4 py-4">
-                      <button onClick={() => toggleSort('value')} className="flex items-center gap-2">
-                        {t('contacts.table.totalValue')}
-                        {renderSortIcon('value')}
-                      </button>
-                    </th>
-                    <th className="px-4 py-4">
-                      <button onClick={() => toggleSort('activity')} className="flex items-center gap-2">
-                        {t('contacts.table.lastActivity')}
-                        {renderSortIcon('activity')}
-                      </button>
-                    </th>
-                    <th className="px-6 py-4 text-right">{t('contacts.table.actions')}</th>
+                    {columnVisibility.email && <th className={`px-4 ${headerPadding}`}>{t('contacts.table.email')}</th>}
+                    {columnVisibility.phone && <th className={`px-4 ${headerPadding}`}>{t('contacts.table.phone')}</th>}
+                    {columnVisibility.company && <th className={`px-4 ${headerPadding}`}>{t('contacts.table.company')}</th>}
+                    {columnVisibility.value && (
+                      <th className={`px-4 ${headerPadding}`}>
+                        <button onClick={() => toggleSort('value')} className="flex items-center gap-2">
+                          {t('contacts.table.totalValue')}
+                          {renderSortIcon('value')}
+                        </button>
+                      </th>
+                    )}
+                    {columnVisibility.activity && (
+                      <th className={`px-4 ${headerPadding}`}>
+                        <button onClick={() => toggleSort('activity')} className="flex items-center gap-2">
+                          {t('contacts.table.lastActivity')}
+                          {renderSortIcon('activity')}
+                        </button>
+                      </th>
+                    )}
+                    <th className={`px-6 ${headerPadding} text-right`}>{t('contacts.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#ced8e9] dark:divide-gray-800">
                   {pageContacts.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-12 text-center">
+                      <td colSpan={tableColSpan} className="px-6 py-12 text-center">
                         <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-600 mb-3 block">
                           person_off
                         </span>
@@ -524,7 +877,7 @@ export function ContactsDirectory({
 
                       return (
                         <tr key={contact.id} className="hover:bg-primary/5 transition-colors group">
-                          <td className="px-6 py-4 h-16">
+                          <td className={`px-6 ${rowPadding} ${density === 'compact' ? 'h-12' : 'h-16'}`}>
                             <input
                               type="checkbox"
                               checked={selectedContacts.includes(contact.id)}
@@ -532,61 +885,90 @@ export function ContactsDirectory({
                               className="rounded border-gray-300 dark:border-gray-700 text-primary focus:ring-primary"
                             />
                           </td>
-                          <td className="px-4 py-4">
+                          <td className={`px-4 ${rowPadding}`}>
                             <div className="flex items-center gap-3">
                               <div
                                 className={`size-9 rounded-lg flex items-center justify-center font-bold ${avatarStyle.bg} ${avatarStyle.text}`}
                               >
                                 {initials}
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <Link href={`/contacts/${contact.id}`} className="font-semibold text-sm text-[#0d121c] dark:text-white">
                                   {contact.fullName}
                                 </Link>
-                                <p className="text-xs text-[#48679d] dark:text-gray-400">{contact.company ?? '—'}</p>
+                                <p className="text-xs text-[#48679d] dark:text-gray-400 truncate max-w-[200px]">
+                                  {contact.company ?? '—'}
+                                </p>
+                                {contact.tags && contact.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {contact.tags.slice(0, 3).map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                    {contact.tags.length > 3 && (
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                        +{contact.tags.length - 3}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-4">
-                            <div className="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
-                              <span>{contact.email ?? '—'}</span>
-                              {contact.email && (
-                                <button
-                                  onClick={() => copyToClipboard(contact.email)}
-                                  className="opacity-0 group-hover:opacity-100 text-primary transition-opacity"
-                                >
-                                  <span className="material-symbols-outlined text-base">content_copy</span>
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400">
-                              <span>{contact.phone ?? '—'}</span>
-                              {contact.phone && (
-                                <a
-                                  href={`tel:${contact.phone}`}
-                                  className="opacity-0 group-hover:opacity-100 text-primary transition-opacity"
-                                >
-                                  <span className="material-symbols-outlined text-base">call</span>
-                                </a>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-full">
-                              {contact.company ?? '—'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4">
-                            <span className={`font-bold text-sm ${contact.totalValue >= 50000 ? 'text-green-600' : 'text-[#0d121c] dark:text-white'}`}>
-                              {formatCurrency(contact.totalValue, formatLocale, currency)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-sm text-[#48679d] dark:text-gray-400">
-                            {formatRelativeTime(contact.lastActivityAt, t)}
-                          </td>
-                          <td className="px-6 py-4 text-right">
+                          {columnVisibility.email && (
+                            <td className={`px-4 ${rowPadding}`}>
+                              <div className="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400 min-w-0">
+                                <span className="truncate max-w-[220px]">{contact.email ?? '—'}</span>
+                                {contact.email && (
+                                  <button
+                                    onClick={() => copyToClipboard(contact.email)}
+                                    className="opacity-0 group-hover:opacity-100 text-primary transition-opacity"
+                                  >
+                                    <span className="material-symbols-outlined text-base">content_copy</span>
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          )}
+                          {columnVisibility.phone && (
+                            <td className={`px-4 ${rowPadding}`}>
+                              <div className="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400 min-w-0">
+                                <span className="truncate max-w-[160px]">{contact.phone ?? '—'}</span>
+                                {contact.phone && (
+                                  <a
+                                    href={`tel:${contact.phone}`}
+                                    className="opacity-0 group-hover:opacity-100 text-primary transition-opacity"
+                                  >
+                                    <span className="material-symbols-outlined text-base">call</span>
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+                          )}
+                          {columnVisibility.company && (
+                            <td className={`px-4 ${rowPadding}`}>
+                              <span className="inline-flex max-w-[180px] truncate px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-full">
+                                {contact.company ?? '—'}
+                              </span>
+                            </td>
+                          )}
+                          {columnVisibility.value && (
+                            <td className={`px-4 ${rowPadding}`}>
+                              <span className={`font-bold text-sm ${contact.totalValue >= 50000 ? 'text-green-600' : 'text-[#0d121c] dark:text-white'}`}>
+                                {formatCurrency(contact.totalValue, formatLocale, currency)}
+                              </span>
+                            </td>
+                          )}
+                          {columnVisibility.activity && (
+                            <td className={`px-4 ${rowPadding} text-sm text-[#48679d] dark:text-gray-400`}>
+                              {formatRelativeTime(contact.lastActivityAt ?? contact.updatedAt ?? contact.createdAt ?? new Date().toISOString(), t)}
+                            </td>
+                          )}
+                          <td className={`px-6 ${rowPadding} text-right`}>
                             <div className="flex items-center justify-end gap-2">
                               <Link
                                 href={`/contacts/${contact.id}`}
@@ -660,7 +1042,7 @@ export function ContactsDirectory({
 
       {viewMode === 'card' && (
         <div className="px-6 lg:px-10 pb-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {pageContacts.map((contact) => {
               const initials = getInitials(contact.fullName)
               const avatarStyle = getAvatarStyle(contact.fullName)
@@ -669,7 +1051,9 @@ export function ContactsDirectory({
                 <Link
                   key={contact.id}
                   href={`/contacts/${contact.id}`}
-                  className="bg-white dark:bg-[#101722] border border-[#ced8e9] dark:border-gray-800 rounded-xl p-5 shadow-sm hover:shadow-md transition-all group"
+                  className={`bg-white dark:bg-[#101722] border border-[#ced8e9] dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all group ${
+                    density === 'compact' ? 'p-4' : 'p-5'
+                  }`}
                 >
                   <div className="flex items-center gap-4 mb-4">
                     <div
@@ -679,7 +1063,26 @@ export function ContactsDirectory({
                     </div>
                     <div>
                       <h3 className="font-bold text-[#0d121c] dark:text-white">{contact.fullName}</h3>
-                      <p className="text-sm text-[#48679d] dark:text-gray-400">{contact.company ?? '—'}</p>
+                      <p className="text-sm text-[#48679d] dark:text-gray-400 truncate max-w-[220px]">
+                        {contact.company ?? '—'}
+                      </p>
+                      {contact.tags && contact.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {contact.tags.slice(0, 3).map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {contact.tags.length > 3 && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                              +{contact.tags.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2 text-sm text-[#48679d] dark:text-gray-400">
@@ -693,7 +1096,12 @@ export function ContactsDirectory({
                     </div>
                   </div>
                   <div className="mt-4 flex items-center justify-between text-xs text-[#48679d] dark:text-gray-400">
-                    <span>{formatRelativeTime(contact.lastActivityAt, t)}</span>
+                    <span>
+                      {formatRelativeTime(
+                        contact.lastActivityAt ?? contact.updatedAt ?? contact.createdAt ?? new Date().toISOString(),
+                        t
+                      )}
+                    </span>
                     <span className="font-semibold text-[#0d121c] dark:text-white">
                       {formatCurrency(contact.totalValue, formatLocale, currency)}
                     </span>
@@ -701,6 +1109,331 @@ export function ContactsDirectory({
                 </Link>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {showFilterPanel && (
+        <div className="fixed inset-0 z-[60] flex">
+          <button
+            aria-label={t('common.close')}
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setShowFilterPanel(false)}
+          />
+          <div className="relative ml-auto h-full w-full max-w-md bg-white dark:bg-[#101722] border-l border-[#e7ebf4] dark:border-gray-800 p-6 overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('contacts.filters.advancedTitle')}</h2>
+              <button
+                onClick={() => setShowFilterPanel(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#48679d]">{t('contacts.filters.presence')}</p>
+                <div className="grid grid-cols-2 gap-3 mt-3 text-sm text-[#0d121c] dark:text-white">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={advancedFilters.hasEmail}
+                      onChange={(event) =>
+                        setAdvancedFilters((prev) => ({ ...prev, hasEmail: event.target.checked }))
+                      }
+                    />
+                    {t('contacts.filters.hasEmail')}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={advancedFilters.hasPhone}
+                      onChange={(event) =>
+                        setAdvancedFilters((prev) => ({ ...prev, hasPhone: event.target.checked }))
+                      }
+                    />
+                    {t('contacts.filters.hasPhone')}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={advancedFilters.hasCompany}
+                      onChange={(event) =>
+                        setAdvancedFilters((prev) => ({ ...prev, hasCompany: event.target.checked }))
+                      }
+                    />
+                    {t('contacts.filters.hasCompany')}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={advancedFilters.hasDeals}
+                      onChange={(event) =>
+                        setAdvancedFilters((prev) => ({ ...prev, hasDeals: event.target.checked }))
+                      }
+                    />
+                    {t('contacts.filters.hasDeals')}
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#48679d]">{t('contacts.filters.valueRange')}</p>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <input
+                    type="number"
+                    value={advancedFilters.minValue}
+                    onChange={(event) => setAdvancedFilters((prev) => ({ ...prev, minValue: event.target.value }))}
+                    placeholder={t('contacts.filters.min')}
+                    className="w-full rounded-lg border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-[#0d121c] dark:text-white"
+                  />
+                  <input
+                    type="number"
+                    value={advancedFilters.maxValue}
+                    onChange={(event) => setAdvancedFilters((prev) => ({ ...prev, maxValue: event.target.value }))}
+                    placeholder={t('contacts.filters.max')}
+                    className="w-full rounded-lg border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-[#0d121c] dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#48679d]">{t('contacts.filters.lastActivity')}</p>
+                <select
+                  value={advancedFilters.lastActivityDays}
+                  onChange={(event) =>
+                    setAdvancedFilters((prev) => ({
+                      ...prev,
+                      lastActivityDays: event.target.value as AdvancedFilters['lastActivityDays'],
+                    }))
+                  }
+                  className="mt-3 w-full rounded-lg border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-semibold text-[#0d121c] dark:text-white"
+                >
+                  <option value="all">{t('contacts.filters.anytime')}</option>
+                  <option value="7">{t('contacts.filters.last7')}</option>
+                  <option value="30">{t('contacts.filters.last30')}</option>
+                  <option value="90">{t('contacts.filters.last90')}</option>
+                  <option value="365">{t('contacts.filters.last365')}</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-[#e7ebf4] dark:border-gray-800 flex items-center justify-between">
+              <button onClick={clearAdvancedFilters} className="text-sm font-semibold text-[#48679d] hover:text-primary">
+                {t('contacts.filters.reset')}
+              </button>
+              <button
+                onClick={() => setShowFilterPanel(false)}
+                className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90"
+              >
+                {t('common.close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSettingsPanel && (
+        <div className="fixed inset-0 z-[60] flex">
+          <button
+            aria-label={t('common.close')}
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setShowSettingsPanel(false)}
+          />
+          <div className="relative ml-auto h-full w-full max-w-md bg-white dark:bg-[#101722] border-l border-[#e7ebf4] dark:border-gray-800 p-6 overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('contacts.settings.title')}</h2>
+              <button
+                onClick={() => setShowSettingsPanel(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#48679d]">{t('contacts.settings.viewMode')}</p>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                      viewMode === 'list'
+                        ? 'bg-primary text-white border-primary'
+                        : 'border-[#ced8e9] dark:border-gray-700 text-[#48679d] dark:text-gray-300'
+                    }`}
+                  >
+                    {t('contacts.view.list')}
+                  </button>
+                  <button
+                    onClick={() => setViewMode('card')}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                      viewMode === 'card'
+                        ? 'bg-primary text-white border-primary'
+                        : 'border-[#ced8e9] dark:border-gray-700 text-[#48679d] dark:text-gray-300'
+                    }`}
+                  >
+                    {t('contacts.view.card')}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#48679d]">{t('contacts.settings.density')}</p>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <button
+                    onClick={() => setDensity('comfortable')}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                      density === 'comfortable'
+                        ? 'bg-primary text-white border-primary'
+                        : 'border-[#ced8e9] dark:border-gray-700 text-[#48679d] dark:text-gray-300'
+                    }`}
+                  >
+                    {t('contacts.settings.densityComfortable')}
+                  </button>
+                  <button
+                    onClick={() => setDensity('compact')}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                      density === 'compact'
+                        ? 'bg-primary text-white border-primary'
+                        : 'border-[#ced8e9] dark:border-gray-700 text-[#48679d] dark:text-gray-300'
+                    }`}
+                  >
+                    {t('contacts.settings.densityCompact')}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#48679d]">{t('contacts.settings.columns')}</p>
+                <div className="grid grid-cols-2 gap-3 mt-3 text-sm text-[#0d121c] dark:text-white">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={columnVisibility.email}
+                      onChange={(event) =>
+                        setColumnVisibility((prev) => ({ ...prev, email: event.target.checked }))
+                      }
+                    />
+                    {t('contacts.table.email')}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={columnVisibility.phone}
+                      onChange={(event) =>
+                        setColumnVisibility((prev) => ({ ...prev, phone: event.target.checked }))
+                      }
+                    />
+                    {t('contacts.table.phone')}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={columnVisibility.company}
+                      onChange={(event) =>
+                        setColumnVisibility((prev) => ({ ...prev, company: event.target.checked }))
+                      }
+                    />
+                    {t('contacts.table.company')}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={columnVisibility.value}
+                      onChange={(event) =>
+                        setColumnVisibility((prev) => ({ ...prev, value: event.target.checked }))
+                      }
+                    />
+                    {t('contacts.table.totalValue')}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={columnVisibility.activity}
+                      onChange={(event) =>
+                        setColumnVisibility((prev) => ({ ...prev, activity: event.target.checked }))
+                      }
+                    />
+                    {t('contacts.table.lastActivity')}
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#48679d]">{t('contacts.settings.rowsPerPage')}</p>
+                <select
+                  value={rowsPerPage}
+                  onChange={(event) => setRowsPerPage(Number(event.target.value))}
+                  className="mt-3 w-full rounded-lg border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-semibold text-[#0d121c] dark:text-white"
+                >
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-[#e7ebf4] dark:border-gray-800 flex items-center justify-between">
+              <button onClick={resetViewSettings} className="text-sm font-semibold text-[#48679d] hover:text-primary">
+                {t('contacts.settings.reset')}
+              </button>
+              <button
+                onClick={() => setShowSettingsPanel(false)}
+                className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90"
+              >
+                {t('common.close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTagModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <button
+            aria-label={t('common.close')}
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setShowTagModal(false)}
+          />
+          <div className="relative w-full max-w-md bg-white dark:bg-[#101722] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('contacts.tags.title')}</h3>
+              <button
+                onClick={() => setShowTagModal(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <p className="text-sm text-[#48679d] dark:text-gray-400 mt-2">
+              {t('contacts.tags.subtitle', { count: selectedContacts.length })}
+            </p>
+            <div className="mt-4 space-y-2">
+              <input
+                value={tagInput}
+                onChange={(event) => setTagInput(event.target.value)}
+                placeholder={t('contacts.tags.placeholder')}
+                className="w-full rounded-lg border border-[#ced8e9] dark:border-gray-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-[#0d121c] dark:text-white"
+              />
+              <p className="text-xs text-[#48679d] dark:text-gray-400">{t('contacts.tags.helper')}</p>
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowTagModal(false)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-[#48679d] hover:text-primary"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={applyTags}
+                disabled={tagSaving}
+                className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-60"
+              >
+                {t('contacts.tags.apply')}
+              </button>
+            </div>
           </div>
         </div>
       )}

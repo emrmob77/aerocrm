@@ -57,6 +57,39 @@ export const getInitials = (name: string) => {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
 }
 
+export const getCustomFields = (value: unknown): Record<string, unknown> | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null
+  }
+  return value as Record<string, unknown>
+}
+
+export const parseContactTags = (customFields: unknown): string[] => {
+  const record = getCustomFields(customFields)
+  if (!record) return []
+  const tags = record.tags
+  if (Array.isArray(tags)) {
+    return tags.map((tag) => `${tag}`.trim()).filter(Boolean)
+  }
+  if (typeof tags === 'string') {
+    return tags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+  }
+  return []
+}
+
+export const normalizeTagInput = (value: string) =>
+  Array.from(
+    new Set(
+      value
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    )
+  )
+
 export type ContactFilterType = 'all' | 'new' | 'highValue' | 'inactive'
 
 export type ContactFilterInput = {

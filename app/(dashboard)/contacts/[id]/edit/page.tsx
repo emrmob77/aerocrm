@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { ContactForm } from '@/components/contacts'
+import { parseContactTags } from '@/components/contacts/contact-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +23,7 @@ export default async function EditContactPage({ params }: { params: { id: string
 
   let contactQuery = supabase
     .from('contacts')
-    .select('id, full_name, email, phone, company, position, address, user_id, team_id')
+    .select('id, full_name, email, phone, company, position, address, user_id, team_id, custom_fields')
     .eq('id', params.id)
 
   if (teamId) {
@@ -41,6 +42,7 @@ export default async function EditContactPage({ params }: { params: { id: string
     <ContactForm
       mode="edit"
       contactId={contact.id}
+      initialCustomFields={contact.custom_fields ?? null}
       initialData={{
         full_name: contact.full_name,
         email: contact.email ?? '',
@@ -48,6 +50,7 @@ export default async function EditContactPage({ params }: { params: { id: string
         company: contact.company ?? '',
         position: contact.position ?? '',
         address: contact.address ?? '',
+        tags: parseContactTags(contact.custom_fields ?? null).join(', '),
       }}
     />
   )

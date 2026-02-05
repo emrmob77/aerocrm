@@ -14,7 +14,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const pathname = usePathname()
-  const isWideLayout = pathname?.startsWith('/proposals/new')
+  const isWideLayout = pathname?.startsWith('/proposals/new') || pathname?.startsWith('/contacts')
 
   // Close sidebar on route change (mobile)
   useEffect(() => {

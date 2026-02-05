@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { useSupabase } from '@/hooks/use-supabase'
 import { useUser } from '@/hooks'
 import { useI18n } from '@/lib/i18n'
+import { getCustomFields, normalizeTagInput, parseContactTags } from '@/components/contacts/contact-utils'
 
 type ContactFormData = {
   full_name: string
@@ -15,15 +16,17 @@ type ContactFormData = {
   company: string
   position: string
   address: string
+  tags: string
 }
 
 type ContactFormProps = {
   mode: 'create' | 'edit'
   contactId?: string
   initialData?: Partial<ContactFormData>
+  initialCustomFields?: unknown
 }
 
-export function ContactForm({ mode, contactId, initialData }: ContactFormProps) {
+export function ContactForm({ mode, contactId, initialData, initialCustomFields }: ContactFormProps) {
   const router = useRouter()
   const supabase = useSupabase()
   const { t } = useI18n()
@@ -36,6 +39,7 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
     company: initialData?.company ?? '',
     position: initialData?.position ?? '',
     address: initialData?.address ?? '',
+    tags: initialData?.tags ?? parseContactTags(initialCustomFields).join(', '),
   })
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -63,6 +67,15 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
     setLoading(true)
     try {
       const contactsTable = supabase.from('contacts')
+      const tagValues = normalizeTagInput(formData.tags)
+      const baseCustomFields = getCustomFields(initialCustomFields) ?? {}
+      const nextCustomFields: Record<string, unknown> = { ...baseCustomFields }
+      if (tagValues.length > 0) {
+        nextCustomFields.tags = tagValues
+      } else {
+        delete nextCustomFields.tags
+      }
+      const customFieldsPayload = Object.keys(nextCustomFields).length > 0 ? nextCustomFields : null
       if (mode === 'create') {
         if (!profile?.team_id) {
           toast.error(t('contacts.form.teamMissing'))
@@ -79,6 +92,7 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
             address: formData.address.trim() || null,
             team_id: profile.team_id,
             user_id: authUser.id,
+            custom_fields: customFieldsPayload,
           })
           .select('id')
           .single()
@@ -107,6 +121,7 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
           company: formData.company.trim() || null,
           position: formData.position.trim() || null,
           address: formData.address.trim() || null,
+          custom_fields: customFieldsPayload,
         })
         .eq('id', contactId)
 
@@ -181,6 +196,17 @@ export function ContactForm({ mode, contactId, initialData }: ContactFormProps) 
                 className="w-full px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white"
                 placeholder={t('contacts.form.placeholders.position')}
               />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-[#0d121c] dark:text-white mb-2">{t('contacts.form.fields.tags')}</label>
+              <input
+                name="tags"
+                value={formData.tags}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white"
+                placeholder={t('contacts.form.placeholders.tags')}
+              />
+              <p className="text-xs text-[#48679d] dark:text-gray-400 mt-2">{t('contacts.form.helpers.tags')}</p>
             </div>
           </div>
         </div>

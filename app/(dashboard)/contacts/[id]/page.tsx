@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
+import { ContactTagsEditor } from '@/components/contacts'
 import { formatCurrency, formatRelativeTime, getInitials } from '@/components/contacts/contact-utils'
 import { normalizeStage, getStageConfigs, type StageId } from '@/components/deals'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
 type ContactRow = Database['public']['Tables']['contacts']['Row']
 type ContactCore = Pick<
   ContactRow,
-  'id' | 'full_name' | 'email' | 'phone' | 'company' | 'position' | 'address' | 'created_at' | 'updated_at' | 'user_id' | 'team_id'
+  'id' | 'full_name' | 'email' | 'phone' | 'company' | 'position' | 'address' | 'created_at' | 'updated_at' | 'user_id' | 'team_id' | 'custom_fields'
 >
 type DealRow = Database['public']['Tables']['deals']['Row']
 
@@ -63,7 +64,7 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
 
   let contactQuery = supabase
     .from('contacts')
-    .select('id, full_name, email, phone, company, position, address, created_at, updated_at, user_id, team_id')
+    .select('id, full_name, email, phone, company, position, address, created_at, updated_at, user_id, team_id, custom_fields')
     .eq('id', params.id)
 
   if (teamId) {
@@ -221,6 +222,10 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
                 <span>{contact.address ?? '—'}</span>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white dark:bg-[#101722] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">
+            <ContactTagsEditor contactId={contact.id} initialCustomFields={contact.custom_fields ?? null} />
           </div>
 
           <div className="bg-white dark:bg-[#101722] rounded-xl border border-[#e7ebf4] dark:border-gray-800 shadow-sm p-6">

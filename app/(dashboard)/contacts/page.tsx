@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 type ContactRow = Database['public']['Tables']['contacts']['Row']
 type ContactCore = Pick<
   ContactRow,
-  'id' | 'full_name' | 'email' | 'phone' | 'company' | 'position' | 'created_at' | 'updated_at' | 'user_id' | 'team_id'
+  'id' | 'full_name' | 'email' | 'phone' | 'company' | 'position' | 'created_at' | 'updated_at' | 'user_id' | 'team_id' | 'custom_fields'
 >
 type DealRow = Database['public']['Tables']['deals']['Row']
 type DealForStats = Pick<DealRow, 'contact_id' | 'value' | 'updated_at' | 'created_at'>
@@ -64,7 +64,7 @@ export default async function ContactsPage() {
 
   let contactsQuery = supabase
     .from('contacts')
-    .select('id, full_name, email, phone, company, position, created_at, updated_at, user_id, team_id')
+    .select('id, full_name, email, phone, company, position, created_at, updated_at, user_id, team_id, custom_fields')
     .order('updated_at', { ascending: false })
 
   if (teamId) {
@@ -113,6 +113,7 @@ export default async function ContactsPage() {
       totalValue: stats?.totalValue ?? 0,
       lastActivityAt: stats?.lastActivityAt ?? fallbackLast,
       dealsCount: stats?.dealsCount ?? 0,
+      customFields: contact.custom_fields ?? null,
     }
   })
 
