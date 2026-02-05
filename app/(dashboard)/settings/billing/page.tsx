@@ -66,7 +66,7 @@ export default function BillingSettingsPage() {
       const response = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ price_id: plan.priceId, plan_name: plan.name }),
+        body: JSON.stringify({ price_id: plan.priceId, plan_id: plan.id }),
       })
       const data = await response.json()
       if (!response.ok) {

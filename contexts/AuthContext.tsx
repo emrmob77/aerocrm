@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { clearAuthPersistence, getSupabaseClient, setAuthStorageMode } from '@/lib/supabase/client'
+import { validateSignInCredentials, validateSignUpCredentials } from '@/lib/auth/credentials'
 import { useRouter } from 'next/navigation'
 
 interface AuthContextType {
@@ -18,6 +19,8 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+const toAuthError = (message: string) => ({ name: 'AuthError', message, status: 400 } as AuthError)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -65,10 +68,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase, router])
 
   const signIn = useCallback(async (email: string, password: string, rememberMe = false) => {
+    const validation = validateSignInCredentials(email, password)
+    if (!validation.ok) {
+      return { error: toAuthError('Invalid login credentials') }
+    }
+
     try {
       setAuthStorageMode(rememberMe ? 'persistent' : 'session')
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: validation.normalizedEmail,
         password,
       })
 
@@ -84,9 +92,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase])
 
   const signUp = useCallback(async (email: string, password: string, fullName: string, plan = 'solo') => {
+    const validation = validateSignUpCredentials(email, password, fullName)
+    if (!validation.ok) {
+      return { error: toAuthError('Invalid sign up credentials') }
+    }
+
     try {
-      const { error, data } = await supabase.auth.signUp({
-        email,
+      const { error } = await supabase.auth.signUp({
+        email: validation.normalizedEmail,
         password,
         options: {
           data: {
@@ -132,8 +145,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase])
 
   const resetPassword = useCallback(async (email: string) => {
+    const validation = validateSignInCredentials(email, '000000')
+    if (!validation.ok) {
+      return { error: toAuthError('Invalid email') }
+    }
+
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(validation.normalizedEmail, {
         redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
       })
 

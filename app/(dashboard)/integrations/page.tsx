@@ -147,7 +147,7 @@ const integrationConfigs = (t: (key: string) => string): IntegrationConfig[] => 
     icon: 'api',
     iconColor: 'text-gray-600 dark:text-gray-300',
     iconBg: 'bg-gray-50 dark:bg-gray-800',
-    href: '/settings/webhooks',
+    href: '/webhooks',
     category: 'automation',
   },
 ]

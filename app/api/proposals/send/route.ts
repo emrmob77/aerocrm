@@ -6,6 +6,8 @@ import { sendTwilioMessage, getCredentialsFromEnv } from '@/lib/integrations/twi
 import type { TwilioCredentials } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
+import { buildPublicProposalUrl } from '@/lib/proposals/link-utils'
+import { sanitizeProposalDesignSettings } from '@/lib/proposals/design-utils'
 
 type SendProposalPayload = {
   title?: string
@@ -21,6 +23,7 @@ type SendProposalPayload = {
   message?: string
   includeLink?: boolean
   includePdf?: boolean
+  designSettings?: unknown
 }
 
 const expiryDurations: Record<string, number> = {
@@ -206,10 +209,10 @@ export const POST = withApiLogging(async (request: Request) => {
     contactId = newContact.id
   }
 
-  const slug = crypto.randomUUID().split('-')[0]
   const origin = new URL(request.url).origin
-  const publicUrl = `${origin}/p/${slug}`
+  const publicUrl = buildPublicProposalUrl(origin)
   const expiresAt = buildExpiryDate(payload.expiryEnabled, payload.expiryDuration)
+  const designSettings = sanitizeProposalDesignSettings(payload.designSettings)
 
   const { data: proposal, error: proposalError } = await supabase
     .from('proposals')
@@ -220,6 +223,7 @@ export const POST = withApiLogging(async (request: Request) => {
       user_id: user.id,
       team_id: teamId,
       blocks: payload.blocks ?? [],
+      design_settings: designSettings,
       status: 'pending',
       public_url: publicUrl,
       expires_at: expiresAt,

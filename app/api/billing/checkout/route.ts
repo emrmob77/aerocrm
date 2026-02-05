@@ -7,7 +7,7 @@ import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 type CheckoutPayload = {
   price_id: string
-  plan_name?: string
+  plan_id?: string
   success_url?: string
   cancel_url?: string
 }
@@ -110,7 +110,7 @@ export const POST = withApiLogging(async (request: Request) => {
     cancelUrl,
     metadata: {
       team_id: profile.team_id,
-      plan: payload.plan_name || team?.plan || 'unknown',
+      plan_id: payload.plan_id || team?.plan || 'starter',
     },
   })
 

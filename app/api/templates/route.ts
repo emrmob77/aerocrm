@@ -2,14 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
-
-type TemplatePayload = {
-  name?: string
-  description?: string
-  category?: string
-  is_public?: boolean
-  blocks?: unknown
-}
+import { normalizeTemplatePayload, type TemplatePayload } from '@/lib/templates/template-utils'
 
 export const GET = withApiLogging(async (request: Request) => {
   const t = getServerT()
@@ -61,9 +54,9 @@ export const GET = withApiLogging(async (request: Request) => {
 export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as TemplatePayload | null
-  const name = payload?.name?.trim()
+  const normalized = normalizeTemplatePayload(payload)
 
-  if (!name) {
+  if (!normalized.name) {
     return NextResponse.json({ error: t('api.templates.nameRequired') }, { status: 400 })
   }
 
@@ -90,11 +83,11 @@ export const POST = withApiLogging(async (request: Request) => {
   const { data, error } = await supabase
     .from('templates')
     .insert({
-      name,
-      description: payload?.description?.trim() ?? null,
-      category: payload?.category?.trim() ?? null,
-      is_public: payload?.is_public ?? false,
-      blocks: payload?.blocks ?? [],
+      name: normalized.name,
+      description: normalized.description,
+      category: normalized.category,
+      is_public: normalized.is_public,
+      blocks: normalized.blocks,
       usage_count: 0,
       user_id: user.id,
       team_id: profile.team_id,

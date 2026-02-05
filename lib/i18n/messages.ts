@@ -23,6 +23,9 @@ export const messages = {
       no: 'Hayır',
       unknown: 'Bilinmiyor',
       empty: 'Henüz kayıt yok.',
+      tryAgain: 'Tekrar Dene',
+      offlineTitle: 'Çevrimdışı moddasınız',
+      offlineSubtitle: 'Bağlantı tekrar sağlandığında sayfayı yenileyerek devam edebilirsiniz.',
     },
     nav: {
       dashboard: 'Dashboard',
@@ -306,10 +309,13 @@ export const messages = {
         usageEmptyValue: '0 / 0',
         usageEmptyStorageValue: '0 GB / 0 GB',
         usageEmptyHint: 'Veri yok',
-        usageActiveUsers: 'Aktif kullanıcı',
+        usageUsers: 'Kullanıcı sayısı',
         usageProposals: 'Teklif gönderimi',
         usageStorage: 'Depolama',
         usageHintActive: '{value} kullanıldı · Son 30 gün',
+        usageHintUsers: 'Takımdaki toplam kullanıcı',
+        usageHintPeriod: 'Son 30 gün',
+        usageHintStorage: 'Toplam depolama kullanımı',
       },
       monitoring: {
         logRequired: 'Log seviyesi ve mesaj zorunludur.',
@@ -320,6 +326,7 @@ export const messages = {
         adminAccessMissing: 'Supabase admin erişimi yok.',
         integrationsMissing: 'Entegrasyonlar bulunamadı.',
         paymentPastDue: 'Ödeme gecikti.',
+        paymentFailed: 'Ödeme başarısız oldu.',
       },
     },
     auth: {
@@ -456,6 +463,91 @@ export const messages = {
           title: 'API & Geliştirici',
           description: 'API anahtarları ve entegrasyonlar',
         },
+      },
+    },
+    profileSettings: {
+      fields: {
+        fullName: 'Ad Soyad',
+        email: 'E-posta',
+        role: 'Rol',
+        teamId: 'Takım ID',
+      },
+      actions: {
+        backSettings: 'Ayarlara Dön',
+        openTeam: 'Takım Ayarları',
+        openSecurity: 'Güvenlik Ayarları',
+      },
+    },
+    securitySettings: {
+      cards: {
+        password: {
+          title: 'Şifre',
+          description: 'Hesabınız için yeni şifre belirlemek için sıfırlama akışını kullanın.',
+          action: 'Şifreyi Sıfırla',
+        },
+        session: {
+          title: 'Oturum',
+          description: 'Bu cihazdaki mevcut oturumu sonlandırın.',
+          signOut: 'Çıkış Yap',
+          signingOut: 'Çıkış yapılıyor...',
+        },
+      },
+      actions: {
+        backSettings: 'Ayarlara Dön',
+      },
+      errors: {
+        signOutFailed: 'Çıkış yapılamadı.',
+      },
+    },
+    termsPage: {
+      title: 'Kullanım Koşulları',
+      subtitle: 'Bu koşullar, Aero CRM hizmetlerinin kullanımındaki temel kuralları tanımlar.',
+      items: {
+        first: 'Bu uygulamayı kullanarak hizmeti yasalara uygun şekilde kullanmayı ve hesap bilgilerinizin güvenliğini kabul edersiniz.',
+        second: 'Yüklediğiniz verilerden ve hesabınız üzerinden yapılan işlemlerden siz sorumlusunuz.',
+        third: 'Hizmet erişilebilirliği ve özellikler ürün geliştikçe zaman içinde değişebilir.',
+      },
+      actions: {
+        backRegister: 'Kayıta Dön',
+        privacy: 'Gizlilik Politikası',
+      },
+    },
+    privacyPage: {
+      title: 'Gizlilik Politikası',
+      subtitle: 'Bu sayfa, Aero CRM içinde hesap ve kullanım verilerinin nasıl işlendiğini özetler.',
+      items: {
+        first: 'Yalnızca CRM işlevleri, ekip iş birliği ve hizmet güvenliği için gerekli verileri saklarız.',
+        second: 'Hassas entegrasyon kimlik bilgilerine erişim sunucu tarafı kontrollerle sınırlandırılır ve korunur.',
+        third: 'Hesap silme ve veri temizleme taleplerinizi destek kanalları üzerinden iletebilirsiniz.',
+      },
+      actions: {
+        backRegister: 'Kayıta Dön',
+        terms: 'Kullanım Koşulları',
+      },
+    },
+    helpPage: {
+      title: 'Yardım Merkezi',
+      subtitle: 'Hesap erişimi, ayarlar ve yaygın ürün akışları için hızlı bağlantılar.',
+      cards: {
+        forgotPassword: {
+          title: 'Şifremi Unuttum',
+          description: 'E-posta adresinize şifre sıfırlama bağlantısı gönderin.',
+        },
+        security: {
+          title: 'Güvenlik Ayarları',
+          description: 'Hesap güvenliğini ve oturum işlemlerini gözden geçirin.',
+        },
+        terms: {
+          title: 'Kullanım Koşulları',
+          description: 'Kullanım şartlarını ve sorumlulukları inceleyin.',
+        },
+        privacy: {
+          title: 'Gizlilik Politikası',
+          description: 'Verilerinizin nasıl işlendiğini ve korunduğunu öğrenin.',
+        },
+      },
+      actions: {
+        backLogin: 'Girişe Dön',
       },
     },
     notificationSettings: {
@@ -680,6 +772,7 @@ export const messages = {
         exporting: 'Rapor Hazırlanıyor...',
       },
       errors: {
+        loadFailed: 'Monitoring verileri yüklenemedi.',
         exportFailed: 'Rapor dışa aktarılamadı.',
       },
       labels: {
@@ -695,6 +788,7 @@ export const messages = {
       charts: {
         apiTrend: 'API Kullanım Trend',
         webhookTrend: 'Webhook Başarı Oranı',
+        successLabel: 'Başarı',
         topEndpoints: 'Top API Endpointler',
         recentErrors: 'Son Hatalar',
       },
@@ -1272,6 +1366,7 @@ export const messages = {
         namePlaceholder: 'Ad Soyad',
         clear: 'Temizle',
         sign: 'İmzala ve Gönder',
+        downloadPdf: 'İmzalı PDF indir',
         success: 'İmzanız alındı.',
         errors: {
           nameRequired: 'Lütfen ad soyad girin.',
@@ -1622,6 +1717,7 @@ export const messages = {
         subtitle: 'Son kaydedilen taslaklar',
         empty: 'Henüz taslak kaydı yok.',
         latest: 'Son kayıt',
+        restore: 'Geri yükle',
       },
       saveTemplate: {
         title: 'Şablon olarak kaydet',
@@ -1680,6 +1776,9 @@ export const messages = {
         proposalLoadFailed: 'Teklif yüklenemedi.',
         draftSaveFailed: 'Taslak kaydedilemedi.',
         draftSaved: 'Taslak kaydedildi.',
+        versionHistoryLoadFailed: 'Sürüm geçmişi yüklenemedi.',
+        versionRestoreFailed: 'Sürüm geri yüklenemedi.',
+        versionRestored: 'Sürüm geri yüklendi.',
       },
       send: {
         methods: {
@@ -1798,14 +1897,17 @@ export const messages = {
         title: 'İçe Aktar',
         subtitle: 'CSV dosyanızı yükleyin ve alanları eşleştirin.',
         downloadTemplate: 'Şablon İndir',
+        clear: 'Temizle',
         csvFile: 'CSV Dosyası',
         uploadHint: '{entity} için CSV yükleyin.',
         chooseFile: 'Dosya Seç',
+        columnFallback: 'Kolon {index}',
         noMapping: 'Eşleştirme yok',
         preview: 'Önizleme (ilk 5 satır)',
         importing: 'İçe aktarılıyor...',
         cta: 'İçe Aktar',
         result: 'Başarılı: {success} · Hatalı: {error}',
+        successRate: 'Başarı Oranı: %{rate}',
         rowError: 'Satır {row}: {message}',
       },
       export: {
@@ -1820,6 +1922,7 @@ export const messages = {
         importFallback: 'CSV içe aktarım',
         exportFallback: 'Dışa aktarım',
         success: '{success}/{total} başarılı',
+        successRate: '%{rate} başarı',
         rows: '{count} satır',
       },
       errors: {
@@ -2591,6 +2694,9 @@ export const messages = {
       no: 'No',
       unknown: 'Unknown',
       empty: 'No records yet.',
+      tryAgain: 'Try Again',
+      offlineTitle: 'You are offline',
+      offlineSubtitle: 'Reconnect to continue and refresh the page.',
     },
     nav: {
       dashboard: 'Dashboard',
@@ -2874,10 +2980,13 @@ export const messages = {
         usageEmptyValue: '0 / 0',
         usageEmptyStorageValue: '0 GB / 0 GB',
         usageEmptyHint: 'No data',
-        usageActiveUsers: 'Active users',
+        usageUsers: 'User count',
         usageProposals: 'Proposal deliveries',
         usageStorage: 'Storage',
         usageHintActive: '{value} used · Last 30 days',
+        usageHintUsers: 'Total users in the team',
+        usageHintPeriod: 'Last 30 days',
+        usageHintStorage: 'Total storage usage',
       },
       monitoring: {
         logRequired: 'Log level and message are required.',
@@ -2888,6 +2997,7 @@ export const messages = {
         adminAccessMissing: 'Supabase admin access missing.',
         integrationsMissing: 'Integrations not found.',
         paymentPastDue: 'Payment is past due.',
+        paymentFailed: 'Payment failed.',
       },
     },
     auth: {
@@ -3024,6 +3134,91 @@ export const messages = {
           title: 'API & Developer',
           description: 'API keys and integrations',
         },
+      },
+    },
+    profileSettings: {
+      fields: {
+        fullName: 'Full name',
+        email: 'Email',
+        role: 'Role',
+        teamId: 'Team ID',
+      },
+      actions: {
+        backSettings: 'Back to Settings',
+        openTeam: 'Team Settings',
+        openSecurity: 'Security Settings',
+      },
+    },
+    securitySettings: {
+      cards: {
+        password: {
+          title: 'Password',
+          description: 'Use the reset flow to set a new password for your account.',
+          action: 'Reset Password',
+        },
+        session: {
+          title: 'Session',
+          description: 'End the current session on this device.',
+          signOut: 'Sign Out',
+          signingOut: 'Signing out...',
+        },
+      },
+      actions: {
+        backSettings: 'Back to Settings',
+      },
+      errors: {
+        signOutFailed: 'Could not sign out.',
+      },
+    },
+    termsPage: {
+      title: 'Terms of Use',
+      subtitle: 'These terms define the baseline rules for using Aero CRM services.',
+      items: {
+        first: 'By using this application, you agree to use the service lawfully and protect your account credentials.',
+        second: 'You are responsible for the data you upload and actions performed through your account.',
+        third: 'Service availability and features may change over time as the product evolves.',
+      },
+      actions: {
+        backRegister: 'Back to Register',
+        privacy: 'Privacy Policy',
+      },
+    },
+    privacyPage: {
+      title: 'Privacy Policy',
+      subtitle: 'This page summarizes how account and usage data is handled in Aero CRM.',
+      items: {
+        first: 'We store only data required to provide CRM features, collaboration, and service security.',
+        second: 'Access to sensitive integration credentials is restricted and protected by server-side controls.',
+        third: 'You can request account removal and data cleanup through support channels.',
+      },
+      actions: {
+        backRegister: 'Back to Register',
+        terms: 'Terms of Use',
+      },
+    },
+    helpPage: {
+      title: 'Help Center',
+      subtitle: 'Quick links for account access, settings, and common product flows.',
+      cards: {
+        forgotPassword: {
+          title: 'Forgot Password',
+          description: 'Send a reset link to your email address.',
+        },
+        security: {
+          title: 'Security Settings',
+          description: 'Review account security and session actions.',
+        },
+        terms: {
+          title: 'Terms of Use',
+          description: 'Read usage terms and responsibilities.',
+        },
+        privacy: {
+          title: 'Privacy Policy',
+          description: 'Understand how your data is processed and protected.',
+        },
+      },
+      actions: {
+        backLogin: 'Back to Login',
       },
     },
     notificationSettings: {
@@ -3248,6 +3443,7 @@ export const messages = {
         exporting: 'Preparing Report...',
       },
       errors: {
+        loadFailed: 'Monitoring data could not be loaded.',
         exportFailed: 'Report export failed.',
       },
       labels: {
@@ -3263,6 +3459,7 @@ export const messages = {
       charts: {
         apiTrend: 'API Usage Trend',
         webhookTrend: 'Webhook Success Rate',
+        successLabel: 'Success',
         topEndpoints: 'Top API Endpoints',
         recentErrors: 'Recent Errors',
       },
@@ -3840,6 +4037,7 @@ export const messages = {
         namePlaceholder: 'Full name',
         clear: 'Clear',
         sign: 'Sign and send',
+        downloadPdf: 'Download signed PDF',
         success: 'Signature recorded.',
         errors: {
           nameRequired: 'Please enter your full name.',
@@ -4190,6 +4388,7 @@ export const messages = {
         subtitle: 'Recently saved drafts',
         empty: 'No drafts yet.',
         latest: 'Latest',
+        restore: 'Restore',
       },
       saveTemplate: {
         title: 'Save as template',
@@ -4248,6 +4447,9 @@ export const messages = {
         proposalLoadFailed: 'Proposal could not be loaded.',
         draftSaveFailed: 'Draft could not be saved.',
         draftSaved: 'Draft saved.',
+        versionHistoryLoadFailed: 'Version history could not be loaded.',
+        versionRestoreFailed: 'Version could not be restored.',
+        versionRestored: 'Version restored.',
       },
       send: {
         methods: {
@@ -4366,14 +4568,17 @@ export const messages = {
         title: 'Import',
         subtitle: 'Upload your CSV and map fields.',
         downloadTemplate: 'Download Template',
+        clear: 'Clear',
         csvFile: 'CSV File',
         uploadHint: 'Upload CSV for {entity}.',
         chooseFile: 'Choose File',
+        columnFallback: 'Column {index}',
         noMapping: 'No mapping',
         preview: 'Preview (first 5 rows)',
         importing: 'Importing...',
         cta: 'Import',
         result: 'Success: {success} · Failed: {error}',
+        successRate: 'Success Rate: %{rate}',
         rowError: 'Row {row}: {message}',
       },
       export: {
@@ -4388,6 +4593,7 @@ export const messages = {
         importFallback: 'CSV import',
         exportFallback: 'Export',
         success: '{success}/{total} succeeded',
+        successRate: '%{rate} success',
         rows: '{count} rows',
       },
       errors: {

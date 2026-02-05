@@ -68,6 +68,7 @@ export function CountdownTimer({ days, hours, minutes, label }: CountdownTimerPr
 
 type SignatureBlockProps = {
   slug: string
+  pdfUrl: string
   label: string
   required: boolean
   existingSignature?: {
@@ -77,7 +78,7 @@ type SignatureBlockProps = {
   }
 }
 
-export function SignatureBlock({ slug, label, required, existingSignature }: SignatureBlockProps) {
+export function SignatureBlock({ slug, pdfUrl, label, required, existingSignature }: SignatureBlockProps) {
   const { t, formatDate } = useI18n()
   const signatureRef = useRef<SignatureCanvas | null>(null)
   const [signerName, setSignerName] = useState(existingSignature?.name ?? '')
@@ -170,6 +171,13 @@ export function SignatureBlock({ slug, label, required, existingSignature }: Sig
             <span className="font-semibold text-[#0d121c]">{signerName}</span>
             {signedLabel && <span>• {signedLabel}</span>}
           </div>
+          <a
+            href={pdfUrl}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#e7ebf4] bg-white px-3 py-2 text-xs font-semibold text-[#0d121c] hover:border-primary/40 hover:text-primary"
+          >
+            <span className="material-symbols-outlined text-[16px]">download</span>
+            {t('publicProposal.signature.downloadPdf')}
+          </a>
         </div>
       ) : (
         <div className="mt-4 space-y-4">

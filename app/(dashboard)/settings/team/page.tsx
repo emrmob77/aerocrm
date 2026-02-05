@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { useSupabase, useUser } from '@/hooks'
 import { formatCurrency, normalizeStage } from '@/components/deals/stage-utils'
 import { useI18n } from '@/lib/i18n'
+import { assignDealOwner } from '@/lib/team/deal-assignment'
 
 type MemberRow = {
   id: string
@@ -392,7 +393,7 @@ export default function TeamSettingsPage() {
         return
       }
       const updated = payload?.deal as { id: string; user_id: string }
-      setDeals((prev) => prev.map((deal) => (deal.id === updated.id ? { ...deal, user_id: updated.user_id } : deal)))
+      setDeals((prev) => assignDealOwner(prev, updated.id, updated.user_id))
       toast.success(t('teamSettings.success.dealAssigned'))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('teamSettings.errors.assignFailed'))

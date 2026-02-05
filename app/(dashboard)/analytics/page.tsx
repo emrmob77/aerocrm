@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import type { Proposal, ProposalView } from '@/types'
 import { AnalyticsLineChart, StatusPieChart } from './charts'
+import { buildConversionFunnel, isSentStatus, isSignedStatus } from '@/lib/analytics/funnel'
 
 export const revalidate = 0
 
@@ -355,26 +356,14 @@ export default async function AnalyticsPage({
     }
   )
 
-  const isSentStatus = (status?: string | null) =>
-    status === 'sent' || status === 'pending' || status === 'viewed' || status === 'signed'
-  const isViewedStatus = (status?: string | null) => status === 'viewed' || status === 'signed'
-  const isSignedStatus = (status?: string | null) => status === 'signed'
-
-  const sentCount = lastRangeProposals.filter((proposal) => isSentStatus(proposal.status)).length
-  const viewedCount = lastRangeProposals.filter((proposal) => isViewedStatus(proposal.status)).length
-  const signedCount = lastRangeProposals.filter((proposal) => isSignedStatus(proposal.status)).length
+  const funnel = buildConversionFunnel(lastRangeProposals, lastRangeViews)
+  const { sentCount, viewedCount, engagedCount, signedCount, sentPercent, viewedPercent, engagedPercent, signedPercent } = funnel
 
   const sentPrev = prevRangeProposals.filter((proposal) => isSentStatus(proposal.status)).length
   const signedPrev = prevRangeProposals.filter((proposal) => isSignedStatus(proposal.status)).length
 
   const viewRate = sentCount ? Math.round((viewedCount / sentCount) * 100) : 0
   const signRate = sentCount ? Math.round((signedCount / sentCount) * 100) : 0
-
-  const engagedThresholdSeconds = 60
-  const engagedProposalIds = new Set(
-    lastRangeViews.filter((view) => (view.duration_seconds ?? 0) >= engagedThresholdSeconds).map((view) => view.proposal_id)
-  )
-  const engagedCount = engagedProposalIds.size
 
   const avgDuration = averageDuration(lastRangeViews)
   const avgDurationPrev = averageDuration(prevRangeViews)
@@ -543,11 +532,6 @@ export default async function AnalyticsPage({
       time: getTimeAgo(activity.date, t),
     }))
 
-  const sentPercent = 100
-  const viewedPercent = sentCount ? Math.round((viewedCount / sentCount) * 100) : 0
-  const engagedPercent = sentCount ? Math.round((engagedCount / sentCount) * 100) : 0
-  const signedPercent = sentCount ? Math.round((signedCount / sentCount) * 100) : 0
-
   const dateRangeLabel = isCustomRange
     ? `${formatDate(rangeStart, locale)} - ${formatDate(rangeEnd, locale)}`
     : t('analytics.range.lastDays', { days: rangeDays })
@@ -662,7 +646,7 @@ export default async function AnalyticsPage({
                 <span className="material-symbols-outlined text-[#ced8e9] text-[18px]">arrow_forward_ios</span>
               </div>
 
-              <div className="relative" style={{ flex: Math.max(0.32, viewedPercent / 100) }}>
+              <div className="relative" style={{ flex: funnel.viewedFlex }}>
                 <div className="h-12 bg-primary/80 rounded-lg flex items-center justify-center text-white font-bold text-xs relative">
                   {t('analytics.funnel.viewed', { count: viewedCount })}
                   <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-primary/80 rotate-45 z-10"></div>
@@ -674,7 +658,7 @@ export default async function AnalyticsPage({
                 <span className="material-symbols-outlined text-[#ced8e9] text-[18px]">arrow_forward_ios</span>
               </div>
 
-              <div className="relative" style={{ flex: Math.max(0.28, engagedPercent / 100) }}>
+              <div className="relative" style={{ flex: funnel.engagedFlex }}>
                 <div className="h-12 bg-primary/60 rounded-lg flex items-center justify-center text-white font-bold text-xs relative">
                   {t('analytics.funnel.engaged', { count: engagedCount })}
                   <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-primary/60 rotate-45 z-10"></div>
@@ -686,7 +670,7 @@ export default async function AnalyticsPage({
                 <span className="material-symbols-outlined text-[#ced8e9] text-[18px]">arrow_forward_ios</span>
               </div>
 
-              <div className="relative" style={{ flex: Math.max(0.22, signedPercent / 100) }}>
+              <div className="relative" style={{ flex: funnel.signedFlex }}>
                 <div className="h-12 bg-primary/50 rounded-lg flex items-center justify-center text-white font-bold text-xs">
                   {t('analytics.funnel.signed', { count: signedCount })}
                 </div>

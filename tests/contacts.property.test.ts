@@ -62,7 +62,7 @@ describe('Contacts Search Coverage', () => {
       fc.property(
         contactArb,
         fc.array(contactArb, { maxLength: 5 }),
-        fc.constantFrom('name', 'email', 'phone', 'company'),
+        fc.constantFrom<'name' | 'email' | 'phone' | 'company'>('name', 'email', 'phone', 'company'),
         fc.boolean(),
         (contact, others, field, useUpper) => {
           const query = buildQuery(contact, field)

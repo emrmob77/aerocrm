@@ -4,6 +4,8 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { getCredentialsFromEnv } from '@/lib/integrations/stripe'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
+import { buildStripePriceMap, resolvePlanFromMetadata, resolvePlanFromPriceId } from '@/lib/billing/plan-change'
+import type { PlanId } from '@/lib/billing/plans'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, IntegrationProvider, IntegrationStatus } from '@/types/database'
 
@@ -31,15 +33,6 @@ const verifySignature = (payload: string, secret: string, header: string | null)
   } catch {
     return false
   }
-}
-
-const resolvePlanFromPrice = (priceId?: string | null) => {
-  if (!priceId) return null
-  const mapping: Record<string, string> = {}
-  if (process.env.STRIPE_PRICE_STARTER) mapping[process.env.STRIPE_PRICE_STARTER] = 'starter'
-  if (process.env.STRIPE_PRICE_GROWTH) mapping[process.env.STRIPE_PRICE_GROWTH] = 'growth'
-  if (process.env.STRIPE_PRICE_SCALE) mapping[process.env.STRIPE_PRICE_SCALE] = 'scale'
-  return mapping[priceId] || null
 }
 
 type StripeEvent = {
@@ -105,6 +98,26 @@ const getObject = (value: unknown) =>
 
 const getString = (value: unknown) => (typeof value === 'string' ? value : null)
 
+const getPriceIdFromSubscription = (dataObject: Record<string, unknown>) => {
+  const items = getObject(dataObject.items)
+  const itemsData = Array.isArray(items?.data) ? items?.data : []
+  const firstItem = getObject(itemsData[0])
+  const price = getObject(firstItem?.price)
+  return getString(price?.id)
+}
+
+const getPriceIdFromInvoice = (dataObject: Record<string, unknown>) => {
+  const lines = getObject(dataObject.lines)
+  const linesData = Array.isArray(lines?.data) ? lines?.data : []
+  const firstLine = getObject(linesData[0])
+  const price = getObject(firstLine?.price)
+  return getString(price?.id)
+}
+
+const isPastDueStatus = (status?: string | null) =>
+  status === 'past_due' || status === 'unpaid' || status === 'incomplete_expired'
+const stripePriceMap = buildStripePriceMap()
+
 export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = await request.text()
@@ -163,7 +176,9 @@ export const POST = withApiLogging(async (request: Request) => {
 
   const settings = (matched.settings || {}) as Record<string, string>
   let updateSettings = { ...settings }
-  let nextPlan: string | null = null
+  let nextPlan: PlanId | null = null
+  let nextIntegrationStatus: IntegrationStatus = 'connected'
+  let nextLastError: string | null = null
 
   if (event.type === 'checkout.session.completed') {
     updateSettings = {
@@ -171,27 +186,32 @@ export const POST = withApiLogging(async (request: Request) => {
       subscription_id: getString(dataObject.subscription) || updateSettings.subscription_id,
     }
     const metadata = getObject(dataObject.metadata)
-    nextPlan = getString(metadata?.plan) || nextPlan
+    nextPlan =
+      resolvePlanFromMetadata(getString(metadata?.plan_id) || getString(metadata?.plan)) || nextPlan
   }
 
   if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.created') {
-    const items = getObject(dataObject.items)
-    const itemsData = Array.isArray(items?.data) ? items?.data : []
-    const firstItem = getObject(itemsData[0])
-    const price = getObject(firstItem?.price)
-    const priceId = getString(price?.id)
+    const priceId = getPriceIdFromSubscription(dataObject)
+    const subscriptionStatus = getString(dataObject.status) || updateSettings.subscription_status
     const currentPeriodEnd = dataObject.current_period_end
+
     updateSettings = {
       ...updateSettings,
       subscription_id: getString(dataObject.id) || updateSettings.subscription_id,
-      subscription_status: getString(dataObject.status) || updateSettings.subscription_status,
+      subscription_status: subscriptionStatus,
       current_period_end:
         typeof currentPeriodEnd === 'number' || typeof currentPeriodEnd === 'string'
           ? String(currentPeriodEnd)
           : updateSettings.current_period_end,
       price_id: priceId || updateSettings.price_id,
     }
-    nextPlan = resolvePlanFromPrice(priceId) || nextPlan
+
+    if (isPastDueStatus(subscriptionStatus)) {
+      nextIntegrationStatus = 'error'
+      nextLastError = t('api.stripeWebhook.paymentPastDue')
+    }
+
+    nextPlan = resolvePlanFromPriceId(priceId, stripePriceMap) || nextPlan
   }
 
   if (event.type === 'customer.subscription.deleted') {
@@ -199,18 +219,77 @@ export const POST = withApiLogging(async (request: Request) => {
       ...updateSettings,
       subscription_status: 'canceled',
     }
-    nextPlan = 'free'
+    nextPlan = 'starter'
   }
+
+  if (event.type === 'invoice.paid' || event.type === 'invoice.payment_succeeded') {
+    const invoiceStatus = getString(dataObject.status) || 'paid'
+    const paidAt = typeof dataObject.status_transitions === 'object'
+      ? getObject(dataObject.status_transitions)?.paid_at
+      : null
+    const paidAtValue =
+      typeof paidAt === 'number' || typeof paidAt === 'string' ? String(paidAt) : null
+    const priceId = getPriceIdFromInvoice(dataObject)
+
+    updateSettings = {
+      ...updateSettings,
+      last_invoice_id: getString(dataObject.id) || updateSettings.last_invoice_id,
+      last_invoice_status: invoiceStatus,
+      subscription_status: invoiceStatus === 'paid' ? 'active' : updateSettings.subscription_status,
+      last_payment_at: paidAtValue || updateSettings.last_payment_at,
+      price_id: priceId || updateSettings.price_id,
+    }
+
+    nextIntegrationStatus = 'connected'
+    nextLastError = null
+    nextPlan = resolvePlanFromPriceId(priceId, stripePriceMap) || nextPlan
+  }
+
+  if (event.type === 'invoice.payment_failed' || event.type === 'invoice.payment_action_required') {
+    const invoiceStatus = getString(dataObject.status) || 'payment_failed'
+    const nextAttempt = dataObject.next_payment_attempt
+    const nextAttemptValue =
+      typeof nextAttempt === 'number' || typeof nextAttempt === 'string' ? String(nextAttempt) : null
+
+    updateSettings = {
+      ...updateSettings,
+      last_invoice_id: getString(dataObject.id) || updateSettings.last_invoice_id,
+      last_invoice_status: invoiceStatus,
+      subscription_status: 'past_due',
+      next_payment_attempt: nextAttemptValue || updateSettings.next_payment_attempt,
+      last_payment_failed_at: String(Math.floor(Date.now() / 1000)),
+    }
+
+    nextIntegrationStatus = 'error'
+    nextLastError = t('api.stripeWebhook.paymentFailed')
+  }
+
+  if (event.type === 'customer.subscription.trial_will_end') {
+    updateSettings = {
+      ...updateSettings,
+      trial_will_end: 'true',
+    }
+  }
+
+  updateSettings = {
+    ...updateSettings,
+    last_event_type: event.type || updateSettings.last_event_type,
+    last_event_at: String(Math.floor(Date.now() / 1000)),
+  }
+
+  const finalStatus = isPastDueStatus(updateSettings.subscription_status)
+    ? 'error'
+    : nextIntegrationStatus
+  const finalLastError = finalStatus === 'error'
+    ? nextLastError || t('api.stripeWebhook.paymentPastDue')
+    : nextLastError
 
   await admin
     .from('integrations')
     .update({
       settings: updateSettings,
-      status: updateSettings.subscription_status === 'past_due' ? 'error' : 'connected',
-      last_error:
-        updateSettings.subscription_status === 'past_due'
-          ? t('api.stripeWebhook.paymentPastDue')
-          : null,
+      status: finalStatus,
+      last_error: finalLastError,
     })
     .eq('id', matched.id)
 

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { useSupabase, useUser } from '@/hooks'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
 import { useI18n } from '@/lib/i18n'
+import { insertRealtimeNotification, updateRealtimeNotificationRead } from '@/lib/notifications/realtime-utils'
 
 type FilterType = 'all' | 'unread' | 'proposal' | 'deal' | 'system'
 
@@ -109,12 +110,7 @@ export default function NotificationsPage() {
         (payload) => {
           const row = payload.new as NotificationRow
           if (!row?.id) return
-          setNotifications((prev) => {
-            if (prev.some((item) => item.id === row.id)) {
-              return prev
-            }
-            return [row, ...prev].slice(0, 100)
-          })
+          setNotifications((prev) => insertRealtimeNotification(prev, row, 100))
         }
       )
       .on(
@@ -123,9 +119,7 @@ export default function NotificationsPage() {
         (payload) => {
           const row = payload.new as NotificationRow
           if (!row?.id) return
-          setNotifications((prev) =>
-            prev.map((item) => (item.id === row.id ? { ...item, read: row.read } : item))
-          )
+          setNotifications((prev) => updateRealtimeNotificationRead(prev, row.id, row.read))
         }
       )
       .subscribe()

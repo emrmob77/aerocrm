@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { CountdownTimer, ProposalViewTracker, SignatureBlock } from './client'
+import { sanitizeProposalDesignSettings } from '@/lib/proposals/design-utils'
 
 export const revalidate = 0
 
@@ -158,7 +159,7 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
 
   const { data: proposal, error } = await supabase
     .from('proposals')
-    .select('id, title, blocks, status, public_url, expires_at, contact:contacts(full_name)')
+    .select('id, title, blocks, design_settings, status, public_url, expires_at, contact:contacts(full_name)')
     .like('public_url', `%/p/${slug}`)
     .maybeSingle()
 
@@ -167,6 +168,8 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
   }
 
   const blocks = (proposal.blocks ?? []) as ProposalBlock[]
+  const designSettings = sanitizeProposalDesignSettings((proposal as { design_settings?: unknown }).design_settings)
+  const proposalPdfUrl = `/api/proposals/pdf?slug=${encodeURIComponent(slug)}`
   const expiresAt = proposal.expires_at ? new Date(proposal.expires_at) : null
   const isExpired = expiresAt ? expiresAt.getTime() < Date.now() : false
   const contactName = (proposal.contact as { full_name?: string } | null)?.full_name ?? t('header.customerFallback')
@@ -218,15 +221,23 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
               <div
                 className="bg-[color:var(--proposal-bg)] text-[color:var(--proposal-text)]"
                 style={{
-                  ['--proposal-bg' as never]: '#ffffff',
-                  ['--proposal-text' as never]: '#0d121c',
-                  ['--proposal-accent' as never]: '#377DF6',
+                  ['--proposal-bg' as never]: designSettings.background,
+                  ['--proposal-text' as never]: designSettings.text,
+                  ['--proposal-accent' as never]: designSettings.accent,
+                  borderRadius: `${designSettings.radius}px`,
+                  fontSize: `${designSettings.fontScale}%`,
                 }}
               >
                 <div className="flex flex-col gap-6 py-10 px-6 sm:px-10">
                   {blocks.map((block) => (
-                    <div key={block.id} className="rounded-2xl overflow-hidden">
-                      <BlockContent block={block} slug={slug} t={t} formatCurrency={(value) => formatCurrency(locale, value)} />
+                    <div key={block.id} className="overflow-hidden" style={{ borderRadius: `${designSettings.radius}px` }}>
+                      <BlockContent
+                        block={block}
+                        slug={slug}
+                        pdfUrl={proposalPdfUrl}
+                        t={t}
+                        formatCurrency={(value) => formatCurrency(locale, value)}
+                      />
                     </div>
                   ))}
                 </div>
@@ -266,11 +277,13 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
 function BlockContent({
   block,
   slug,
+  pdfUrl,
   t,
   formatCurrency,
 }: {
   block: ProposalBlock
   slug: string
+  pdfUrl: string
   t: (key: string, vars?: Record<string, string | number>) => string
   formatCurrency: (value: number) => string
 }) {
@@ -503,6 +516,7 @@ function BlockContent({
       <div className="p-8">
         <SignatureBlock
           slug={slug}
+          pdfUrl={pdfUrl}
           label={block.data.label}
           required={block.data.required}
           existingSignature={{

@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
 import { ActivityFeed, MetricsGrid, QuickActions, WebhookActivity, mapActivityRow, type DashboardActivity } from '@/components/dashboard'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
+import { buildDashboardMetrics } from '@/lib/dashboard/metrics'
 
 const quickActions = (t: (key: string) => string) => [
   { label: t('dashboard.quickActions.newDeal'), icon: 'add_task', href: '/deals/new' },
@@ -76,27 +77,6 @@ const buildMetricsFromDeals = (deals: DealMetricRow[]): DashboardMetrics => {
   }
 }
 
-const formatCurrency = (locale: string, value: number) =>
-  new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: locale.startsWith('en') ? 'USD' : 'TRY',
-    maximumFractionDigits: 0,
-  }).format(value)
-
-const formatNumber = (locale: string, value: number) =>
-  new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 0,
-  }).format(value)
-
-const formatPercent = (value: number) => {
-  if (Number.isNaN(value)) {
-    return '0%'
-  }
-
-  const normalized = value <= 1 ? value * 100 : value
-  return `${Math.round(normalized)}%`
-}
-
 const getGreeting = (t: (key: string) => string) => {
   const hour = new Date().getHours()
   if (hour < 6) return t('dashboard.greeting.night')
@@ -117,49 +97,6 @@ const getDisplayName = (profile: UserProfile | null, email?: string | null, fall
 
   return fallback || 'User'
 }
-
-const buildMetrics = (locale: string, t: (key: string) => string, metrics: DashboardMetrics) => [
-  {
-    label: t('dashboard.metrics.openDeals'),
-    value: formatNumber(locale, metrics.open_deals ?? 0),
-    badge: null,
-    badgeColor: 'text-green-500',
-    icon: 'assignment',
-    iconBg: 'bg-blue-50 dark:bg-blue-900/30',
-    iconColor: 'text-blue-600',
-    badgeType: t('dashboard.metrics.active'),
-  },
-  {
-    label: t('dashboard.metrics.monthlyWon'),
-    value: formatCurrency(locale, metrics.monthly_revenue ?? 0),
-    badge: null,
-    badgeColor: 'text-green-500',
-    icon: 'payments',
-    iconBg: 'bg-green-50 dark:bg-green-900/30',
-    iconColor: 'text-green-600',
-    badgeType: null,
-  },
-  {
-    label: t('dashboard.metrics.conversion'),
-    value: formatPercent(metrics.conversion_rate ?? 0),
-    badge: null,
-    badgeColor: 'text-green-500',
-    icon: 'trending_up',
-    iconBg: 'bg-purple-50 dark:bg-purple-900/30',
-    iconColor: 'text-purple-600',
-    badgeType: null,
-  },
-  {
-    label: t('dashboard.metrics.pipeline'),
-    value: formatCurrency(locale, metrics.pipeline_value ?? 0),
-    badge: null,
-    badgeColor: '',
-    icon: 'account_tree',
-    iconBg: 'bg-orange-50 dark:bg-orange-900/30',
-    iconColor: 'text-orange-600',
-    badgeType: t('dashboard.metrics.total'),
-  },
-]
 
 const mapActivities = (rows: ActivityRow[] | null): DashboardActivity[] => {
   if (!rows) {
@@ -245,7 +182,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <MetricsGrid metrics={buildMetrics(locale, t, metricsData)} />
+      <MetricsGrid metrics={buildDashboardMetrics(locale, t, metricsData)} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 flex flex-col gap-8">

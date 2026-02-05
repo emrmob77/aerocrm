@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
 import { useI18n } from '@/lib/i18n'
+import { computeImportSuccessRate } from '@/lib/data/import-reporting'
 
 type EntityId = 'contacts' | 'deals' | 'proposals' | 'sales'
 
@@ -25,9 +26,9 @@ type ImportLog = {
   id: string
   entity: string
   status: string
-  total_rows: number
-  success_count: number
-  error_count: number
+  total_rows: number | null
+  success_count: number | null
+  error_count: number | null
   file_name: string | null
   created_at: string
 }
@@ -240,6 +241,7 @@ export default function ImportExportPage() {
   const [importResult, setImportResult] = useState<{
     successCount: number
     errorCount: number
+    successRate: number
     errors: { row: number; message: string }[]
   } | null>(null)
   const [logs, setLogs] = useState<{ imports: ImportLog[]; exports: ExportLog[] }>({
@@ -369,6 +371,7 @@ export default function ImportExportPage() {
     setImportResult({
       successCount: payload?.successCount ?? 0,
       errorCount: payload?.errorCount ?? 0,
+      successRate: payload?.successRate ?? computeImportSuccessRate(payload?.successCount ?? 0, payload?.totalRows ?? 0),
       errors: payload?.errors ?? [],
     })
     setIsImporting(false)
@@ -449,7 +452,7 @@ export default function ImportExportPage() {
                 className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#e2e8f0] text-slate-600 text-sm font-semibold hover:border-primary/40 hover:text-primary"
               >
                 <span className="material-symbols-outlined text-lg">restart_alt</span>
-                Temizle
+                {t('importExport.import.clear')}
               </button>
             </div>
           </div>
@@ -501,7 +504,9 @@ export default function ImportExportPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {columnSamples.map((column) => (
                   <div key={column.index} className="border border-[#e2e8f0] rounded-xl p-3">
-                    <p className="text-xs font-semibold text-slate-500">{column.header || `Kolon ${column.index + 1}`}</p>
+                    <p className="text-xs font-semibold text-slate-500">
+                      {column.header || t('importExport.import.columnFallback', { index: column.index + 1 })}
+                    </p>
                     <p className="text-sm text-slate-700 mt-1 truncate">{column.sample || '—'}</p>
                     <select
                       value={mapping[column.index] ?? ''}
@@ -529,7 +534,7 @@ export default function ImportExportPage() {
                       <tr className="text-left text-slate-400">
                         {parsedCsv.headers.map((header, index) => (
                           <th key={index} className="py-1 pr-3">
-                            {header || `Kolon ${index + 1}`}
+                            {header || t('importExport.import.columnFallback', { index: index + 1 })}
                           </th>
                         ))}
                       </tr>
@@ -565,6 +570,9 @@ export default function ImportExportPage() {
               <p className="text-sm font-bold text-emerald-700">{t('importExport.success.imported')}</p>
               <p className="text-xs text-emerald-600 mt-1">
                 {t('importExport.import.result', { success: importResult.successCount, error: importResult.errorCount })}
+              </p>
+              <p className="text-xs text-emerald-700 mt-1">
+                {t('importExport.import.successRate', { rate: importResult.successRate })}
               </p>
               {importResult.errors.length > 0 && (
                 <div className="mt-3 max-h-32 overflow-y-auto text-xs text-emerald-700 space-y-1">
@@ -646,7 +654,12 @@ export default function ImportExportPage() {
                     <div className="text-right">
                       <p className="text-xs text-slate-500">{formatRelativeTime(item.created_at, t)}</p>
                       <p className="text-xs text-slate-600">
-                        {t('importExport.history.success', { success: item.success_count, total: item.total_rows })}
+                        {t('importExport.history.success', { success: item.success_count ?? 0, total: item.total_rows ?? 0 })}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {t('importExport.history.successRate', {
+                          rate: computeImportSuccessRate(item.success_count ?? 0, item.total_rows ?? 0),
+                        })}
                       </p>
                     </div>
                   </div>

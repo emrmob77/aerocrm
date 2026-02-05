@@ -19,6 +19,12 @@ import { SortableContext, arrayMove, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useSupabase, useUser } from '@/hooks'
 import { useI18n } from '@/lib/i18n'
+import { appendSmartVariableToBlock, insertBlockAt } from '@/lib/proposals/editor-utils'
+import {
+  defaultProposalDesignSettings,
+  sanitizeProposalDesignSettings,
+  type ProposalDesignSettings,
+} from '@/lib/proposals/design-utils'
 
 type BlockType =
   | 'hero'
@@ -154,13 +160,7 @@ type TemplatePreset = {
   name: string
   description: string
   title: string
-  design: {
-    background: string
-    text: string
-    accent: string
-    radius: number
-    fontScale: number
-  }
+  design: ProposalDesignSettings
   build: () => ProposalBlock[]
 }
 
@@ -779,13 +779,7 @@ export default function ProposalEditorPage() {
   const [templateCategory, setTemplateCategory] = useState('')
   const [templateIsPublic, setTemplateIsPublic] = useState(false)
   const [templateSaving, setTemplateSaving] = useState(false)
-  const [designSettings, setDesignSettings] = useState({
-    background: '#ffffff',
-    text: '#0d121c',
-    accent: '#377DF6',
-    radius: 12,
-    fontScale: 100,
-  })
+  const [designSettings, setDesignSettings] = useState<ProposalDesignSettings>(defaultProposalDesignSettings)
 
   const [proposalMeta, setProposalMeta] = useState(() => ({
     clientName: t('proposalEditor.defaults.clientName'),
@@ -900,6 +894,7 @@ export default function ProposalEditorPage() {
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [versionHistory, setVersionHistory] = useState<DraftVersion[]>([])
+  const [restoringVersionId, setRestoringVersionId] = useState<string | null>(null)
 
   useEffect(() => {
     if (proposalLink) return
@@ -970,6 +965,16 @@ export default function ProposalEditorPage() {
     setTemplateModalOpen(true)
   }
 
+  const loadVersionHistory = useCallback(async (proposalValue: string) => {
+    const response = await fetch(`/api/proposals/draft/versions?proposalId=${proposalValue}`)
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      toast.error(payload?.error || t('proposalEditor.toasts.versionHistoryLoadFailed'))
+      return
+    }
+    setVersionHistory((payload?.versions ?? []) as DraftVersion[])
+  }, [t])
+
   const handleSaveTemplate = async () => {
     if (templateSaving) return
     if (!templateName.trim()) {
@@ -1036,7 +1041,7 @@ export default function ProposalEditorPage() {
     const loadProposal = async () => {
       const { data, error } = await supabase
         .from('proposals')
-        .select('id, title, blocks, public_url, contacts(full_name, company, email, phone)')
+        .select('id, title, blocks, design_settings, public_url, contacts(full_name, company, email, phone)')
         .eq('id', proposalId)
         .maybeSingle()
 
@@ -1063,6 +1068,7 @@ export default function ProposalEditorPage() {
       if (nextBlocks.length > 0) {
         setBlocks(normalizeBlocks(nextBlocks))
       }
+      setDesignSettings(sanitizeProposalDesignSettings(data.design_settings))
 
       const contact = Array.isArray(data.contacts) ? data.contacts[0] : data.contacts
       const fallbackClientName = t('proposalEditor.defaults.clientName')
@@ -1087,7 +1093,7 @@ export default function ProposalEditorPage() {
     loadProposal()
   }, [authUser, proposalId, supabase, t, userLoading])
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = useCallback(async (mode: 'manual' | 'auto' = 'manual') => {
     if (isSavingDraft) return
     setIsSavingDraft(true)
     try {
@@ -1101,6 +1107,7 @@ export default function ProposalEditorPage() {
           contactEmail: proposalMeta.contactEmail,
           contactPhone: proposalMeta.contactPhone,
           blocks,
+          designSettings,
         }),
       })
 
@@ -1124,14 +1131,69 @@ export default function ProposalEditorPage() {
         const next = [{ id: versionId, savedAt, title: documentTitle }, ...prev]
         return next.slice(0, 8)
       })
-      toast.success(t('proposalEditor.toasts.draftSaved'))
+      if (mode === 'manual') {
+        toast.success(t('proposalEditor.toasts.draftSaved'))
+      }
     } catch (error) {
       const messageText = error instanceof Error ? error.message : t('proposalEditor.toasts.draftSaveFailed')
-      toast.error(messageText)
+      if (mode === 'manual') {
+        toast.error(messageText)
+      }
     } finally {
       setIsSavingDraft(false)
     }
-  }
+  }, [blocks, designSettings, documentTitle, draftId, isSavingDraft, proposalMeta.clientName, proposalMeta.contactEmail, proposalMeta.contactPhone, t])
+
+  useEffect(() => {
+    if (!draftId) return
+    loadVersionHistory(draftId)
+  }, [draftId, loadVersionHistory])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!isSavingDraft) {
+        void handleSaveDraft('auto')
+      }
+    }, 60_000)
+
+    return () => clearInterval(timer)
+  }, [handleSaveDraft, isSavingDraft])
+
+  const handleRestoreVersion = useCallback(async (versionId: string) => {
+    if (!versionId || restoringVersionId) return
+    setRestoringVersionId(versionId)
+    try {
+      const response = await fetch('/api/proposals/draft/versions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ versionId }),
+      })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error(payload?.error || t('proposalEditor.toasts.versionRestoreFailed'))
+      }
+
+      const nextBlocks = Array.isArray(payload?.blocks) ? (payload.blocks as ProposalBlock[]) : []
+      if (nextBlocks.length > 0) {
+        setBlocks(normalizeBlocks(nextBlocks))
+      } else {
+        setBlocks([])
+      }
+      setDocumentTitle(payload?.title || t('proposalEditor.defaults.documentTitle'))
+      setDesignSettings(sanitizeProposalDesignSettings(payload?.designSettings))
+      if (payload?.proposalId) {
+        setDraftId(payload.proposalId)
+      }
+      setSelectedBlockId(null)
+      setHistoryOpen(false)
+      toast.success(t('proposalEditor.toasts.versionRestored'))
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : t('proposalEditor.toasts.versionRestoreFailed')
+      toast.error(messageText)
+    } finally {
+      setRestoringVersionId(null)
+    }
+  }, [restoringVersionId, t])
 
   const selectedBlock = useMemo(
     () => blocks.find((block) => block.id === selectedBlockId) ?? null,
@@ -1140,14 +1202,7 @@ export default function ProposalEditorPage() {
 
   const handleAddBlock = (type: BlockType, index?: number) => {
     const newBlock = createBlock(type)
-    setBlocks((prev) => {
-      if (index === undefined || index < 0 || index > prev.length) {
-        return [...prev, newBlock]
-      }
-      const next = [...prev]
-      next.splice(index, 0, newBlock)
-      return next
-    })
+    setBlocks((prev) => insertBlockAt(prev, newBlock, index))
     setSelectedBlockId(newBlock.id)
   }
 
@@ -1393,32 +1448,12 @@ export default function ProposalEditorPage() {
       return
     }
 
-  if (selectedBlock.type === 'hero') {
-    updateBlockData(selectedBlock.id, {
-      title: `${selectedBlock.data.title ?? ''} ${value}`.trim(),
-    })
-    return
-  }
+    const updatedBlock = appendSmartVariableToBlock(selectedBlock, value)
+    if (updatedBlock === selectedBlock) {
+      return
+    }
 
-  if (selectedBlock.type === 'heading') {
-    updateBlockData(selectedBlock.id, {
-      text: `${selectedBlock.data.text ?? ''} ${value}`.trim(),
-    })
-    return
-  }
-
-  if (selectedBlock.type === 'text') {
-    updateBlockData(selectedBlock.id, {
-      content: `${selectedBlock.data.content ?? ''} ${value}`.trim(),
-    })
-    return
-  }
-
-  if (selectedBlock.type === 'testimonial') {
-    updateBlockData(selectedBlock.id, {
-      quote: `${selectedBlock.data.quote ?? ''} ${value}`.trim(),
-    })
-  }
+    updateBlockData(selectedBlock.id, updatedBlock.data as Partial<ProposalBlock['data']>)
   }
 
   useEffect(() => {
@@ -1578,6 +1613,7 @@ export default function ProposalEditorPage() {
             defaultPhone={proposalMeta.contactPhone}
             proposalLink={proposalLink}
             blocks={blocks}
+            designSettings={designSettings}
             onLinkUpdate={setProposalLink}
             onPreview={() => {
               setEditorMode('preview')
@@ -1713,7 +1749,7 @@ export default function ProposalEditorPage() {
                 <span className="material-symbols-outlined text-[20px]">bookmark_add</span>
               </button>
               <button
-                onClick={handleSaveDraft}
+                onClick={() => void handleSaveDraft('manual')}
                 title={t('proposalEditor.actions.saveDraft')}
                 aria-label={t('proposalEditor.actions.saveDraft')}
                 disabled={isSavingDraft}
@@ -1746,6 +1782,8 @@ export default function ProposalEditorPage() {
         isOpen={historyOpen}
         onClose={() => setHistoryOpen(false)}
         versions={versionHistory}
+        onRestore={handleRestoreVersion}
+        restoringVersionId={restoringVersionId}
       />
       <TemplateSaveModal
         isOpen={templateModalOpen}
@@ -2871,10 +2909,14 @@ function HistoryModal({
   isOpen,
   onClose,
   versions,
+  onRestore,
+  restoringVersionId,
 }: {
   isOpen: boolean
   onClose: () => void
   versions: DraftVersion[]
+  onRestore: (versionId: string) => void
+  restoringVersionId: string | null
 }) {
   const { t, locale } = useI18n()
   const localeCode = locale === 'en' ? 'en-US' : 'tr-TR'
@@ -2922,11 +2964,20 @@ function HistoryModal({
                       <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{version.title}</p>
                       <p className="text-xs text-gray-500">{formatted}</p>
                     </div>
-                    {index === 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
-                        {t('proposalEditor.history.latest')}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {index === 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
+                          {t('proposalEditor.history.latest')}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => onRestore(version.id)}
+                        disabled={restoringVersionId === version.id}
+                        className="px-2.5 py-1 rounded-lg border border-[#e7ebf4] dark:border-gray-800 text-[11px] font-semibold text-[#48679d] hover:bg-gray-50 disabled:opacity-60"
+                      >
+                        {restoringVersionId === version.id ? t('common.loading') : t('proposalEditor.history.restore')}
+                      </button>
+                    </div>
                   </div>
                 )
               })}
@@ -3395,6 +3446,7 @@ type SendProposalModalProps = {
   defaultPhone: string
   proposalLink: string
   blocks: ProposalBlock[]
+  designSettings: ProposalDesignSettings
   onLinkUpdate?: (nextLink: string) => void
   onPreview?: () => void
   onClose: () => void
@@ -3408,6 +3460,7 @@ function SendProposalModal({
   defaultPhone,
   proposalLink,
   blocks,
+  designSettings,
   onLinkUpdate,
   onPreview,
   onClose,
@@ -3479,6 +3532,7 @@ function SendProposalModal({
           contactEmail: recipientEmail,
           contactPhone: recipientPhone,
           blocks,
+          designSettings,
           method,
           subject,
           message,

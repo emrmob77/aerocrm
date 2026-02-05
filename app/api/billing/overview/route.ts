@@ -20,6 +20,7 @@ const buildUsage = (params: {
   limit: number | null
   label: string
   unit?: string
+  hint?: string
   t: (key: string, vars?: Record<string, string | number>) => string
 }) => {
   const unlimitedLabel = params.t('billing.unlimited')
@@ -31,10 +32,11 @@ const buildUsage = (params: {
     params.limit && params.limit > 0
       ? Math.min(100, Math.round((params.used / params.limit) * 100))
       : 0
-  const hint =
+  const hint = params.hint || (
     params.limit && params.limit > 0
       ? params.t('api.billing.usageHintActive', { value: `${percent}%` })
       : params.t('api.billing.usageEmptyHint')
+  )
   return {
     label: params.label,
     value: valueLabel,
@@ -80,50 +82,35 @@ export const GET = withApiLogging(async () => {
 
   const since = new Date(Date.now() - daysToMs(30)).toISOString()
 
-  const [dealsResponse, proposalsResponse, contactsResponse] = await Promise.all([
+  const [usersResponse, proposalsResponse, dealIdsResponse] = await Promise.all([
     supabase
-      .from('deals')
-      .select('user_id')
-      .eq('team_id', profile.team_id)
-      .gte('created_at', since),
+      .from('users')
+      .select('id')
+      .eq('team_id', profile.team_id),
     supabase
       .from('proposals')
-      .select('user_id, status')
+      .select('status')
       .eq('team_id', profile.team_id)
       .gte('created_at', since),
     supabase
-      .from('contacts')
-      .select('user_id')
-      .eq('team_id', profile.team_id)
-      .gte('created_at', since),
+      .from('deals')
+      .select('id')
+      .eq('team_id', profile.team_id),
   ])
 
-  const activeUserIds = new Set<string>()
-  const dealsUsers = dealsResponse.data ?? []
-  const proposalUsers = proposalsResponse.data ?? []
-  const contactUsers = contactsResponse.data ?? []
-  dealsUsers.forEach((item) => item.user_id && activeUserIds.add(item.user_id))
-  proposalUsers.forEach((item) => item.user_id && activeUserIds.add(item.user_id))
-  contactUsers.forEach((item) => item.user_id && activeUserIds.add(item.user_id))
-
-  const activeUsers = activeUserIds.size
-  const proposalCount = (proposalsResponse.data ?? []).filter(
-    (item) => item.status && item.status !== 'draft'
-  ).length
-
-  const { data: dealIds } = await supabase
-    .from('deals')
-    .select('id')
-    .eq('team_id', profile.team_id)
+  const teamUserCount = usersResponse.data?.length ?? 0
+  const proposalSentCount = (proposalsResponse.data ?? []).filter((item) => {
+    const status = item.status?.toLowerCase()
+    return status && status !== 'draft'
+  }).length
 
   let storageBytes = 0
-  const ids = (dealIds ?? []).map((deal) => deal.id)
+  const ids = (dealIdsResponse.data ?? []).map((deal) => deal.id)
   if (ids.length > 0) {
     const { data: files } = await supabase
       .from('deal_files')
       .select('file_size')
       .in('deal_id', ids)
-      .gte('created_at', since)
 
     storageBytes =
       files?.reduce((sum, file) => sum + (file.file_size ?? 0), 0) ?? 0
@@ -133,15 +120,17 @@ export const GET = withApiLogging(async () => {
 
   const usage = [
     buildUsage({
-      used: activeUsers,
+      used: teamUserCount,
       limit: planLimits.users,
-      label: t('api.billing.usageActiveUsers'),
+      label: t('api.billing.usageUsers'),
+      hint: t('api.billing.usageHintUsers'),
       t,
     }),
     buildUsage({
-      used: proposalCount,
+      used: proposalSentCount,
       limit: planLimits.proposals,
       label: t('api.billing.usageProposals'),
+      hint: t('api.billing.usageHintPeriod'),
       t,
     }),
     buildUsage({
@@ -149,6 +138,7 @@ export const GET = withApiLogging(async () => {
       limit: planLimits.storageGb,
       label: t('api.billing.usageStorage'),
       unit: 'GB',
+      hint: t('api.billing.usageHintStorage'),
       t,
     }),
   ]

@@ -2,33 +2,25 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
-
-type SearchFilters = {
-  types?: string[]
-  stages?: string[]
-  statuses?: string[]
-  dateRange?: '7d' | '30d' | '90d' | 'all'
-}
+import {
+  buildSearchDateFrom,
+  isSearchQueryMeaningful,
+  normalizeSearchFilters,
+  sanitizeSearchQuery,
+  type SearchFiltersInput,
+} from '@/lib/search/search-utils'
 
 type SearchPayload = {
   query?: string
-  filters?: SearchFilters
+  filters?: SearchFiltersInput
   track?: boolean
-}
-
-const sanitizeQuery = (value: string) => value.replace(/[%_,]/g, ' ').trim()
-
-const buildDateFrom = (range?: SearchFilters['dateRange']) => {
-  if (!range || range === 'all') return null
-  const days = range === '7d' ? 7 : range === '30d' ? 30 : 90
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 }
 
 export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as SearchPayload | null
   const query = payload?.query?.trim() ?? ''
-  const sanitized = sanitizeQuery(query)
+  const sanitized = sanitizeSearchQuery(query)
 
   const supabase = await createServerSupabaseClient()
   const {
@@ -40,7 +32,7 @@ export const POST = withApiLogging(async (request: Request) => {
     return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
-  if (!sanitized || sanitized.length < 2) {
+  if (!isSearchQueryMeaningful(query)) {
     return NextResponse.json({
       query,
       results: { deals: [], contacts: [], proposals: [] },
@@ -54,9 +46,9 @@ export const POST = withApiLogging(async (request: Request) => {
     .maybeSingle()
 
   const teamId = profile?.team_id ?? null
-  const filters = payload?.filters ?? {}
-  const dateFrom = buildDateFrom(filters.dateRange)
-  const types = filters.types?.length ? filters.types : ['deals', 'contacts', 'proposals']
+  const filters = normalizeSearchFilters(payload?.filters)
+  const dateFrom = buildSearchDateFrom(filters.dateRange)
+  const types = filters.types
   const like = `%${sanitized}%`
 
   const tasks: Promise<unknown>[] = []
@@ -101,7 +93,7 @@ export const POST = withApiLogging(async (request: Request) => {
     if (teamId) {
       dealsQuery = dealsQuery.eq('team_id', teamId)
     }
-    if (filters.stages?.length) {
+    if (filters.stages.length) {
       dealsQuery = dealsQuery.in('stage', filters.stages)
     }
     if (dateFrom) {
@@ -148,7 +140,7 @@ export const POST = withApiLogging(async (request: Request) => {
     if (teamId) {
       proposalsQuery = proposalsQuery.eq('team_id', teamId)
     }
-    if (filters.statuses?.length) {
+    if (filters.statuses.length) {
       proposalsQuery = proposalsQuery.in('status', filters.statuses)
     }
     if (dateFrom) {
@@ -170,9 +162,9 @@ export const POST = withApiLogging(async (request: Request) => {
       query: sanitized,
       filters: {
         types,
-        stages: filters.stages ?? [],
-        statuses: filters.statuses ?? [],
-        dateRange: filters.dateRange ?? 'all',
+        stages: filters.stages,
+        statuses: filters.statuses,
+        dateRange: filters.dateRange,
       },
     })
   }

@@ -3,23 +3,12 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
+import { applySignatureToBlocks } from '@/lib/proposals/signature-utils'
 
 type SignPayload = {
   slug?: string
   signature?: string
   name?: string
-}
-
-type SignatureBlock = {
-  id: string
-  type: 'signature'
-  data: {
-    label?: string
-    required?: boolean
-    signatureImage?: string
-    signedName?: string
-    signedAt?: string
-  }
 }
 
 export const POST = withApiLogging(async (request: Request) => {
@@ -46,20 +35,7 @@ export const POST = withApiLogging(async (request: Request) => {
 
   const signedAt = new Date().toISOString()
   const blocks = Array.isArray(proposal.blocks) ? proposal.blocks : []
-  const nextBlocks = blocks.map((block) => {
-    if (block?.type === 'signature') {
-      return {
-        ...block,
-        data: {
-          ...(block as SignatureBlock).data,
-          signatureImage: signature,
-          signedName: name,
-          signedAt,
-        },
-      }
-    }
-    return block
-  })
+  const { blocks: nextBlocks } = applySignatureToBlocks(blocks as Array<{ type: string; data?: Record<string, unknown> }>, signature, name, signedAt)
 
   const { error: updateError } = await supabase
     .from('proposals')

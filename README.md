@@ -95,9 +95,34 @@ npm run test
 # Property-based testler
 npm run test:property
 
+# Veritabanı performans testleri (opt-in)
+npm run test:db:perf
+
 # E2E testler
 npm run test:e2e
+
+# Lighthouse performans kontrolü (opsiyonel)
+npm run test:lighthouse
 ```
+
+### Test veritabanı konfigürasyonu
+
+`.env.local` içinde test için ayrı Supabase değişkenleri tanımlayabilirsiniz:
+
+```env
+SUPABASE_TEST_URL=your_test_project_url
+SUPABASE_TEST_ANON_KEY=your_test_anon_key
+SUPABASE_TEST_SERVICE_ROLE_KEY=your_test_service_role_key
+DB_PERF_THRESHOLD_MS=1500
+```
+
+Testlerde yardımcı client için `createSupabaseTestClient` kullanılabilir:
+
+```ts
+import { createSupabaseTestClient } from '@/lib/supabase'
+```
+
+Veritabanı performans testleri varsayılan olarak kapalıdır ve yalnızca `RUN_DB_PERF_TESTS=true` ile çalışır.
 
 ## 📝 Lisans
 
@@ -110,3 +135,10 @@ Bu proje özel bir projedir.
 ## 📞 İletişim
 
 Sorularınız için issue açabilir veya iletişime geçebilirsiniz.
+
+## 🚢 Production
+
+- Vercel konfigürasyonu: `vercel.json`
+- Production env örneği: `.env.production.example`
+- Deployment runbook: `docs/production-deployment.md`
+- Backup script: `scripts/backup-supabase.sh`

@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { DndContext, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import toast from 'react-hot-toast'
 import { getSupabaseClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database'
 import { formatCurrency, formatRelativeTime, getActivityMeta, normalizeStage, getStageConfigs, type StageId } from './stage-utils'
+import { resolveDropStage } from './kanban-utils'
 import { useI18n } from '@/lib/i18n'
+import { useOptimisticDealUpdates } from '@/hooks'
 
 export type DealCardData = {
   id: string
@@ -68,8 +69,6 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
   const [maxValue, setMaxValue] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [members, setMembers] = useState<Array<{ id: string; name: string; avatarUrl: string | null }>>([])
-  const [stageUpdatingId, setStageUpdatingId] = useState<string | null>(null)
-  const [ownerUpdatingId, setOwnerUpdatingId] = useState<string | null>(null)
 
   useEffect(() => {
     setDeals(initialDeals)
@@ -106,6 +105,12 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
     () => new Map(members.map((member) => [member.id, member])),
     [members]
   )
+  const { stageUpdatingId, ownerUpdatingId, applyStageChange, assignOwner } = useOptimisticDealUpdates({
+    deals,
+    setDeals,
+    memberMap,
+    t,
+  })
 
   useEffect(() => {
     if (members.length === 0) return
@@ -343,84 +348,6 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
     }
   }
 
-  const applyStageChange = async (dealId: string, targetStage: StageId) => {
-    const current = deals.find(deal => deal.id === dealId)
-    if (!current || current.stage === targetStage) {
-      return
-    }
-
-    const previousStage = current.stage
-    const previousUpdatedAt = current.updatedAt
-    const now = new Date().toISOString()
-
-    setDeals(prev =>
-      prev.map(deal =>
-        deal.id === dealId
-          ? {
-              ...deal,
-              stage: targetStage,
-              updatedAt: now,
-            }
-          : deal
-      )
-    )
-
-    setStageUpdatingId(dealId)
-    try {
-      const response = await fetch('/api/deals/stage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, stage: targetStage }),
-      })
-      const payload = await response.json().catch(() => null)
-
-      if (!response.ok) {
-        setDeals(prev =>
-          prev.map(deal =>
-            deal.id === dealId
-              ? {
-                  ...deal,
-                  stage: previousStage,
-                  updatedAt: previousUpdatedAt,
-                }
-              : deal
-          )
-        )
-        toast.error(payload?.error || t('deals.stageUpdateError'))
-        return
-      }
-
-      const updatedAt = payload?.deal?.updated_at
-      if (updatedAt) {
-        setDeals(prev =>
-          prev.map(deal =>
-            deal.id === dealId
-              ? {
-                  ...deal,
-                  updatedAt,
-                }
-              : deal
-          )
-        )
-      }
-    } catch (error) {
-      setDeals(prev =>
-        prev.map(deal =>
-          deal.id === dealId
-            ? {
-                ...deal,
-                stage: previousStage,
-                updatedAt: previousUpdatedAt,
-              }
-            : deal
-        )
-      )
-      toast.error(error instanceof Error ? error.message : t('deals.stageUpdateError'))
-    } finally {
-      setStageUpdatingId((prev) => (prev === dealId ? null : prev))
-    }
-  }
-
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
@@ -434,85 +361,13 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
     }
 
     const dealId = activeId.replace('deal-', '')
-    const targetStage = getTargetStage(over.id, deals)
+    const targetStage = resolveDropStage(over.id, deals)
 
     if (!targetStage) {
       return
     }
 
     await applyStageChange(dealId, targetStage)
-  }
-
-  const handleAssignOwner = async (dealId: string, nextOwnerId: string) => {
-    const current = deals.find((deal) => deal.id === dealId)
-    if (!current) return
-    if (!nextOwnerId) return
-    if (current.ownerId === nextOwnerId) return
-
-    const previousOwnerId = current.ownerId
-    const previousOwnerName = current.ownerName
-    const previousOwnerInitials = current.ownerInitials
-    const previousOwnerAvatarUrl = current.ownerAvatarUrl ?? null
-    const nextMember = memberMap.get(nextOwnerId)
-    const nextOwnerName = nextMember?.name ?? t('deals.ownerFallback')
-    const nextOwnerInitials = createInitials(nextOwnerName)
-
-    setDeals((prev) =>
-      prev.map((deal) =>
-        deal.id === dealId
-          ? {
-              ...deal,
-              ownerId: nextOwnerId,
-              ownerName: nextOwnerName,
-              ownerInitials: nextOwnerInitials,
-              ownerAvatarUrl: nextMember?.avatarUrl ?? null,
-            }
-          : deal
-      )
-    )
-
-    setOwnerUpdatingId(dealId)
-    try {
-      const response = await fetch('/api/deals/assign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, ownerId: nextOwnerId }),
-      })
-      const payload = await response.json().catch(() => null)
-      if (!response.ok) {
-        setDeals((prev) =>
-          prev.map((deal) =>
-            deal.id === dealId
-              ? {
-                  ...deal,
-                  ownerId: previousOwnerId,
-                  ownerName: previousOwnerName,
-                  ownerInitials: previousOwnerInitials,
-                  ownerAvatarUrl: previousOwnerAvatarUrl,
-                }
-              : deal
-          )
-        )
-        toast.error(payload?.error || t('deals.assignError'))
-      }
-    } catch (error) {
-      setDeals((prev) =>
-        prev.map((deal) =>
-          deal.id === dealId
-            ? {
-                ...deal,
-                ownerId: previousOwnerId,
-                ownerName: previousOwnerName,
-                ownerInitials: previousOwnerInitials,
-                ownerAvatarUrl: previousOwnerAvatarUrl,
-              }
-            : deal
-        )
-      )
-      toast.error(error instanceof Error ? error.message : t('deals.assignError'))
-    } finally {
-      setOwnerUpdatingId((prev) => (prev === dealId ? null : prev))
-    }
   }
 
   const totalPipelineValue = sortedDeals.reduce((sum, deal) => sum + deal.value, 0)
@@ -823,7 +678,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                         <select
                           value={deal.ownerId ?? ''}
                           disabled={ownerUpdatingId === deal.id}
-                          onChange={(event) => handleAssignOwner(deal.id, event.target.value)}
+                          onChange={(event) => assignOwner(deal.id, event.target.value)}
                           className="h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs font-semibold text-slate-600 dark:text-slate-200"
                         >
                           <option value="" disabled>
@@ -1055,19 +910,4 @@ function WonDealCard({ deal, disableLink }: { deal: DealCardData; disableLink?: 
       </div>
     </Link>
   )
-}
-
-function getTargetStage(overId: unknown, deals: DealCardData[]): StageId | null {
-  const id = String(overId)
-  if (id.startsWith('stage-')) {
-    return id.replace('stage-', '') as StageId
-  }
-
-  if (id.startsWith('deal-')) {
-    const dealId = id.replace('deal-', '')
-    const deal = deals.find(item => item.id === dealId)
-    return deal?.stage ?? null
-  }
-
-  return null
 }

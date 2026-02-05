@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { testConnection } from '@/lib/integrations/stripe'
+import { maskPresence, maskSensitiveValue } from '@/lib/integrations/security-utils'
 import type { StripeCredentials } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
@@ -53,13 +54,11 @@ export const GET = withApiLogging(async () => {
   }
 
   const credentials = integration.credentials as StripeCredentials
-  const maskedSecret = credentials.secret_key
-    ? `${credentials.secret_key.slice(0, 6)}${'*'.repeat(Math.max(0, credentials.secret_key.length - 10))}${credentials.secret_key.slice(-4)}`
-    : ''
+  const maskedSecret = maskSensitiveValue(credentials.secret_key, { prefix: 6, suffix: 4, maskChar: '*' })
 
   const maskedCredentials = {
     secret_key: maskedSecret,
-    webhook_secret: credentials.webhook_secret ? '••••••••••••••••' : '',
+    webhook_secret: maskPresence(credentials.webhook_secret),
   }
 
   return NextResponse.json({

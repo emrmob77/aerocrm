@@ -1,6 +1,6 @@
-import { createHmac } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, Json } from '@/types/database'
+import { buildWebhookPayload, buildWebhookSignature, buildWebhookTestData } from '@/lib/webhooks/utils'
 
 type WebhookRow = Database['public']['Tables']['webhooks']['Row']
 
@@ -25,17 +25,14 @@ type DeliveryAttempt = {
   result: DeliveryResult
 }
 
-const buildSignature = (secret: string, payload: string) =>
-  createHmac('sha256', secret).update(payload).digest('hex')
-
 const sendWebhook = async (
   webhook: WebhookRow,
   event: string,
   data: Record<string, unknown>,
   sentAt: string
 ): Promise<DeliveryAttempt> => {
-  const payload = JSON.stringify({ event, data, sentAt })
-  const signature = buildSignature(webhook.secret_key, payload)
+  const payload = buildWebhookPayload(event, data, sentAt)
+  const signature = buildWebhookSignature(webhook.secret_key, payload)
   const startedAt = Date.now()
 
   try {
@@ -137,10 +134,8 @@ export async function sendWebhookTest(
   webhook: WebhookRow,
   event = 'webhook.test'
 ) {
-  const attempt = await sendWebhook(webhook, event, {
-    message: 'Webhook test gönderimi',
-    webhookId: webhook.id,
-  }, new Date().toISOString())
+  const data = buildWebhookTestData(webhook.id)
+  const attempt = await sendWebhook(webhook, event, data, new Date().toISOString())
 
   const successCount = (webhook.success_count ?? 0) + (attempt.result.ok ? 1 : 0)
   const failureCount = (webhook.failure_count ?? 0) + (attempt.result.ok ? 0 : 1)
@@ -149,14 +144,11 @@ export async function sendWebhookTest(
     supabase,
     webhook,
     event,
-    data: {
-      message: 'Webhook test gönderimi',
-      webhookId: webhook.id,
-    },
+    data,
     attempt,
   })
 
-  const { data } = await supabase
+  const { data: updatedWebhook } = await supabase
     .from('webhooks')
     .update({
       last_triggered_at: attempt.sentAt,
@@ -169,7 +161,7 @@ export async function sendWebhookTest(
 
   return {
     result: attempt.result,
-    updated: data ?? null,
+    updated: updatedWebhook ?? null,
   }
 }
 

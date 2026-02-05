@@ -13,6 +13,8 @@
     "test": "vitest",
     "test:unit": "vitest run --coverage",
     "test:property": "vitest run --config vitest.property.config.ts",
+    "test:db:perf": "RUN_DB_PERF_TESTS=true vitest run tests/db.performance.test.ts",
+    "test:lighthouse": "npx @lhci/cli autorun --config=.lighthouserc.json",
     "test:e2e": "playwright test",
     "type-check": "tsc --noEmit"
   },

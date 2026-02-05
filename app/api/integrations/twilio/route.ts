@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { testConnection } from '@/lib/integrations/twilio'
+import { maskPresence, maskSensitiveValue } from '@/lib/integrations/security-utils'
 import type { TwilioCredentials } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
@@ -57,10 +58,8 @@ export const GET = withApiLogging(async () => {
   // Mask sensitive credentials
   const credentials = integration.credentials as TwilioCredentials
   const maskedCredentials = {
-    account_sid: credentials.account_sid
-      ? `${credentials.account_sid.slice(0, 6)}${'*'.repeat(Math.max(0, credentials.account_sid.length - 10))}${credentials.account_sid.slice(-4)}`
-      : '',
-    auth_token: credentials.auth_token ? '••••••••••••••••' : '',
+    account_sid: maskSensitiveValue(credentials.account_sid, { prefix: 6, suffix: 4, maskChar: '*' }),
+    auth_token: maskPresence(credentials.auth_token),
     from_sms: credentials.from_sms || '',
     from_whatsapp: credentials.from_whatsapp || '',
   }

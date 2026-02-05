@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
+import { normalizeLocale } from '@/lib/i18n/utils'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
-
-const normalizeLanguage = (value?: string | null) => (value === 'en' ? 'en' : 'tr')
 
 export const GET = withApiLogging(async () => {
   const t = getServerT()
@@ -27,8 +26,8 @@ export const GET = withApiLogging(async () => {
     return NextResponse.json({ error: t('api.settings.languageReadFailed') }, { status: 400 })
   }
 
-  const response = NextResponse.json({ language: normalizeLanguage(profile?.language ?? null) })
-  response.cookies.set('aero_locale', normalizeLanguage(profile?.language ?? null), {
+  const response = NextResponse.json({ language: normalizeLocale(profile?.language ?? null) })
+  response.cookies.set('aero_locale', normalizeLocale(profile?.language ?? null), {
     path: '/',
     maxAge: 60 * 60 * 24 * 365,
   })
@@ -38,7 +37,7 @@ export const GET = withApiLogging(async () => {
 export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as { language?: string } | null
-  const next = normalizeLanguage(payload?.language)
+  const next = normalizeLocale(payload?.language)
 
   const supabase = await createServerSupabaseClient()
   const {

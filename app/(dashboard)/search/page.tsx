@@ -7,32 +7,13 @@ import toast from 'react-hot-toast'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
 import { useI18n } from '@/lib/i18n'
 import { formatCurrency } from '@/components/deals'
-
-type SearchResults = {
-  deals: {
-    id: string
-    title: string
-    value: number
-    currency: string
-    stage: string
-    updated_at: string
-    contact?: { full_name?: string | null; company?: string | null } | null
-  }[]
-  contacts: {
-    id: string
-    full_name: string
-    email: string | null
-    company: string | null
-    updated_at: string
-  }[]
-  proposals: {
-    id: string
-    title: string
-    status: string
-    updated_at: string
-    contact?: { full_name?: string | null } | null
-  }[]
-}
+import {
+  applyRealtimeSearchFilters,
+  toggleSearchFilterValue,
+  type SearchDateRange,
+  type SearchFiltersInput,
+  type SearchResults,
+} from '@/lib/search/search-utils'
 
 type SavedSearch = {
   id: string
@@ -77,7 +58,7 @@ export default function SearchPage() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['deals', 'contacts', 'proposals'])
   const [selectedStages, setSelectedStages] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
-  const [dateRange, setDateRange] = useState<'all' | '7d' | '30d' | '90d'>('all')
+  const [dateRange, setDateRange] = useState<SearchDateRange>('all')
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [showSaveModal, setShowSaveModal] = useState(false)
@@ -86,7 +67,7 @@ export default function SearchPage() {
   const statusOptions = useMemo(() => buildStatusOptions(t), [t])
 
   const filtersPayload = useMemo(
-    () => ({
+    (): SearchFiltersInput => ({
       types: selectedTypes,
       stages: selectedStages,
       statuses: selectedStatuses,
@@ -108,12 +89,7 @@ export default function SearchPage() {
   const runSearch = useCallback(async (
     track: boolean,
     overrideQuery?: string,
-    overrideFilters?: {
-      types: string[]
-      stages: string[]
-      statuses: string[]
-      dateRange: 'all' | '7d' | '30d' | '90d'
-    }
+    overrideFilters?: SearchFiltersInput
   ) => {
     const queryValue = (overrideQuery ?? query).trim()
     if (!queryValue) return
@@ -152,23 +128,11 @@ export default function SearchPage() {
     }
   }, [initialQuery, runSearch])
 
-  const toggleType = (id: string) => {
-    setSelectedTypes((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    )
-  }
+  const toggleType = (id: string) => setSelectedTypes((prev) => toggleSearchFilterValue(prev, id))
 
-  const toggleStage = (id: string) => {
-    setSelectedStages((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    )
-  }
+  const toggleStage = (id: string) => setSelectedStages((prev) => toggleSearchFilterValue(prev, id))
 
-  const toggleStatus = (id: string) => {
-    setSelectedStatuses((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    )
-  }
+  const toggleStatus = (id: string) => setSelectedStatuses((prev) => toggleSearchFilterValue(prev, id))
 
   const applySavedSearch = (item: SavedSearch | HistoryItem) => {
     setQuery(item.query)
@@ -176,7 +140,7 @@ export default function SearchPage() {
     const nextTypes = (filters.types as string[]) || ['deals', 'contacts', 'proposals']
     const nextStages = (filters.stages as string[]) || []
     const nextStatuses = (filters.statuses as string[]) || []
-    const nextRange = (filters.dateRange as 'all' | '7d' | '30d' | '90d') || 'all'
+    const nextRange = (filters.dateRange as SearchDateRange) || 'all'
     setSelectedTypes(nextTypes)
     setSelectedStages(nextStages)
     setSelectedStatuses(nextStatuses)
@@ -225,8 +189,13 @@ export default function SearchPage() {
     toast.success(t('search.success.deleted'))
   }
 
-  const totalResults =
-    results.deals.length + results.contacts.length + results.proposals.length
+  const liveResults = useMemo(
+    () => applyRealtimeSearchFilters(results, query, filtersPayload),
+    [filtersPayload, query, results]
+  )
+
+  const liveTotalResults =
+    liveResults.deals.length + liveResults.contacts.length + liveResults.proposals.length
 
   return (
     <div className="-m-8">
@@ -310,7 +279,7 @@ export default function SearchPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
             <p className="text-xs text-slate-500">{t('search.stats.totalResults')}</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{totalResults}</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{liveTotalResults}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
             <p className="text-xs text-slate-500">{t('search.stats.selectedTypes')}</p>
@@ -329,7 +298,7 @@ export default function SearchPage() {
             <h3 className="text-sm font-bold text-[#0f172a] dark:text-white">{t('search.filters.title')}</h3>
             <select
               value={dateRange}
-              onChange={(event) => setDateRange(event.target.value as 'all' | '7d' | '30d' | '90d')}
+              onChange={(event) => setDateRange(event.target.value as SearchDateRange)}
               className="text-xs bg-white dark:bg-slate-900 border border-[#e2e8f0] dark:border-slate-700 rounded-lg px-2 py-1"
             >
               <option value="all">{t('search.filters.allDates')}</option>
@@ -385,14 +354,14 @@ export default function SearchPage() {
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('nav.deals')}</h2>
-                <span className="text-xs text-slate-400">{t('search.results.count', { count: results.deals.length })}</span>
+                <span className="text-xs text-slate-400">{t('search.results.count', { count: liveResults.deals.length })}</span>
               </div>
-              {results.deals.length === 0 ? (
+              {liveResults.deals.length === 0 ? (
                 <div className="text-sm text-slate-500 bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4">
                   {t('search.results.emptyDeals')}
                 </div>
               ) : (
-                results.deals.map((deal) => (
+                liveResults.deals.map((deal) => (
                   <Link
                     key={deal.id}
                         href={`/deals/${deal.id}`}
@@ -424,14 +393,14 @@ export default function SearchPage() {
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('nav.proposals')}</h2>
-                <span className="text-xs text-slate-400">{t('search.results.count', { count: results.proposals.length })}</span>
+                <span className="text-xs text-slate-400">{t('search.results.count', { count: liveResults.proposals.length })}</span>
               </div>
-              {results.proposals.length === 0 ? (
+              {liveResults.proposals.length === 0 ? (
                 <div className="text-sm text-slate-500 bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4">
                   {t('search.results.emptyProposals')}
                 </div>
               ) : (
-                results.proposals.map((proposal) => (
+                liveResults.proposals.map((proposal) => (
                   <Link
                     key={proposal.id}
                     href={`/proposals/${proposal.id}`}
@@ -457,14 +426,14 @@ export default function SearchPage() {
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('nav.contacts')}</h2>
-                <span className="text-xs text-slate-400">{t('search.results.count', { count: results.contacts.length })}</span>
+                <span className="text-xs text-slate-400">{t('search.results.count', { count: liveResults.contacts.length })}</span>
               </div>
-              {results.contacts.length === 0 ? (
+              {liveResults.contacts.length === 0 ? (
                 <div className="text-sm text-slate-500 bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4">
                   {t('search.results.emptyContacts')}
                 </div>
               ) : (
-                results.contacts.map((contact) => (
+                liveResults.contacts.map((contact) => (
                   <Link
                     key={contact.id}
                     href={`/contacts/${contact.id}`}

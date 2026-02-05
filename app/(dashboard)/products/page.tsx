@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSupabase, useUser } from '@/hooks'
 import { useI18n } from '@/lib/i18n'
+import { buildCatalogStats, filterCatalogProducts } from '@/lib/products/catalog-utils'
 
 type Product = {
   id: string
@@ -168,26 +169,15 @@ export default function ProductsPage() {
   }, [categories, selectedCategory])
 
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const categoryKey = product.category ?? 'uncategorized'
-      const matchesCategory = selectedCategory === 'all' || categoryKey === selectedCategory
-      const matchesSearch =
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesActive = !showOnlyActive || product.isActive
-      return matchesCategory && matchesSearch && matchesActive
+    return filterCatalogProducts(products, {
+      selectedCategory,
+      searchQuery,
+      showOnlyActive,
     })
   }, [products, selectedCategory, searchQuery, showOnlyActive])
 
   const stats = useMemo(() => {
-    const categoryCount = new Set(products.map((product) => product.category ?? 'uncategorized')).size
-    const currencyCount = new Set(products.map((product) => product.currency ?? 'TRY')).size
-    return {
-      total: products.length,
-      active: products.filter((product) => product.isActive).length,
-      categories: categoryCount,
-      currencies: currencyCount,
-    }
+    return buildCatalogStats(products)
   }, [products])
 
   const openAddModal = () => {

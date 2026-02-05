@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Json } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
+import { buildImportReport, type ImportRowError } from '@/lib/data/import-reporting'
 
 type ImportEntity = 'contacts' | 'deals' | 'proposals' | 'sales'
 
@@ -10,11 +11,6 @@ type ImportPayload = {
   entity?: ImportEntity
   fileName?: string
   rows?: Record<string, string | null>[]
-}
-
-type ImportError = {
-  row: number
-  message: string
 }
 
 const parseNumber = (value?: string | null) => {
@@ -98,7 +94,7 @@ export const POST = withApiLogging(async (request: Request) => {
     return NextResponse.json({ error: t('api.data.importRecordFailed') }, { status: 400 })
   }
 
-  const errors: ImportError[] = []
+  const errors: ImportRowError[] = []
   let successCount = 0
 
   const upsertContact = async (params: { email?: string | null; name?: string | null }) => {
@@ -282,33 +278,46 @@ export const POST = withApiLogging(async (request: Request) => {
       }
     }
 
-    const status = errors.length > 0 ? 'completed_with_errors' : 'completed'
+    const report = buildImportReport({
+      totalRows: rows.length,
+      successCount,
+      errors,
+    })
+
     await supabase
       .from('data_import_jobs')
       .update({
-        status,
-        success_count: successCount,
-        error_count: errors.length,
-        errors: errors.slice(0, 50) as Json,
+        status: report.status,
+        success_count: report.successCount,
+        error_count: report.errorCount,
+        errors: report.storedErrors as Json,
         completed_at: new Date().toISOString(),
       })
       .eq('id', job.id)
 
     return NextResponse.json({
       jobId: job.id,
-      status,
-      totalRows: rows.length,
-      successCount,
-      errorCount: errors.length,
-      errors,
+      status: report.status,
+      totalRows: report.totalRows,
+      successCount: report.successCount,
+      errorCount: report.errorCount,
+      successRate: report.successRate,
+      errors: report.errors,
     })
   } catch (error) {
+    const failedReport = buildImportReport({
+      totalRows: rows.length,
+      successCount,
+      errors,
+    })
+
     await supabase
       .from('data_import_jobs')
       .update({
         status: 'failed',
-        error_count: errors.length,
-        errors: errors.slice(0, 50) as Json,
+        success_count: failedReport.successCount,
+        error_count: failedReport.errorCount,
+        errors: failedReport.storedErrors as Json,
         completed_at: new Date().toISOString(),
       })
       .eq('id', job.id)

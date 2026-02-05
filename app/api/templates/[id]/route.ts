@@ -2,18 +2,12 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
-
-type TemplatePayload = {
-  name?: string
-  description?: string
-  category?: string
-  is_public?: boolean
-  blocks?: unknown
-}
+import { normalizeTemplatePayload, type TemplatePayload } from '@/lib/templates/template-utils'
 
 export const PATCH = withApiLogging(async (request: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
   const payload = (await request.json().catch(() => null)) as TemplatePayload | null
+  const normalized = normalizeTemplatePayload(payload)
   const supabase = await createServerSupabaseClient()
   const {
     data: { user },
@@ -25,11 +19,11 @@ export const PATCH = withApiLogging(async (request: Request, { params }: { param
   }
 
   const updates = {
-    name: payload?.name?.trim(),
-    description: payload?.description?.trim() ?? null,
-    category: payload?.category?.trim() ?? null,
-    is_public: payload?.is_public ?? false,
-    blocks: payload?.blocks ?? [],
+    name: typeof payload?.name === 'string' ? normalized.name : undefined,
+    description: normalized.description,
+    category: normalized.category,
+    is_public: normalized.is_public,
+    blocks: normalized.blocks,
     updated_at: new Date().toISOString(),
   }
 

@@ -10,6 +10,7 @@ import { useAppStore } from '@/store'
 import { useSupabase, useTeamPresence, useUser } from '@/hooks'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
 import { useI18n } from '@/lib/i18n'
+import { insertRealtimeNotification, updateRealtimeNotificationRead } from '@/lib/notifications/realtime-utils'
 
 // Breadcrumb mapping
 const pageTitleKeys: Record<string, string> = {
@@ -294,11 +295,9 @@ export function Header({ onMenuClick }: HeaderProps) {
           }
           if (!row?.id) return
           const nextId = row.id
-          setNotifications((prev) => {
-            if (prev.some((item) => item.id === nextId)) {
-              return prev
-            }
-            const next = [
+          setNotifications((prev) =>
+            insertRealtimeNotification(
+              prev,
               {
                 id: nextId,
                 message: row.message ?? t('header.newNotification'),
@@ -306,10 +305,9 @@ export function Header({ onMenuClick }: HeaderProps) {
                 read: row.read ?? false,
                 href: row.action_url ?? undefined,
               },
-              ...prev,
-            ]
-            return next.slice(0, 8)
-          })
+              8
+            )
+          )
           if (!row.read) {
             const messageText = row.title ? `${row.title}` : row.message ?? t('header.newNotification')
             if (row.type?.includes('signed')) {
@@ -326,9 +324,8 @@ export function Header({ onMenuClick }: HeaderProps) {
         (payload) => {
           const row = payload.new as { id?: string; read?: boolean }
           if (!row?.id) return
-          setNotifications((prev) =>
-            prev.map((item) => (item.id === row.id ? { ...item, read: row.read ?? item.read } : item))
-          )
+          const rowId = row.id
+          setNotifications((prev) => updateRealtimeNotificationRead(prev, rowId, row.read))
         }
       )
       .subscribe()

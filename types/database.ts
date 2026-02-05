@@ -625,6 +625,7 @@ export type Database = {
           blocks: Json
           contact_id: string
           created_at: string | null
+          design_settings: Json
           deal_id: string | null
           expires_at: string | null
           id: string
@@ -641,6 +642,7 @@ export type Database = {
           blocks?: Json
           contact_id: string
           created_at?: string | null
+          design_settings?: Json
           deal_id?: string | null
           expires_at?: string | null
           id?: string
@@ -657,6 +659,7 @@ export type Database = {
           blocks?: Json
           contact_id?: string
           created_at?: string | null
+          design_settings?: Json
           deal_id?: string | null
           expires_at?: string | null
           id?: string

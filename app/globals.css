@@ -87,11 +87,27 @@
   body {
     @apply bg-aero-slate-50 text-aero-slate-900 dark:bg-aero-slate-900 dark:text-aero-slate-50;
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-y: contain;
   }
   
   /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  button,
+  a,
+  [role='button'] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
   }
   
   /* Custom scrollbar */
@@ -215,5 +231,18 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-x {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }

@@ -1,17 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  BarChart,
-  Bar,
-} from 'recharts'
+import dynamic from 'next/dynamic'
 import { useI18n } from '@/lib/i18n'
 
 type MonitoringOverview = {
@@ -30,6 +20,11 @@ type MonitoringOverview = {
   rateLimit: { enabled: boolean; max: number | null; windowSeconds: number | null }
   since: string
 }
+
+const MonitoringCharts = dynamic(
+  () => import('@/components/monitoring/MonitoringCharts').then((mod) => mod.MonitoringCharts),
+  { ssr: false }
+)
 
 const formatUptime = (seconds: number) => {
   const days = Math.floor(seconds / 86400)
@@ -51,11 +46,11 @@ export default function MonitoringSettingsPage() {
         const response = await fetch('/api/monitoring/overview')
         const data = await response.json()
         if (!response.ok) {
-          throw new Error(data.error || 'Monitoring verileri yuklenemedi.')
+          throw new Error(data.error || t('monitoring.errors.loadFailed'))
         }
         setOverview(data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Monitoring verileri yuklenemedi.')
+        setError(err instanceof Error ? err.message : t('monitoring.errors.loadFailed'))
       } finally {
         setLoading(false)
       }
@@ -176,57 +171,29 @@ export default function MonitoringSettingsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white mb-4">{t('monitoring.charts.apiTrend')}</h2>
-          {overview?.apiSeries?.length ? (
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={overview.apiSeries}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e7ebf4" />
-                  <XAxis dataKey="date" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" allowDecimals={false} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="#3B82F6" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <p className="text-sm text-[#48679d]">{t('monitoring.empty.noData')}</p>
-          )}
-          {overview?.rateLimit && (
-            <p className="text-xs text-[#93a1b8] mt-4">
-              {overview.rateLimit.enabled && overview.rateLimit.max && overview.rateLimit.windowSeconds
-                ? t('monitoring.rateLimit.limited', {
-                    count: overview.rateLimit.max,
-                    window: overview.rateLimit.windowSeconds >= 60
-                      ? `${Math.round(overview.rateLimit.windowSeconds / 60)}m`
-                      : `${overview.rateLimit.windowSeconds}s`,
-                  })
-                : t('monitoring.rateLimit.unlimited')}
-            </p>
-          )}
-        </div>
+      <MonitoringCharts
+        apiSeries={overview?.apiSeries || []}
+        webhookSeries={overview?.webhookSeries || []}
+        noDataLabel={t('monitoring.empty.noData')}
+        apiTrendTitle={t('monitoring.charts.apiTrend')}
+        webhookTrendTitle={t('monitoring.charts.webhookTrend')}
+        successLabel={t('monitoring.charts.successLabel')}
+      />
 
-        <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
-          <h2 className="text-xl font-bold text-[#0d121c] dark:text-white mb-4">{t('monitoring.charts.webhookTrend')}</h2>
-          {overview?.webhookSeries?.length ? (
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={overview.webhookSeries}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e7ebf4" />
-                  <XAxis dataKey="date" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" domain={[0, 100]} />
-                  <Tooltip formatter={(value) => [`${value}%`, 'Basari']} />
-                  <Bar dataKey="successRate" fill="#10B981" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <p className="text-sm text-[#48679d]">{t('monitoring.empty.noData')}</p>
-          )}
+      {overview?.rateLimit && (
+        <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-4">
+          <p className="text-xs text-[#48679d] dark:text-gray-400">
+            {overview.rateLimit.enabled && overview.rateLimit.max && overview.rateLimit.windowSeconds
+              ? t('monitoring.rateLimit.limited', {
+                  count: overview.rateLimit.max,
+                  window: overview.rateLimit.windowSeconds >= 60
+                    ? `${Math.round(overview.rateLimit.windowSeconds / 60)}m`
+                    : `${overview.rateLimit.windowSeconds}s`,
+                })
+              : t('monitoring.rateLimit.unlimited')}
+          </p>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-[#161e2b] rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-6">
@@ -255,7 +222,7 @@ export default function MonitoringSettingsPage() {
                 <div key={log.id} className="border border-[#e7ebf4] dark:border-gray-800 rounded-lg p-3">
                   <p className="text-sm font-semibold text-[#0d121c] dark:text-white">{log.message}</p>
                   <div className="text-xs text-[#48679d] dark:text-gray-400 mt-1 flex items-center justify-between">
-                    <span>{log.source || 'unknown'}</span>
+                    <span>{log.source || t('common.unknown')}</span>
                     <span>{log.created_at ? formatDate(log.created_at, { dateStyle: 'medium', timeStyle: 'short' }) : '-'}</span>
                   </div>
                 </div>
