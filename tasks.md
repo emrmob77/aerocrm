@@ -130,7 +130,7 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 9: Benzersiz Teklif Linki Oluşturma**
   - **Doğrular: Gereksinim 6.4**
 
-- [ ] 11. Müşteri Teklif Görüntüleme Sayfası
+- [x] 11. Müşteri Teklif Görüntüleme Sayfası ✅
   - Public teklif görüntüleme sayfası (SSR)
   - Mobil uyumlu responsive tasarım
   - E-imza bileşeni (React Signature Canvas)
@@ -182,7 +182,7 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - **Property 15: Gerçek Zamanlı Bildirim Gönderimi**
   - **Doğrular: Gereksinim 12.1**
 
-- [ ]* 13.2 Bildirimler için kalıcı okundu durumu
+- [x]* 13.2 Bildirimler için kalıcı okundu durumu ✅
   - Notifications tablosundan okuma + realtime güncelleme
   - Okundu/okunmadı durumunun DB’ye yazılması
   - Teklif olayları için bildirim kaydı oluşturma (sent/viewed/signed)
@@ -278,7 +278,7 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - Anlaşma geçmişi timeline'ı
   - _Gereksinimler: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6_
 
-- [ ] 21.2 Deal dosyaları için Storage policy'leri
+- [x] 21.2 Deal dosyaları için Storage policy'leri ✅
   - Storage bucket `deal-files` için read/insert/delete politikalarını ekle (dashboard üzerinden)
   - _Gereksinimler: 16.4_
 
