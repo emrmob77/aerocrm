@@ -275,12 +275,24 @@ const getEmbedUrl = (url: string) => {
   return url
 }
 
+const legacyClientNames = new Set(['abc şirketi', 'abc company'])
+
+const normalizeClientNameValue = (value: string | null | undefined, fallback: string) => {
+  const normalized = value?.trim() ?? ''
+  if (!normalized) return fallback
+  if (legacyClientNames.has(normalized.toLocaleLowerCase('tr-TR'))) {
+    return fallback
+  }
+  return normalized
+}
+
 export default function ProposalEditorPage() {
   const supabase = useSupabase()
   const { user, authUser, loading: userLoading } = useUser()
   const searchParams = useSearchParams()
   const isTemplateMode = searchParams.get('mode') === 'template'
   const templateId = searchParams.get('templateId')
+  const contactId = searchParams.get('contactId')
   const proposalId = searchParams.get('proposalId')
   const { t, get, locale } = useI18n()
   const localeCode = locale === 'en' ? 'en-US' : 'tr-TR'
@@ -777,8 +789,8 @@ export default function ProposalEditorPage() {
 
   const [proposalMeta, setProposalMeta] = useState(() => ({
     clientName: t('proposalEditor.defaults.clientName'),
-    contactEmail: 'info@abc.com',
-    contactPhone: '+90 532 000 00 00',
+    contactEmail: '',
+    contactPhone: '',
   }))
 
   useEffect(() => {
@@ -820,6 +832,45 @@ export default function ProposalEditorPage() {
 
     loadProducts()
   }, [authUser, user?.team_id, userLoading, supabase])
+
+  useEffect(() => {
+    if (userLoading) return
+    if (!authUser || !contactId) return
+    if (proposalId) return
+
+    const teamId = user?.team_id ?? null
+
+    const loadContact = async () => {
+      let query = supabase
+        .from('contacts')
+        .select('full_name, company, email, phone, team_id, user_id')
+        .eq('id', contactId)
+
+      if (teamId) {
+        query = query.eq('team_id', teamId)
+      } else {
+        query = query.eq('user_id', authUser.id)
+      }
+
+      const { data } = await query.maybeSingle()
+      if (!data) return
+
+      const fallbackClientName = t('proposalEditor.defaults.clientName')
+      const clientName = normalizeClientNameValue(
+        data.full_name?.trim() || data.company?.trim(),
+        fallbackClientName
+      )
+
+      setProposalMeta((prev) => ({
+        ...prev,
+        clientName,
+        contactEmail: data.email ?? prev.contactEmail,
+        contactPhone: data.phone ?? prev.contactPhone,
+      }))
+    }
+
+    loadContact()
+  }, [authUser, contactId, proposalId, supabase, t, user?.team_id, userLoading])
 
   const fetchTemplates = useCallback(async (scope: TemplateScope) => {
     setTemplatesLoading(true)
@@ -1014,10 +1065,11 @@ export default function ProposalEditorPage() {
       }
 
       const contact = Array.isArray(data.contacts) ? data.contacts[0] : data.contacts
-      const contactName =
-        contact?.full_name?.trim() ||
-        contact?.company?.trim() ||
-        t('proposalEditor.defaults.clientName')
+      const fallbackClientName = t('proposalEditor.defaults.clientName')
+      const contactName = normalizeClientNameValue(
+        contact?.full_name?.trim() || contact?.company?.trim(),
+        fallbackClientName
+      )
 
       setProposalMeta({
         clientName: contactName,
@@ -1464,6 +1516,8 @@ export default function ProposalEditorPage() {
     () => ({
       '{{Müşteri_Adı}}': proposalMeta.clientName,
       '{{Client_Name}}': proposalMeta.clientName,
+      'ABC Şirketi': proposalMeta.clientName,
+      'ABC Company': proposalMeta.clientName,
       '{{Teklif_No}}': draftId ?? proposalId ?? '-',
       '{{Proposal_No}}': draftId ?? proposalId ?? '-',
       '{{Tarih}}': formattedDate,

@@ -130,6 +130,12 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
               {t('contacts.detail.edit')}
             </Link>
             <Link
+              href={`/proposals/new?contactId=${contact.id}`}
+              className="px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg text-sm font-semibold text-[#48679d] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              {t('contacts.detail.newProposal')}
+            </Link>
+            <Link
               href={`/deals/new?contact=${contact.id}`}
               className="px-5 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors"
             >

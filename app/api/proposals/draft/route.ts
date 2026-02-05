@@ -13,6 +13,9 @@ type DraftProposalPayload = {
 }
 
 const normalizeText = (value?: string | null) => value?.trim() || null
+const placeholderClientNames = new Set(['abc şirketi', 'abc company', 'müşteri adı', 'client name', 'müşteri', 'customer'])
+const isPlaceholderClientName = (value: string | null) =>
+  value ? placeholderClientNames.has(value.toLocaleLowerCase('tr-TR')) : false
 
 export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
@@ -45,8 +48,10 @@ export const POST = withApiLogging(async (request: Request) => {
   const teamId = profile.team_id
   const contactEmail = normalizeText(payload.contactEmail)
   const contactPhone = normalizeText(payload.contactPhone)
+  const rawClientName = normalizeText(payload.clientName)
+  const hasMeaningfulClientName = Boolean(rawClientName && !isPlaceholderClientName(rawClientName))
   const clientName =
-    normalizeText(payload.clientName) ||
+    (hasMeaningfulClientName ? rawClientName : null) ||
     (contactEmail ? contactEmail.split('@')[0] : null) ||
     t('header.customerFallback')
 
@@ -81,7 +86,7 @@ export const POST = withApiLogging(async (request: Request) => {
     }
   }
 
-  if (!contactId) {
+  if (!contactId && (contactEmail || contactPhone || hasMeaningfulClientName)) {
     const { data: newContact, error: contactError } = await supabase
       .from('contacts')
       .insert({
