@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -95,7 +95,7 @@ export default function SearchPage() {
     [dateRange, selectedStages, selectedStatuses, selectedTypes]
   )
 
-  const loadMeta = async () => {
+  const loadMeta = useCallback(async () => {
     const response = await fetch('/api/search/meta')
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
@@ -103,9 +103,9 @@ export default function SearchPage() {
     }
     setSavedSearches((payload?.saved ?? []) as SavedSearch[])
     setHistory((payload?.history ?? []) as HistoryItem[])
-  }
+  }, [])
 
-  const runSearch = async (
+  const runSearch = useCallback(async (
     track: boolean,
     overrideQuery?: string,
     overrideFilters?: {
@@ -139,18 +139,18 @@ export default function SearchPage() {
     if (track) {
       await loadMeta()
     }
-  }
+  }, [filtersPayload, loadMeta, query, t])
 
   useEffect(() => {
     loadMeta()
-  }, [])
+  }, [loadMeta])
 
   useEffect(() => {
     if (initialQuery) {
       setQuery(initialQuery)
       runSearch(true, initialQuery)
     }
-  }, [initialQuery])
+  }, [initialQuery, runSearch])
 
   const toggleType = (id: string) => {
     setSelectedTypes((prev) =>

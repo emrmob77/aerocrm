@@ -31,14 +31,6 @@ const parseNumber = (value?: string | null) => {
   return Number.isNaN(parsed) ? null : parsed
 }
 
-const parseBoolean = (value?: string | null) => {
-  if (!value) return null
-  const normalized = value.toString().trim().toLowerCase()
-  if (['true', '1', 'yes', 'evet', 'aktif'].includes(normalized)) return true
-  if (['false', '0', 'no', 'hayır', 'pasif'].includes(normalized)) return false
-  return null
-}
-
 const parseDate = (value?: string | null) => {
   if (!value) return null
   const date = new Date(value)

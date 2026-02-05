@@ -1373,6 +1373,9 @@ export const messages = {
         addStep: 'Yeni adım ekle',
         deleteBlock: 'Bloğu Sil',
       },
+      badges: {
+        template: 'Şablon',
+      },
       sidebar: {
         blocks: 'Bloklar',
         dragHint: 'Sürükle & bırak veya tıkla',
@@ -3936,6 +3939,9 @@ export const messages = {
         removeStep: 'Remove step',
         addStep: 'Add step',
         deleteBlock: 'Delete block',
+      },
+      badges: {
+        template: 'Template',
       },
       sidebar: {
         blocks: 'Blocks',

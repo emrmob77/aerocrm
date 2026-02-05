@@ -15,7 +15,10 @@ export async function updateSession(request: NextRequest) {
   const persistSession = persistCookie === '1'
 
   const normalizeCookieOptions = (options: CookieOptions) => {
-    const { maxAge: _ignored, ...rest } = options ?? {}
+    const rest = { ...(options ?? {}) }
+    if ('maxAge' in rest) {
+      delete (rest as Partial<CookieOptions>).maxAge
+    }
     if (persistSession) {
       return { ...rest, maxAge: PERSISTENCE_MAX_AGE }
     }

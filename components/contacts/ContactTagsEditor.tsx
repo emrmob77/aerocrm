@@ -4,6 +4,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSupabase } from '@/hooks/use-supabase'
 import { useI18n } from '@/lib/i18n'
+import type { Json } from '@/types/database'
 import { getCustomFields, normalizeTagInput, parseContactTags } from './contact-utils'
 
 type ContactTagsEditorProps = {
@@ -43,7 +44,7 @@ export function ContactTagsEditor({ contactId, initialCustomFields }: ContactTag
       } else {
         delete nextFields.tags
       }
-      const payload = Object.keys(nextFields).length > 0 ? nextFields : null
+      const payload: Json | null = Object.keys(nextFields).length > 0 ? (nextFields as Json) : null
       const { error } = await supabase.from('contacts').update({ custom_fields: payload }).eq('id', contactId)
       if (error) {
         throw error

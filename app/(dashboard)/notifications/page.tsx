@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { useSupabase, useUser } from '@/hooks'
@@ -71,7 +71,7 @@ export default function NotificationsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!userId) return
     setIsRefreshing(true)
     const { data, error } = await supabase
@@ -88,7 +88,7 @@ export default function NotificationsPage() {
     }
     setNotifications((data ?? []) as NotificationRow[])
     setIsRefreshing(false)
-  }
+  }, [supabase, t, userId])
 
   useEffect(() => {
     const load = async () => {
@@ -97,7 +97,7 @@ export default function NotificationsPage() {
       setIsLoading(false)
     }
     load()
-  }, [userId])
+  }, [fetchNotifications, userId])
 
   useEffect(() => {
     if (!userId) return

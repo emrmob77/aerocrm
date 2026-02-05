@@ -133,7 +133,7 @@ export default function MonitoringSettingsPage() {
         hint: t('monitoring.hints.last10Errors'),
       },
     ]
-  }, [overview, t])
+  }, [formatDate, overview, t])
 
   if (loading) {
     return (

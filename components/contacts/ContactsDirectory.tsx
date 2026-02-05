@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { useSupabase } from '@/hooks/use-supabase'
-import type { Database } from '@/types/database'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database, Json } from '@/types/database'
 import { useI18n } from '@/lib/i18n'
 import {
   formatCurrency,
@@ -72,6 +73,33 @@ const getAvatarStyle = (seed: string) => {
 
 type ContactRow = Database['public']['Tables']['contacts']['Row']
 type DealRow = Database['public']['Tables']['deals']['Row']
+type ExtendedDatabase = Database & {
+  public: Database['public'] & {
+    Tables: Database['public']['Tables'] & {
+      user_view_settings: {
+        Row: {
+          user_id: string
+          context: string
+          settings: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          user_id: string
+          context: string
+          settings?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          settings?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+    }
+  }
+}
 
 const settingsStorageKey = 'aero:contacts:view-settings'
 const settingsContext = 'contacts'
@@ -108,6 +136,7 @@ export function ContactsDirectory({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const supabase = useSupabase()
+  const supabaseDb = supabase as unknown as SupabaseClient<ExtendedDatabase>
   const { t, get, locale } = useI18n()
   const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
   const currency = locale === 'en' ? 'USD' : 'TRY'
@@ -192,7 +221,7 @@ export function ContactsDirectory({
 
     const load = async () => {
       let applied = false
-      const { data } = await supabase
+      const { data } = await supabaseDb
         .from('user_view_settings')
         .select('settings')
         .eq('user_id', userId)
@@ -220,7 +249,7 @@ export function ContactsDirectory({
     }
 
     load()
-  }, [supabase, userId])
+  }, [supabaseDb, userId])
 
   useEffect(() => {
     if (!settingsReady || !userId) return
@@ -241,7 +270,7 @@ export function ContactsDirectory({
       clearTimeout(settingsSaveTimeout.current)
     }
     settingsSaveTimeout.current = setTimeout(async () => {
-      await supabase.from('user_view_settings').upsert(
+      await supabaseDb.from('user_view_settings').upsert(
         {
           user_id: userId,
           context: settingsContext,
@@ -261,15 +290,18 @@ export function ContactsDirectory({
         clearTimeout(settingsSaveTimeout.current)
       }
     }
-  }, [settingsReady, userId, viewMode, rowsPerPage, density, columnVisibility, supabase])
+  }, [settingsReady, userId, viewMode, rowsPerPage, density, columnVisibility, supabaseDb])
 
   useEffect(() => {
     setContacts(
-      initialContacts.map((contact) => ({
-        ...contact,
-        customFields: getCustomFields(contact.customFields) ?? contact.customFields ?? null,
-        tags: contact.tags ?? parseContactTags(getCustomFields(contact.customFields)),
-      }))
+      initialContacts.map((contact) => {
+        const normalizedCustomFields = getCustomFields(contact.customFields)
+        return {
+          ...contact,
+          customFields: (normalizedCustomFields ?? contact.customFields ?? null) as Json | null,
+          tags: contact.tags ?? parseContactTags(normalizedCustomFields ?? contact.customFields),
+        }
+      })
     )
   }, [initialContacts])
 
@@ -358,6 +390,7 @@ export function ContactsDirectory({
               return prev
             }
 
+            const normalizedCustomFields = getCustomFields(row.custom_fields)
             return [
               {
                 id: row.id,
@@ -371,8 +404,8 @@ export function ContactsDirectory({
                 totalValue: 0,
                 lastActivityAt: row.updated_at ?? row.created_at,
                 dealsCount: 0,
-                customFields: getCustomFields(row.custom_fields),
-                tags: parseContactTags(getCustomFields(row.custom_fields)),
+                customFields: (normalizedCustomFields ?? row.custom_fields ?? null) as Json | null,
+                tags: parseContactTags(normalizedCustomFields ?? row.custom_fields),
               },
               ...prev,
             ]
@@ -395,7 +428,8 @@ export function ContactsDirectory({
               }
 
               const updatedAt = row.updated_at ?? contact.updatedAt
-              const customFields = getCustomFields(row.custom_fields) ?? contact.customFields ?? null
+              const normalizedCustomFields = getCustomFields(row.custom_fields)
+              const customFields = (normalizedCustomFields ?? contact.customFields ?? null) as Json | null
               const lastActivityAt =
                 updatedAt && contact.lastActivityAt && new Date(updatedAt) > new Date(contact.lastActivityAt)
                   ? updatedAt
@@ -554,7 +588,9 @@ export function ContactsDirectory({
       } else if (sortKey === 'value') {
         comparison = a.totalValue - b.totalValue
       } else {
-        comparison = new Date(a.lastActivityAt).getTime() - new Date(b.lastActivityAt).getTime()
+        const aTime = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0
+        const bTime = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0
+        comparison = aTime - bTime
       }
 
       return sortDir === 'asc' ? comparison : -comparison
@@ -832,9 +868,15 @@ export function ContactsDirectory({
                         {renderSortIcon('name')}
                       </button>
                     </th>
-                    {columnVisibility.email && <th className={`px-4 ${headerPadding}`}>{t('contacts.table.email')}</th>}
-                    {columnVisibility.phone && <th className={`px-4 ${headerPadding}`}>{t('contacts.table.phone')}</th>}
-                    {columnVisibility.company && <th className={`px-4 ${headerPadding}`}>{t('contacts.table.company')}</th>}
+                    {columnVisibility.email && (
+                      <th className={`px-4 ${headerPadding} w-[260px]`}>{t('contacts.table.email')}</th>
+                    )}
+                    {columnVisibility.phone && (
+                      <th className={`px-4 ${headerPadding} w-[180px]`}>{t('contacts.table.phone')}</th>
+                    )}
+                    {columnVisibility.company && (
+                      <th className={`px-4 ${headerPadding} w-[220px]`}>{t('contacts.table.company')}</th>
+                    )}
                     {columnVisibility.value && (
                       <th className={`px-4 ${headerPadding}`}>
                         <button onClick={() => toggleSort('value')} className="flex items-center gap-2">
@@ -920,9 +962,9 @@ export function ContactsDirectory({
                             </div>
                           </td>
                           {columnVisibility.email && (
-                            <td className={`px-4 ${rowPadding}`}>
+                            <td className={`px-4 ${rowPadding} min-w-0`}>
                               <div className="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400 min-w-0">
-                                <span className="truncate max-w-[220px]">{contact.email ?? '—'}</span>
+                                <span className="truncate max-w-[240px]">{contact.email ?? '—'}</span>
                                 {contact.email && (
                                   <button
                                     onClick={() => copyToClipboard(contact.email)}
@@ -935,9 +977,9 @@ export function ContactsDirectory({
                             </td>
                           )}
                           {columnVisibility.phone && (
-                            <td className={`px-4 ${rowPadding}`}>
+                            <td className={`px-4 ${rowPadding} min-w-0`}>
                               <div className="flex items-center gap-2 text-sm text-[#48679d] dark:text-gray-400 min-w-0">
-                                <span className="truncate max-w-[160px]">{contact.phone ?? '—'}</span>
+                                <span className="truncate max-w-[180px]">{contact.phone ?? '—'}</span>
                                 {contact.phone && (
                                   <a
                                     href={`tel:${contact.phone}`}
@@ -950,8 +992,8 @@ export function ContactsDirectory({
                             </td>
                           )}
                           {columnVisibility.company && (
-                            <td className={`px-4 ${rowPadding}`}>
-                              <span className="inline-flex max-w-[180px] truncate px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-full">
+                            <td className={`px-4 ${rowPadding} min-w-0`}>
+                              <span className="inline-flex max-w-[220px] truncate px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-full">
                                 {contact.company ?? '—'}
                               </span>
                             </td>
@@ -1061,7 +1103,7 @@ export function ContactsDirectory({
                     >
                       {initials}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h3 className="font-bold text-[#0d121c] dark:text-white">{contact.fullName}</h3>
                       <p className="text-sm text-[#48679d] dark:text-gray-400 truncate max-w-[220px]">
                         {contact.company ?? '—'}
@@ -1086,13 +1128,13 @@ export function ContactsDirectory({
                     </div>
                   </div>
                   <div className="space-y-2 text-sm text-[#48679d] dark:text-gray-400">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span className="material-symbols-outlined text-[18px]">mail</span>
-                      <span>{contact.email ?? '—'}</span>
+                      <span className="min-w-0 flex-1 truncate">{contact.email ?? '—'}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <span className="material-symbols-outlined text-[18px]">call</span>
-                      <span>{contact.phone ?? '—'}</span>
+                      <span className="min-w-0 flex-1 truncate">{contact.phone ?? '—'}</span>
                     </div>
                   </div>
                   <div className="mt-4 flex items-center justify-between text-xs text-[#48679d] dark:text-gray-400">

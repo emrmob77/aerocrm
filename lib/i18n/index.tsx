@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { messages, type Locale } from './messages'
 
 type I18nContextValue = {
@@ -28,8 +28,12 @@ const readCookie = (name: string) => {
   return match ? decodeURIComponent(match[1]) : null
 }
 
-const getValue = (obj: Record<string, any>, path: string) =>
-  path.split('.').reduce((acc, key) => (acc && key in acc ? acc[key] : null), obj)
+const getValue = (obj: Record<string, unknown>, path: string) =>
+  path.split('.').reduce<unknown>((acc, key) => {
+    if (!acc || typeof acc !== 'object') return null
+    const record = acc as Record<string, unknown>
+    return key in record ? record[key] : null
+  }, obj)
 
 const interpolate = (template: string, vars?: Record<string, string | number>) => {
   if (!vars) return template
@@ -77,12 +81,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }
 
   const t = (key: string, vars?: Record<string, string | number>) => {
-    const value = getValue(messages[locale] as unknown as Record<string, any>, key)
+    const value = getValue(messages[locale] as unknown as Record<string, unknown>, key)
     if (!value || typeof value !== 'string') return key
     return interpolate(value, vars)
   }
 
-  const get = (key: string) => getValue(messages[locale] as unknown as Record<string, any>, key)
+  const get = (key: string) => getValue(messages[locale] as unknown as Record<string, unknown>, key)
 
   const formatDate = (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => {
     const value = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date
@@ -92,10 +96,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const formatNumber = (value: number, options?: Intl.NumberFormatOptions) =>
     new Intl.NumberFormat(localeMap[locale], options).format(value)
 
-  const contextValue = useMemo<I18nContextValue>(
-    () => ({ locale, setLocale, t, get, formatDate, formatNumber }),
-    [locale]
-  )
+  const contextValue: I18nContextValue = { locale, setLocale, t, get, formatDate, formatNumber }
 
   return <I18nContext.Provider value={contextValue}>{children}</I18nContext.Provider>
 }

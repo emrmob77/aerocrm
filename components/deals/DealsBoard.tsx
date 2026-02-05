@@ -797,7 +797,6 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
                     </td>
                   </tr>
                 ) : sortedDeals.map((deal) => {
-                  const stage = stageConfigs.find(item => item.id === deal.stage)
                   return (
                     <tr key={deal.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="px-6 py-4">

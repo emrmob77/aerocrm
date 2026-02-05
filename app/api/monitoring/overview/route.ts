@@ -16,7 +16,7 @@ const buildDailyBuckets = (days: number, locale: string) => {
   return buckets
 }
 
-export const GET = withApiLogging(async (request: Request) => {
+export const GET = withApiLogging(async (_request: Request) => {
   const t = getServerT()
   const locale = getServerLocale()
   const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'

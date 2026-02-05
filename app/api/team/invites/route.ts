@@ -37,7 +37,7 @@ const sendInviteEmail = async (params: { to: string; link: string; inviter: stri
   return response.ok
 }
 
-export const GET = withApiLogging(async (request: Request) => {
+export const GET = withApiLogging(async (_request: Request) => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {

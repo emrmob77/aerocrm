@@ -1,11 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
 
 export default function ProposalViewPage() {
-  const params = useParams()
   const [signerName, setSignerName] = useState('')
   const { t, locale } = useI18n()
 

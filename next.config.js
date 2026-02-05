@@ -16,6 +16,7 @@ const nextConfig = {
       },
     ],
   },
+  optimizeFonts: false,
   // Performans optimizasyonları
   poweredByHeader: false,
   compress: true,

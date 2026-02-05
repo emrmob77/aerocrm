@@ -24,7 +24,7 @@ type BillingOverview = {
   usage: Array<{ label: string; value: string; hint: string }>
   usagePeriod: string
   invoices: Array<{ id: string; date: string; amount: string; status: string; pdf?: string | null }>
-  subscription: any
+  subscription: { status?: string | null } | null
   customer: { id: string; email: string | null; name: string | null } | null
   plans: BillingPlan[]
 }
@@ -54,7 +54,7 @@ export default function BillingSettingsPage() {
     }
 
     loadOverview()
-  }, [])
+  }, [t])
 
   const startCheckout = async (plan: BillingPlan) => {
     if (!plan.priceId) {

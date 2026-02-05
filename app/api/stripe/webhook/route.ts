@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { getCredentialsFromEnv } from '@/lib/integrations/stripe'
-import type { StripeCredentials } from '@/types/database'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database, IntegrationProvider, IntegrationStatus } from '@/types/database'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -41,6 +42,69 @@ const resolvePlanFromPrice = (priceId?: string | null) => {
   return mapping[priceId] || null
 }
 
+type StripeEvent = {
+  type?: string
+  data?: {
+    object?: Record<string, unknown>
+  }
+}
+
+type ExtendedDatabase = Database & {
+  public: Database['public'] & {
+    Tables: Database['public']['Tables'] & {
+      integrations: {
+        Row: {
+          id: string
+          team_id: string | null
+          provider: IntegrationProvider
+          status: IntegrationStatus
+          credentials: Record<string, string> | null
+          settings: Record<string, string> | null
+          last_used_at: string | null
+          last_error: string | null
+          connected_at: string | null
+          connected_by: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          team_id?: string | null
+          provider: IntegrationProvider
+          status?: IntegrationStatus
+          credentials?: Record<string, string> | null
+          settings?: Record<string, string> | null
+          last_used_at?: string | null
+          last_error?: string | null
+          connected_at?: string | null
+          connected_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          team_id?: string | null
+          provider?: IntegrationProvider
+          status?: IntegrationStatus
+          credentials?: Record<string, string> | null
+          settings?: Record<string, string> | null
+          last_used_at?: string | null
+          last_error?: string | null
+          connected_at?: string | null
+          connected_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+    }
+  }
+}
+
+const getObject = (value: unknown) =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : null
+
+const getString = (value: unknown) => (typeof value === 'string' ? value : null)
+
 export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const payload = await request.text()
@@ -53,16 +117,16 @@ export const POST = withApiLogging(async (request: Request) => {
     return NextResponse.json({ error: t('api.stripeWebhook.invalidSignature') }, { status: 400 })
   }
 
-  let event: any
+  let event: StripeEvent
   try {
-    event = JSON.parse(payload)
+    event = JSON.parse(payload) as StripeEvent
   } catch {
     return NextResponse.json({ error: t('api.stripeWebhook.payloadUnreadable') }, { status: 400 })
   }
 
-  let admin
+  let admin: SupabaseClient<ExtendedDatabase>
   try {
-    admin = createSupabaseAdminClient()
+    admin = createSupabaseAdminClient() as SupabaseClient<ExtendedDatabase>
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : t('api.stripeWebhook.adminAccessMissing') },
@@ -70,14 +134,14 @@ export const POST = withApiLogging(async (request: Request) => {
     )
   }
 
-  const dataObject = event?.data?.object
-  const customerId = dataObject?.customer || dataObject?.customer_id || null
+  const dataObject = getObject(event?.data?.object) ?? {}
+  const customerId = getString(dataObject.customer) || getString(dataObject.customer_id)
 
   if (!customerId) {
     return NextResponse.json({ received: true })
   }
 
-  const { data, error } = await (admin as any)
+  const { data, error } = await admin
     .from('integrations')
     .select('*')
     .eq('provider', 'stripe')
@@ -104,20 +168,27 @@ export const POST = withApiLogging(async (request: Request) => {
   if (event.type === 'checkout.session.completed') {
     updateSettings = {
       ...updateSettings,
-      subscription_id: dataObject?.subscription || updateSettings.subscription_id,
+      subscription_id: getString(dataObject.subscription) || updateSettings.subscription_id,
     }
-    if (dataObject?.metadata?.plan) {
-      nextPlan = dataObject.metadata.plan
-    }
+    const metadata = getObject(dataObject.metadata)
+    nextPlan = getString(metadata?.plan) || nextPlan
   }
 
   if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.created') {
-    const priceId = dataObject?.items?.data?.[0]?.price?.id || null
+    const items = getObject(dataObject.items)
+    const itemsData = Array.isArray(items?.data) ? items?.data : []
+    const firstItem = getObject(itemsData[0])
+    const price = getObject(firstItem?.price)
+    const priceId = getString(price?.id)
+    const currentPeriodEnd = dataObject.current_period_end
     updateSettings = {
       ...updateSettings,
-      subscription_id: dataObject?.id || updateSettings.subscription_id,
-      subscription_status: dataObject?.status || updateSettings.subscription_status,
-      current_period_end: dataObject?.current_period_end?.toString() || updateSettings.current_period_end,
+      subscription_id: getString(dataObject.id) || updateSettings.subscription_id,
+      subscription_status: getString(dataObject.status) || updateSettings.subscription_status,
+      current_period_end:
+        typeof currentPeriodEnd === 'number' || typeof currentPeriodEnd === 'string'
+          ? String(currentPeriodEnd)
+          : updateSettings.current_period_end,
       price_id: priceId || updateSettings.price_id,
     }
     nextPlan = resolvePlanFromPrice(priceId) || nextPlan
@@ -131,7 +202,7 @@ export const POST = withApiLogging(async (request: Request) => {
     nextPlan = 'free'
   }
 
-  await (admin as any)
+  await admin
     .from('integrations')
     .update({
       settings: updateSettings,

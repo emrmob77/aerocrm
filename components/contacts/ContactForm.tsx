@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { useSupabase } from '@/hooks/use-supabase'
+import type { Json } from '@/types/database'
 import { useUser } from '@/hooks'
 import { useI18n } from '@/lib/i18n'
 import { getCustomFields, normalizeTagInput, parseContactTags } from '@/components/contacts/contact-utils'
@@ -75,7 +76,8 @@ export function ContactForm({ mode, contactId, initialData, initialCustomFields 
       } else {
         delete nextCustomFields.tags
       }
-      const customFieldsPayload = Object.keys(nextCustomFields).length > 0 ? nextCustomFields : null
+      const customFieldsPayload: Json | null =
+        Object.keys(nextCustomFields).length > 0 ? (nextCustomFields as Json) : null
       if (mode === 'create') {
         if (!profile?.team_id) {
           toast.error(t('contacts.form.teamMissing'))

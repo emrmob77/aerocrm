@@ -60,15 +60,21 @@ const cookieMethods = {
     return getCookieValue(name) ?? undefined
   },
   async set(name: string, value: string, options: CookieOptions) {
-    const { maxAge: _ignored, ...rest } = options ?? {}
+    const rest = { ...(options ?? {}) }
     if (authPersistence === 'persistent') {
       setCookieValue(name, value, { ...rest, maxAge: PERSISTENCE_MAX_AGE })
     } else {
-      setCookieValue(name, value, { ...rest })
+      if ('maxAge' in rest) {
+        delete (rest as Partial<CookieOptions>).maxAge
+      }
+      setCookieValue(name, value, rest)
     }
   },
   async remove(name: string, options: CookieOptions) {
-    const { maxAge: _ignored, ...rest } = options ?? {}
+    const rest = { ...(options ?? {}) }
+    if ('maxAge' in rest) {
+      delete (rest as Partial<CookieOptions>).maxAge
+    }
     setCookieValue(name, '', { ...rest, maxAge: 0 })
   },
 }
@@ -80,11 +86,11 @@ export function createClient() {
     {
       cookies: cookieMethods,
     }
-  ) as unknown as SupabaseClient<any>
+  ) as unknown as SupabaseClient<Database>
 }
 
 // Singleton instance for client-side
-let client: SupabaseClient<any> | null = null
+let client: SupabaseClient<Database> | null = null
 
 export function getSupabaseClient() {
   if (!client) {

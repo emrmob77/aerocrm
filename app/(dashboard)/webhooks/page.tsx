@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
@@ -71,31 +71,31 @@ export default function WebhooksPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
 
-  useEffect(() => {
-    const fetchWebhooks = async () => {
-      setIsLoading(true)
-      const response = await fetch('/api/webhooks')
-      const payload = await response.json().catch(() => null)
-      if (!response.ok) {
-        toast.error(payload?.error || 'Webhooklar getirilemedi.')
-        setIsLoading(false)
-        return
-      }
-      const list = (payload?.webhooks ?? []) as WebhookRow[]
-      setWebhooks(list)
-      if (list.length > 0) {
-        const first = list[0]
-        setSelectedWebhookId(first.id)
-        setTargetUrl(first.url)
-        setSecretKey(first.secret_key)
-        setActive(first.active)
-        setEvents(buildEventState(first.events, eventGroups))
-      }
+  const fetchWebhooks = useCallback(async () => {
+    setIsLoading(true)
+    const response = await fetch('/api/webhooks')
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      toast.error(payload?.error || 'Webhooklar getirilemedi.')
       setIsLoading(false)
+      return
     }
+    const list = (payload?.webhooks ?? []) as WebhookRow[]
+    setWebhooks(list)
+    if (list.length > 0) {
+      const first = list[0]
+      setSelectedWebhookId(first.id)
+      setTargetUrl(first.url)
+      setSecretKey(first.secret_key)
+      setActive(first.active)
+      setEvents(buildEventState(first.events, eventGroups))
+    }
+    setIsLoading(false)
+  }, [eventGroups])
 
+  useEffect(() => {
     fetchWebhooks()
-  }, [])
+  }, [fetchWebhooks])
 
   const toggleEvent = (key: string) => {
     setEvents((prev) => ({ ...prev, [key]: !prev[key] }))

@@ -274,8 +274,6 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
     return Array.from(map.values()).sort((a, b) => b.value - a.value).slice(0, 4)
   })()
 
-  const recentSales = wonDeals.slice(0, 6)
-
   const months: Array<{ key: string; label: string }> = []
   for (let i = 5; i >= 0; i -= 1) {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1)

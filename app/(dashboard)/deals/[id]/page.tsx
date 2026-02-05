@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import DealDetailsClient from './DealDetailsClient'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
@@ -32,6 +33,7 @@ type DealFileRow = {
 
 export default async function DealDetailsPage({ params }: { params: { id: string } }) {
   const supabase = await createServerSupabaseClient()
+  const supabaseDb = supabase as unknown as SupabaseClient<Database>
   const t = getServerT()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -161,8 +163,7 @@ export default async function DealDetailsPage({ params }: { params: { id: string
     .eq('entity_id', params.id)
     .order('created_at', { ascending: false })
 
-  const supabaseAny = supabase as unknown as { from: (table: string) => any }
-  const { data: fileRows } = await supabaseAny
+  const { data: fileRows } = await supabaseDb
     .from('deal_files')
     .select('id, deal_id, name, file_path, file_size, mime_type, uploaded_by, created_at')
     .eq('deal_id', params.id)

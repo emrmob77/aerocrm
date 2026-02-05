@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Image from 'next/image'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { CountdownTimer, ProposalViewTracker, SignatureBlock } from './client'
@@ -400,10 +401,13 @@ function BlockContent({
         <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
           {block.data.images.map((image) => (
             <div key={image.id} className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-              <img
+              <Image
                 src={image.url}
                 alt={image.caption || t('publicProposal.gallery.imageAlt')}
+                width={600}
+                height={160}
                 className="w-full h-40 object-cover"
+                unoptimized
               />
               {image.caption && (
                 <div className="px-3 py-2 text-xs text-gray-500 bg-white">{image.caption}</div>
@@ -421,7 +425,14 @@ function BlockContent({
         <span className="material-symbols-outlined text-3xl text-[color:var(--proposal-accent)] mb-2">format_quote</span>
         <p className="text-lg italic text-[color:var(--proposal-text)]">"{block.data.quote}"</p>
         <div className="mt-4 flex items-center gap-3">
-          <img src={block.data.avatarUrl} alt={block.data.author} className="size-10 rounded-full object-cover" />
+          <Image
+            src={block.data.avatarUrl}
+            alt={block.data.author}
+            width={40}
+            height={40}
+            className="size-10 rounded-full object-cover"
+            unoptimized
+          />
           <div>
             <p className="text-sm font-semibold text-[color:var(--proposal-text)]">{block.data.author}</p>
             <p className="text-xs text-gray-500">{block.data.role}</p>

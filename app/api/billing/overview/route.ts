@@ -161,7 +161,7 @@ export const GET = withApiLogging(async () => {
     priceMonthly: item.priceMonthly,
     currency: item.currency,
     priceId: item.priceId,
-    features: (planFeatures as Record<string, any>)?.[item.id]?.features ?? [],
+    features: (planFeatures as Record<string, { features?: readonly string[] }>)[item.id]?.features ?? [],
     limits: item.limits,
     recommended: item.recommended ?? false,
   }))

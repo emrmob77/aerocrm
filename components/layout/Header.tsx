@@ -255,19 +255,22 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       if (!data) return
 
-      const mapped = data.map((row) => ({
-        id: row.id,
-        message: row.message,
-        time: formatRelativeTime(row.created_at, t),
-        read: row.read ?? false,
-        href: row.action_url ?? undefined,
-      }))
+      const mapped = data.map((row) => {
+        const createdAt = row.created_at ?? new Date().toISOString()
+        return {
+          id: row.id,
+          message: row.message,
+          time: formatRelativeTime(createdAt, t),
+          read: row.read ?? false,
+          href: row.action_url ?? undefined,
+        }
+      })
 
       setNotifications(mapped)
     }
 
     fetchNotifications()
-  }, [supabase, userId])
+  }, [supabase, t, userId])
 
   useEffect(() => {
     if (!userId) {
@@ -333,7 +336,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase, userId])
+  }, [supabase, t, userId])
 
   const markAllNotificationsRead = async () => {
     if (!userId) return

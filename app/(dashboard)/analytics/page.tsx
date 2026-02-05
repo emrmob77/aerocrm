@@ -365,7 +365,6 @@ export default async function AnalyticsPage({
   const signedCount = lastRangeProposals.filter((proposal) => isSignedStatus(proposal.status)).length
 
   const sentPrev = prevRangeProposals.filter((proposal) => isSentStatus(proposal.status)).length
-  const viewedPrev = prevRangeProposals.filter((proposal) => isViewedStatus(proposal.status)).length
   const signedPrev = prevRangeProposals.filter((proposal) => isSignedStatus(proposal.status)).length
 
   const viewRate = sentCount ? Math.round((viewedCount / sentCount) * 100) : 0
@@ -376,7 +375,6 @@ export default async function AnalyticsPage({
     lastRangeViews.filter((view) => (view.duration_seconds ?? 0) >= engagedThresholdSeconds).map((view) => view.proposal_id)
   )
   const engagedCount = engagedProposalIds.size
-  const engagedRate = sentCount ? Math.round((engagedCount / sentCount) * 100) : 0
 
   const avgDuration = averageDuration(lastRangeViews)
   const avgDurationPrev = averageDuration(prevRangeViews)

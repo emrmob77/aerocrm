@@ -32,6 +32,13 @@ export type StripeCustomer = {
   name: string | null
 }
 
+type StripeResponse<T = unknown> = {
+  ok: boolean
+  status: number
+  data: T | null
+  error: string | null
+}
+
 export function getCredentialsFromEnv(): StripeCredentials | null {
   const secret_key = process.env.STRIPE_SECRET_KEY
   if (!secret_key) return null
@@ -57,7 +64,7 @@ async function stripeRequest(
   path: string,
   method: 'GET' | 'POST',
   payload?: Record<string, string | number | boolean | undefined | null>
-) {
+): Promise<StripeResponse> {
   const url = `https://api.stripe.com${path}`
   const headers: Record<string, string> = {
     Authorization: buildAuthHeader(credentials.secret_key),
@@ -78,11 +85,11 @@ async function stripeRequest(
       ok: false,
       status: response.status,
       error: data?.error?.message || 'Stripe istegi basarisiz oldu.',
-      data: null as any,
+      data: null,
     }
   }
 
-  return { ok: true, status: response.status, data, error: null as string | null }
+  return { ok: true, status: response.status, data, error: null }
 }
 
 export async function testConnection(credentials: StripeCredentials): Promise<StripeTestResult> {
@@ -96,12 +103,24 @@ export async function testConnection(credentials: StripeCredentials): Promise<St
       }
     }
 
-    const data = response.data
+    const data = response.data as Record<string, unknown> | null
+    const businessProfile =
+      data && typeof data.business_profile === 'object'
+        ? (data.business_profile as Record<string, unknown>)
+        : null
+    const settings =
+      data && typeof data.settings === 'object'
+        ? (data.settings as Record<string, unknown>)
+        : null
+    const dashboard =
+      settings && typeof settings.dashboard === 'object'
+        ? (settings.dashboard as Record<string, unknown>)
+        : null
     const accountName =
-      data?.business_profile?.name ||
-      data?.settings?.dashboard?.display_name ||
-      data?.business_name ||
-      data?.email ||
+      (typeof businessProfile?.name === 'string' ? businessProfile.name : null) ||
+      (typeof dashboard?.display_name === 'string' ? dashboard.display_name : null) ||
+      (typeof data?.business_name === 'string' ? data.business_name : null) ||
+      (typeof data?.email === 'string' ? data.email : null) ||
       undefined
 
     return {
@@ -131,7 +150,7 @@ export async function createCustomer(
 
   const response = await stripeRequest(credentials, '/v1/customers', 'POST', requestPayload)
   if (!response.ok) {
-    return { success: false, error: response.error }
+    return { success: false, error: response.error ?? undefined }
   }
 
   return { success: true, customer: response.data as StripeCustomer }
@@ -149,10 +168,12 @@ export async function listInvoices(
   )
 
   if (!response.ok) {
-    return { success: false, error: response.error }
+    return { success: false, error: response.error ?? undefined }
   }
 
-  return { success: true, invoices: (response.data?.data || []) as StripeInvoice[] }
+  const invoiceData = response.data as Record<string, unknown> | null
+  const invoices = Array.isArray(invoiceData?.data) ? (invoiceData.data as StripeInvoice[]) : []
+  return { success: true, invoices }
 }
 
 export async function listSubscriptions(
@@ -166,11 +187,12 @@ export async function listSubscriptions(
   )
 
   if (!response.ok) {
-    return { success: false, error: response.error }
+    return { success: false, error: response.error ?? undefined }
   }
 
-  const data = response.data?.data || []
-  return { success: true, subscription: (data[0] as StripeSubscription) || null }
+  const subscriptionData = response.data as Record<string, unknown> | null
+  const list = Array.isArray(subscriptionData?.data) ? subscriptionData.data : []
+  return { success: true, subscription: (list[0] as StripeSubscription) || null }
 }
 
 export async function createCheckoutSession(
@@ -200,10 +222,12 @@ export async function createCheckoutSession(
 
   const response = await stripeRequest(credentials, '/v1/checkout/sessions', 'POST', requestPayload)
   if (!response.ok) {
-    return { success: false, error: response.error }
+    return { success: false, error: response.error ?? undefined }
   }
 
-  return { success: true, url: response.data?.url }
+  const checkoutData = response.data as Record<string, unknown> | null
+  const url = typeof checkoutData?.url === 'string' ? checkoutData.url : undefined
+  return { success: true, url }
 }
 
 export async function createPortalSession(
@@ -216,8 +240,10 @@ export async function createPortalSession(
   })
 
   if (!response.ok) {
-    return { success: false, error: response.error }
+    return { success: false, error: response.error ?? undefined }
   }
 
-  return { success: true, url: response.data?.url }
+  const portalData = response.data as Record<string, unknown> | null
+  const url = typeof portalData?.url === 'string' ? portalData.url : undefined
+  return { success: true, url }
 }

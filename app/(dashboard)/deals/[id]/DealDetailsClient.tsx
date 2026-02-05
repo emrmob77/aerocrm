@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
 import { useDropzone } from 'react-dropzone'
 import DOMPurify from 'dompurify'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { useSupabase } from '@/hooks'
 import type { Database } from '@/types/database'
 import { formatCurrency, formatRelativeTime, getDbStage, normalizeStage, getStageConfigs, type StageId } from '@/components/deals/stage-utils'
@@ -98,7 +99,7 @@ const formatFileSize = (bytes: number | null | undefined, t: (key: string) => st
 export default function DealDetailsClient({
   dealId,
   authUserId,
-  teamId,
+  teamId: _teamId,
   initialDeal,
   initialContact,
   initialOwner,
@@ -113,24 +114,25 @@ export default function DealDetailsClient({
   initialError,
 }: DealDetailsClientProps) {
   const supabase = useSupabase()
+  const supabaseDb = supabase as unknown as SupabaseClient<Database>
   const { t, locale } = useI18n()
   const formatLocale = locale === 'en' ? 'en-US' : 'tr-TR'
   const [activeTab, setActiveTab] = useState<TabType>('products')
-  const [isLoading] = useState(!initialDeal && !initialError)
-  const [error, setError] = useState<string | null>(initialError ?? null)
+  const isLoading = !initialDeal && !initialError
+  const error = initialError ?? null
 
   const [deal, setDeal] = useState<DealRow | null>(initialDeal)
   const [contact, setContact] = useState<ContactRow | null>(initialContact)
   const [owner, setOwner] = useState<UserRow | null>(initialOwner)
   const [dealProducts, setDealProducts] = useState<DealProductItem[]>(initialDealProducts)
-  const [proposals, setProposals] = useState<ProposalRow[]>(initialProposals)
-  const [activities, setActivities] = useState<ActivityRow[]>(initialActivities)
+  const [proposals] = useState<ProposalRow[]>(initialProposals)
+  const [activities] = useState<ActivityRow[]>(initialActivities)
   const [files, setFiles] = useState<DealFileRow[]>(initialFiles)
   const [filesError, setFilesError] = useState<string | null>(null)
 
-  const [teamMembers, setTeamMembers] = useState<UserRow[]>(initialTeamMembers)
-  const [contacts, setContacts] = useState<ContactRow[]>(initialContacts)
-  const [products, setProducts] = useState<ProductRow[]>(initialProducts)
+  const [teamMembers] = useState<UserRow[]>(initialTeamMembers)
+  const [contacts] = useState<ContactRow[]>(initialContacts)
+  const [products] = useState<ProductRow[]>(initialProducts)
 
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState({
@@ -408,7 +410,6 @@ export default function DealDetailsClient({
       return
     }
     setIsSavingFile(true)
-    const supabaseAny = supabase as unknown as { from: (table: string) => any }
     const payload = {
       deal_id: dealId,
       name: fileName.trim(),
@@ -417,7 +418,7 @@ export default function DealDetailsClient({
       mime_type: null,
       uploaded_by: authUserId ?? null,
     }
-    const { data, error: insertError } = await supabaseAny
+    const { data, error: insertError } = await supabaseDb
       .from('deal_files')
       .insert(payload)
       .select('id, deal_id, name, file_path, file_size, mime_type, uploaded_by, created_at')
@@ -438,8 +439,7 @@ export default function DealDetailsClient({
   }
 
   const handleRemoveFile = async (id: string) => {
-    const supabaseAny = supabase as unknown as { from: (table: string) => any }
-    const { error: deleteError } = await supabaseAny.from('deal_files').delete().eq('id', id)
+    const { error: deleteError } = await supabaseDb.from('deal_files').delete().eq('id', id)
     if (deleteError) {
       toast.error(t('deals.detail.toasts.fileDeleteError'))
       return
@@ -451,7 +451,6 @@ export default function DealDetailsClient({
   const handleDropFiles = async (acceptedFiles: File[]) => {
     if (!dealId || acceptedFiles.length === 0) return
     setIsUploadingFile(true)
-    const supabaseAny = supabase as unknown as { from: (table: string) => any }
 
     try {
       for (const file of acceptedFiles) {
@@ -465,19 +464,18 @@ export default function DealDetailsClient({
           throw uploadError
         }
 
-    const { data: urlData } = supabase.storage.from(FILE_BUCKET).getPublicUrl(path)
-    const { data, error: insertError } = await supabaseAny
-      .from('deal_files')
-      .insert({
-        deal_id: dealId,
-        name: file.name,
-        file_path: path,
-        file_size: file.size,
-        mime_type: file.type || null,
-        uploaded_by: authUserId ?? null,
-      })
-      .select('id, deal_id, name, file_path, file_size, mime_type, uploaded_by, created_at')
-      .single()
+        const { data, error: insertError } = await supabaseDb
+          .from('deal_files')
+          .insert({
+            deal_id: dealId,
+            name: file.name,
+            file_path: path,
+            file_size: file.size,
+            mime_type: file.type || null,
+            uploaded_by: authUserId ?? null,
+          })
+          .select('id, deal_id, name, file_path, file_size, mime_type, uploaded_by, created_at')
+          .single()
 
         if (insertError || !data) {
           throw insertError
@@ -487,7 +485,7 @@ export default function DealDetailsClient({
       }
       toast.success(t('deals.detail.toasts.uploadSuccess'))
       setFilesError(null)
-    } catch (uploadError) {
+    } catch {
       setFilesError(t('deals.detail.files.uploadErrorDetail'))
       toast.error(t('deals.detail.toasts.uploadError'))
     } finally {

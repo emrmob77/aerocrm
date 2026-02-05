@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSupabase, useUser } from '@/hooks'
 import { useI18n } from '@/lib/i18n'
@@ -86,7 +86,7 @@ export default function ProductsPage() {
     isActive: true,
   })
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     if (!user?.team_id) {
       setProducts([])
       setIsLoading(false)
@@ -106,6 +106,7 @@ export default function ProductsPage() {
       return
     }
 
+    const fallbackDate = new Date().toISOString()
     const mapped = (data ?? []).map((row) => ({
       id: row.id,
       name: row.name,
@@ -114,13 +115,13 @@ export default function ProductsPage() {
       currency: row.currency ?? 'TRY',
       category: row.category ?? null,
       isActive: row.active ?? true,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      createdAt: row.created_at ?? fallbackDate,
+      updatedAt: row.updated_at ?? fallbackDate,
     }))
 
     setProducts(mapped)
     setIsLoading(false)
-  }
+  }, [supabase, t, user?.team_id])
 
   useEffect(() => {
     if (authLoading) return
@@ -131,7 +132,7 @@ export default function ProductsPage() {
     }
 
     loadProducts()
-  }, [authLoading, authUser, user?.team_id, supabase, t])
+  }, [authLoading, authUser, loadProducts])
 
   const baseCategories = useMemo(() => buildBaseCategories(t), [t])
   const categoryMap = useMemo(
@@ -273,8 +274,8 @@ export default function ProductsPage() {
                 currency: data.currency ?? 'TRY',
                 category: data.category ?? null,
                 isActive: data.active ?? true,
-                createdAt: data.created_at,
-                updatedAt: data.updated_at,
+                createdAt: data.created_at ?? product.createdAt,
+                updatedAt: data.updated_at ?? product.updatedAt,
               }
             : product
         )
@@ -296,6 +297,7 @@ export default function ProductsPage() {
         return
       }
 
+      const fallbackDate = new Date().toISOString()
       setProducts((prev) => [
         {
           id: data.id,
@@ -305,8 +307,8 @@ export default function ProductsPage() {
           currency: data.currency ?? 'TRY',
           category: data.category ?? null,
           isActive: data.active ?? true,
-          createdAt: data.created_at,
-          updatedAt: data.updated_at,
+          createdAt: data.created_at ?? fallbackDate,
+          updatedAt: data.updated_at ?? fallbackDate,
         },
         ...prev,
       ])

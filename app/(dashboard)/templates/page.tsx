@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { useUser } from '@/hooks'
@@ -34,7 +34,7 @@ export default function TemplatesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
 
-  const fetchTemplates = async (selectedScope: ScopeType) => {
+  const fetchTemplates = useCallback(async (selectedScope: ScopeType) => {
     setIsLoading(true)
     const response = await fetch(`/api/templates?scope=${selectedScope}`)
     const payload = await response.json().catch(() => null)
@@ -45,11 +45,11 @@ export default function TemplatesPage() {
     }
     setTemplates((payload?.templates ?? []) as TemplateRow[])
     setIsLoading(false)
-  }
+  }, [t])
 
   useEffect(() => {
     fetchTemplates(scope)
-  }, [scope])
+  }, [fetchTemplates, scope])
 
   const categories = useMemo(() => {
     const set = new Set<string>()

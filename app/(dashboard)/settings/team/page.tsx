@@ -155,7 +155,7 @@ export default function TeamSettingsPage() {
     }
 
     loadData()
-  }, [authLoading, authUser, supabase, user?.team_id, t])
+  }, [assignDealId, assignOwnerId, authLoading, authUser, supabase, t, user?.team_id])
 
   const pendingInvites = invites.filter((invite) => invite.status === 'pending' && !isInviteExpired(invite))
   const expiredInvites = invites.filter((invite) => invite.status === 'pending' && isInviteExpired(invite))
@@ -311,7 +311,6 @@ export default function TeamSettingsPage() {
     setRemovingMemberId(memberId)
     try {
       const response = await fetch(`/api/team/members/${memberId}`, { method: 'DELETE' })
-      const payload = await response.json().catch(() => null)
       if (!response.ok) {
         toast.error(t('teamSettings.errors.memberRemoveFailed'))
         setRemovingMemberId(null)
@@ -363,7 +362,6 @@ export default function TeamSettingsPage() {
     setRevokingInviteId(inviteId)
     try {
       const response = await fetch(`/api/team/invites/${inviteId}`, { method: 'DELETE' })
-      const payload = await response.json().catch(() => null)
       if (!response.ok) {
         toast.error(t('teamSettings.errors.inviteRevokeFailed'))
         setRevokingInviteId(null)

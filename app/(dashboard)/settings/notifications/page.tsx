@@ -89,7 +89,7 @@ export default function NotificationSettingsPage() {
     }
 
     loadPreferences()
-  }, [authLoading, supabase, userId])
+  }, [authLoading, supabase, t, userId])
 
   const updatePreference = async (key: PreferenceKey, value: boolean) => {
     if (!preferences || !userId) return

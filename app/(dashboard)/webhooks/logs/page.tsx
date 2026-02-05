@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
@@ -65,7 +65,7 @@ export default function WebhookLogsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [retryingId, setRetryingId] = useState<string | null>(null)
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setIsRefreshing(true)
     const response = await fetch('/api/webhooks/logs')
     const payload = await response.json().catch(() => null)
@@ -76,7 +76,7 @@ export default function WebhookLogsPage() {
     }
     setLogs((payload?.logs ?? []) as WebhookLog[])
     setIsRefreshing(false)
-  }
+  }, [t])
 
   useEffect(() => {
     const load = async () => {
@@ -85,7 +85,7 @@ export default function WebhookLogsPage() {
       setIsLoading(false)
     }
     load()
-  }, [])
+  }, [fetchLogs])
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {

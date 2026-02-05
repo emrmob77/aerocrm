@@ -176,6 +176,74 @@ type SavedTemplate = {
   blocks: unknown
 }
 
+const defaultPricingColumns: PricingData['columns'] = {
+  description: true,
+  quantity: true,
+  unitPrice: true,
+  total: true,
+}
+
+const normalizePricingItem = (item: Partial<PricingItem> | null | undefined): PricingItem => ({
+  id: item?.id ?? crypto.randomUUID(),
+  name: item?.name ?? '',
+  qty: Number.isFinite(item?.qty) ? (item?.qty as number) : 1,
+  price: Number.isFinite(item?.price) ? (item?.price as number) : 0,
+  currency: item?.currency,
+  productId: item?.productId,
+})
+
+const normalizePricingData = (data: Partial<PricingData> | null | undefined): PricingData => {
+  const items = Array.isArray(data?.items) ? data?.items.map((item) => normalizePricingItem(item)) : []
+  const columns = { ...defaultPricingColumns, ...(data?.columns ?? {}) }
+  const source = data?.source === 'crm' ? 'crm' : 'manual'
+  return { source, columns, items }
+}
+
+const normalizeGalleryImage = (image: Partial<GalleryImage> | null | undefined): GalleryImage => ({
+  id: image?.id ?? crypto.randomUUID(),
+  url: image?.url ?? '',
+  caption: image?.caption ?? '',
+})
+
+const normalizeGalleryData = (data: Partial<GalleryData> | null | undefined): GalleryData => ({
+  columns: data?.columns === 3 ? 3 : 2,
+  images: Array.isArray(data?.images) ? data?.images.map((image) => normalizeGalleryImage(image)) : [],
+})
+
+const normalizeTimelineItem = (item: Partial<TimelineItem> | null | undefined): TimelineItem => ({
+  id: item?.id ?? crypto.randomUUID(),
+  title: item?.title ?? '',
+  description: item?.description ?? '',
+  date: item?.date ?? '',
+})
+
+const normalizeTimelineData = (data: Partial<TimelineData> | null | undefined): TimelineData => ({
+  items: Array.isArray(data?.items) ? data?.items.map((item) => normalizeTimelineItem(item)) : [],
+})
+
+const normalizeBlocks = (items: ProposalBlock[]) =>
+  items.map((block) => {
+    if (block.type === 'pricing') {
+      return {
+        ...block,
+        data: normalizePricingData(block.data),
+      }
+    }
+    if (block.type === 'gallery') {
+      return {
+        ...block,
+        data: normalizeGalleryData(block.data),
+      }
+    }
+    if (block.type === 'timeline') {
+      return {
+        ...block,
+        data: normalizeTimelineData(block.data),
+      }
+    }
+    return block
+  })
+
 const updateBlock = <T extends ProposalBlock>(block: T, data: Partial<T['data']>): T => ({
   ...block,
   data: { ...block.data, ...data },
@@ -211,6 +279,7 @@ export default function ProposalEditorPage() {
   const supabase = useSupabase()
   const { user, authUser, loading: userLoading } = useUser()
   const searchParams = useSearchParams()
+  const isTemplateMode = searchParams.get('mode') === 'template'
   const templateId = searchParams.get('templateId')
   const proposalId = searchParams.get('proposalId')
   const { t, get, locale } = useI18n()
@@ -677,12 +746,14 @@ export default function ProposalEditorPage() {
   const [documentTitle, setDocumentTitle] = useState(() => t('proposalEditor.defaults.documentTitle'))
   const [activePanel, setActivePanel] = useState<'content' | 'design'>('content')
   const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
-  const [blocks, setBlocks] = useState<ProposalBlock[]>(() => [
-    createBlock('hero'),
-    createBlock('text'),
-    createBlock('pricing'),
-    createBlock('signature'),
-  ])
+  const [blocks, setBlocks] = useState<ProposalBlock[]>(() =>
+    normalizeBlocks([
+      createBlock('hero'),
+      createBlock('text'),
+      createBlock('pricing'),
+      createBlock('signature'),
+    ])
+  )
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [activePaletteId, setActivePaletteId] = useState<string | null>(null)
   const [editorMode, setEditorMode] = useState<'edit' | 'preview' | 'send'>('edit')
@@ -711,8 +782,15 @@ export default function ProposalEditorPage() {
   }))
 
   useEffect(() => {
+    if (isTemplateMode && editorMode === 'send') {
+      setEditorMode('edit')
+    }
+  }, [isTemplateMode, editorMode])
+
+  useEffect(() => {
     if (userLoading) return
-    if (!authUser || !user?.team_id) {
+    const teamId = user?.team_id ?? null
+    if (!authUser || !teamId) {
       setProductOptions([])
       return
     }
@@ -722,7 +800,7 @@ export default function ProposalEditorPage() {
       const { data, error } = await supabase
         .from('products')
         .select('id, name, price, currency, category, active')
-        .eq('team_id', user.team_id)
+        .eq('team_id', teamId)
         .eq('active', true)
         .order('created_at', { ascending: false })
 
@@ -799,7 +877,7 @@ export default function ProposalEditorPage() {
   }, [productOptions, productSearch])
 
   const applyTemplate = (template: TemplatePreset) => {
-    setBlocks(template.build())
+    setBlocks(normalizeBlocks(template.build()))
     setDesignSettings(template.design)
     setDocumentTitle(template.title)
     setSelectedBlockId(null)
@@ -827,7 +905,7 @@ export default function ProposalEditorPage() {
     if (trackUsage) {
       void fetch(`/api/templates/${template.id}/use`, { method: 'POST' })
     }
-    setBlocks(nextBlocks)
+    setBlocks(normalizeBlocks(nextBlocks))
     setDocumentTitle((prev) => template.name || prev)
     setSelectedBlockId(null)
     setEditorMode('edit')
@@ -932,7 +1010,7 @@ export default function ProposalEditorPage() {
       }
 
       if (nextBlocks.length > 0) {
-        setBlocks(nextBlocks)
+        setBlocks(normalizeBlocks(nextBlocks))
       }
 
       const contact = Array.isArray(data.contacts) ? data.contacts[0] : data.contacts
@@ -1049,11 +1127,12 @@ export default function ProposalEditorPage() {
     setBlocks((prev) =>
       prev.map((block) => {
         if (block.id !== blockId || block.type !== 'pricing') return block
+        const items = Array.isArray(block.data.items) ? block.data.items : []
         return {
           ...block,
           data: {
             ...block.data,
-            items: block.data.items.map((item) => (item.id === itemId ? { ...item, ...updates } : item)),
+            items: items.map((item) => (item.id === itemId ? { ...item, ...updates } : item)),
           },
         }
       })
@@ -1064,12 +1143,13 @@ export default function ProposalEditorPage() {
     setBlocks((prev) =>
       prev.map((block) => {
         if (block.id !== blockId || block.type !== 'pricing') return block
+        const items = Array.isArray(block.data.items) ? block.data.items : []
         return {
           ...block,
           data: {
             ...block.data,
             items: [
-              ...block.data.items,
+              ...items,
               { id: crypto.randomUUID(), name: 'Yeni Kalem', qty: 1, price: 0, currency: 'TRY' },
             ],
           },
@@ -1082,11 +1162,12 @@ export default function ProposalEditorPage() {
     setBlocks((prev) =>
       prev.map((block) => {
         if (block.id !== blockId || block.type !== 'pricing') return block
+        const items = Array.isArray(block.data.items) ? block.data.items : []
         return {
           ...block,
           data: {
             ...block.data,
-            items: block.data.items.filter((item) => item.id !== itemId),
+            items: items.filter((item) => item.id !== itemId),
           },
         }
       })
@@ -1098,7 +1179,8 @@ export default function ProposalEditorPage() {
       prev.map((block) => {
         if (block.id !== blockId || block.type !== 'pricing') return block
 
-        const existing = block.data.items.find(
+        const items = Array.isArray(block.data.items) ? block.data.items : []
+        const existing = items.find(
           (item) => item.productId === product.id || item.name === product.name
         )
 
@@ -1107,7 +1189,7 @@ export default function ProposalEditorPage() {
             ...block,
             data: {
               ...block.data,
-              items: block.data.items.map((item) =>
+              items: items.map((item) =>
                 item.id === existing.id
                   ? {
                       ...item,
@@ -1127,7 +1209,7 @@ export default function ProposalEditorPage() {
           data: {
             ...block.data,
             items: [
-              ...block.data.items,
+              ...items,
               {
                 id: crypto.randomUUID(),
                 name: product.name,
@@ -1147,11 +1229,12 @@ export default function ProposalEditorPage() {
     setBlocks((prev) =>
       prev.map((block) => {
         if (block.id !== blockId || block.type !== 'gallery') return block
+        const images = Array.isArray(block.data.images) ? block.data.images : []
         return {
           ...block,
           data: {
             ...block.data,
-            images: block.data.images.map((image) => (image.id === imageId ? { ...image, ...updates } : image)),
+            images: images.map((image) => (image.id === imageId ? { ...image, ...updates } : image)),
           },
         }
       })
@@ -1162,12 +1245,13 @@ export default function ProposalEditorPage() {
     setBlocks((prev) =>
       prev.map((block) => {
         if (block.id !== blockId || block.type !== 'gallery') return block
+        const images = Array.isArray(block.data.images) ? block.data.images : []
         return {
           ...block,
           data: {
             ...block.data,
             images: [
-              ...block.data.images,
+              ...images,
               {
                 id: crypto.randomUUID(),
                 url: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800',
@@ -1184,11 +1268,12 @@ export default function ProposalEditorPage() {
     setBlocks((prev) =>
       prev.map((block) => {
         if (block.id !== blockId || block.type !== 'gallery') return block
+        const images = Array.isArray(block.data.images) ? block.data.images : []
         return {
           ...block,
           data: {
             ...block.data,
-            images: block.data.images.filter((image) => image.id !== imageId),
+            images: images.filter((image) => image.id !== imageId),
           },
         }
       })
@@ -1199,11 +1284,12 @@ export default function ProposalEditorPage() {
     setBlocks((prev) =>
       prev.map((block) => {
         if (block.id !== blockId || block.type !== 'timeline') return block
+        const items = Array.isArray(block.data.items) ? block.data.items : []
         return {
           ...block,
           data: {
             ...block.data,
-            items: block.data.items.map((item) => (item.id === itemId ? { ...item, ...updates } : item)),
+            items: items.map((item) => (item.id === itemId ? { ...item, ...updates } : item)),
           },
         }
       })
@@ -1214,12 +1300,13 @@ export default function ProposalEditorPage() {
     setBlocks((prev) =>
       prev.map((block) => {
         if (block.id !== blockId || block.type !== 'timeline') return block
+        const items = Array.isArray(block.data.items) ? block.data.items : []
         return {
           ...block,
           data: {
             ...block.data,
             items: [
-              ...block.data.items,
+              ...items,
               {
                 id: crypto.randomUUID(),
                 title: t('proposalEditor.defaults.newTimeline.title'),
@@ -1237,11 +1324,12 @@ export default function ProposalEditorPage() {
     setBlocks((prev) =>
       prev.map((block) => {
         if (block.id !== blockId || block.type !== 'timeline') return block
+        const items = Array.isArray(block.data.items) ? block.data.items : []
         return {
           ...block,
           data: {
             ...block.data,
-            items: block.data.items.filter((item) => item.id !== itemId),
+            items: items.filter((item) => item.id !== itemId),
           },
         }
       })
@@ -1349,8 +1437,53 @@ export default function ProposalEditorPage() {
 
   const subtotal = blocks
     .filter((block): block is Extract<ProposalBlock, { type: 'pricing' }> => block.type === 'pricing')
-    .flatMap((block) => block.data.items)
-    .reduce((sum, item) => sum + item.qty * item.price, 0)
+    .flatMap((block) => (Array.isArray(block.data.items) ? block.data.items : []))
+    .reduce((sum, item) => sum + (item?.qty ?? 0) * (item?.price ?? 0), 0)
+
+  const totalCurrency = useMemo(() => {
+    for (const block of blocks) {
+      if (block.type !== 'pricing') continue
+      const items = Array.isArray(block.data.items) ? block.data.items : []
+      const found = items.find((item) => item.currency)
+      if (found?.currency) return found.currency
+    }
+    return locale === 'en' ? 'USD' : 'TRY'
+  }, [blocks, locale])
+
+  const formattedDate = useMemo(
+    () =>
+      new Intl.DateTimeFormat(localeCode, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }).format(new Date()),
+    [localeCode]
+  )
+
+  const smartVariableValues = useMemo(
+    () => ({
+      '{{Müşteri_Adı}}': proposalMeta.clientName,
+      '{{Client_Name}}': proposalMeta.clientName,
+      '{{Teklif_No}}': draftId ?? proposalId ?? '-',
+      '{{Proposal_No}}': draftId ?? proposalId ?? '-',
+      '{{Tarih}}': formattedDate,
+      '{{Date}}': formattedDate,
+      '{{Toplam_Tutar}}': formatCurrency(subtotal, totalCurrency),
+      '{{Total_Amount}}': formatCurrency(subtotal, totalCurrency),
+    }),
+    [draftId, formattedDate, formatCurrency, proposalId, proposalMeta.clientName, subtotal, totalCurrency]
+  )
+
+  const resolveSmartVariables = useCallback(
+    (value: string) => {
+      if (!value) return value
+      return Object.entries(smartVariableValues).reduce(
+        (acc, [token, replacement]) => acc.split(token).join(String(replacement ?? '')),
+        value
+      )
+    },
+    [smartVariableValues]
+  )
 
   if (editorMode === 'send') {
     return (
@@ -1371,7 +1504,7 @@ export default function ProposalEditorPage() {
             </div>
           </div>
           <div className="hidden lg:flex flex-1 justify-center">
-            <StepNav mode={editorMode} onChange={setEditorMode} />
+            <StepNav mode={editorMode} onChange={setEditorMode} hideSend={isTemplateMode} />
           </div>
           <button
             onClick={() => {
@@ -1422,16 +1555,25 @@ export default function ProposalEditorPage() {
             </div>
           </div>
           <div className="hidden lg:flex flex-1 justify-center">
-            <StepNav mode={editorMode} onChange={setEditorMode} />
+            <StepNav mode={editorMode} onChange={setEditorMode} hideSend={isTemplateMode} />
           </div>
-          <button
-            onClick={() => {
-              setEditorMode('send')
-            }}
-            className="flex h-10 px-4 items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90"
-          >
-            {t('proposalEditor.actions.send')}
-          </button>
+          {isTemplateMode ? (
+            <button
+              onClick={openTemplateModal}
+              className="flex h-10 px-4 items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90"
+            >
+              {t('proposalEditor.actions.saveTemplate')}
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setEditorMode('send')
+              }}
+              className="flex h-10 px-4 items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90"
+            >
+              {t('proposalEditor.actions.send')}
+            </button>
+          )}
         </header>
 
         <main className="flex-1 overflow-y-auto px-6 py-8 lg:px-10">
@@ -1448,7 +1590,7 @@ export default function ProposalEditorPage() {
             <div className="flex flex-col gap-6 py-10 px-10">
               {blocks.map((block) => (
                 <div key={block.id} className="rounded-lg overflow-hidden">
-                  <BlockContent block={block} />
+                  <BlockContent block={block} resolveText={resolveSmartVariables} />
                 </div>
               ))}
             </div>
@@ -1475,56 +1617,75 @@ export default function ProposalEditorPage() {
                 className="text-sm font-bold text-[#0d121c] dark:text-white bg-transparent border-b border-transparent focus:border-primary outline-none"
               />
               <span className="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] rounded uppercase font-bold">
-                {t('proposals.status.draft')}
+                {isTemplateMode ? t('proposalEditor.badges.template') : t('proposals.status.draft')}
               </span>
             </div>
           </div>
         </div>
         <div className="hidden lg:flex flex-1 justify-center">
-          <StepNav mode={editorMode} onChange={setEditorMode} />
+          <StepNav mode={editorMode} onChange={setEditorMode} hideSend={isTemplateMode} />
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setHistoryOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-          >
-            <span className="material-symbols-outlined text-[20px]">history</span>
-            {t('proposalEditor.history.title')}
-          </button>
-          <button
-            onClick={openTemplateModal}
-            title={t('proposalEditor.actions.saveTemplate')}
-            aria-label={t('proposalEditor.actions.saveTemplate')}
-            className="flex size-10 items-center justify-center rounded-lg border border-[#e7ebf4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            <span className="material-symbols-outlined text-[20px]">bookmark_add</span>
-          </button>
-          <button
-            onClick={handleSaveDraft}
-            title={t('proposalEditor.actions.saveDraft')}
-            aria-label={t('proposalEditor.actions.saveDraft')}
-            disabled={isSavingDraft}
-            className="flex size-10 items-center justify-center rounded-lg border border-[#e7ebf4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60"
-          >
-            <span
-              className={`material-symbols-outlined text-[20px] ${isSavingDraft ? 'animate-spin' : ''}`}
-            >
-              {isSavingDraft ? 'progress_activity' : 'save'}
-            </span>
-          </button>
-          <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
-          <button
-            onClick={() => setEditorMode('preview')}
-            className="flex h-10 px-4 items-center justify-center rounded-lg bg-[#e7ebf4] dark:bg-gray-800 text-[#0d121c] dark:text-white text-sm font-bold hover:bg-opacity-80"
-          >
-            {t('proposalEditor.actions.preview')}
-          </button>
-          <button
-            onClick={() => setEditorMode('send')}
-            className="flex h-10 px-4 items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90"
-          >
-            {t('proposalEditor.actions.send')}
-          </button>
+          {isTemplateMode ? (
+            <>
+              <button
+                onClick={() => setEditorMode('preview')}
+                className="flex h-10 px-4 items-center justify-center rounded-lg bg-[#e7ebf4] dark:bg-gray-800 text-[#0d121c] dark:text-white text-sm font-bold hover:bg-opacity-80"
+              >
+                {t('proposalEditor.actions.preview')}
+              </button>
+              <button
+                onClick={openTemplateModal}
+                className="flex h-10 px-4 items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90"
+              >
+                {t('proposalEditor.actions.saveTemplate')}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setHistoryOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[#48679d] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+              >
+                <span className="material-symbols-outlined text-[20px]">history</span>
+                {t('proposalEditor.history.title')}
+              </button>
+              <button
+                onClick={openTemplateModal}
+                title={t('proposalEditor.actions.saveTemplate')}
+                aria-label={t('proposalEditor.actions.saveTemplate')}
+                className="flex size-10 items-center justify-center rounded-lg border border-[#e7ebf4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                <span className="material-symbols-outlined text-[20px]">bookmark_add</span>
+              </button>
+              <button
+                onClick={handleSaveDraft}
+                title={t('proposalEditor.actions.saveDraft')}
+                aria-label={t('proposalEditor.actions.saveDraft')}
+                disabled={isSavingDraft}
+                className="flex size-10 items-center justify-center rounded-lg border border-[#e7ebf4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60"
+              >
+                <span
+                  className={`material-symbols-outlined text-[20px] ${isSavingDraft ? 'animate-spin' : ''}`}
+                >
+                  {isSavingDraft ? 'progress_activity' : 'save'}
+                </span>
+              </button>
+              <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
+              <button
+                onClick={() => setEditorMode('preview')}
+                className="flex h-10 px-4 items-center justify-center rounded-lg bg-[#e7ebf4] dark:bg-gray-800 text-[#0d121c] dark:text-white text-sm font-bold hover:bg-opacity-80"
+              >
+                {t('proposalEditor.actions.preview')}
+              </button>
+              <button
+                onClick={() => setEditorMode('send')}
+                className="flex h-10 px-4 items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90"
+              >
+                {t('proposalEditor.actions.send')}
+              </button>
+            </>
+          )}
         </div>
       </header>
       <HistoryModal
@@ -1946,138 +2107,144 @@ export default function ProposalEditorPage() {
                   </div>
                 )}
 
-                {selectedBlock.type === 'pricing' && (
-                  <div className="space-y-4">
-                    <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
-                      {t('proposalEditor.blocks.pricingTable')}
-                    </label>
-                    <div>
-                      <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.source')}</label>
-                      <select
-                        value={selectedBlock.data.source}
-                        onChange={(event) =>
-                          updateBlockData(selectedBlock.id, { source: event.target.value as PricingData['source'] })
-                        }
-                        className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
-                      >
-                        <option value="crm">{t('proposalEditor.fields.productCatalog')}</option>
-                        <option value="manual">{t('proposalEditor.fields.manual')}</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.columns')}</label>
-                      {Object.entries(selectedBlock.data.columns).map(([key, value]) => (
-                        <label key={key} className="flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={value}
-                            onChange={() =>
-                              updateBlockData(selectedBlock.id, {
-                                columns: { ...selectedBlock.data.columns, [key]: !value },
-                              })
-                            }
-                            className="rounded text-primary focus:ring-primary size-4"
-                          />
-                          <span className="capitalize text-[#0d121c] dark:text-white">{key}</span>
+                {selectedBlock.type === 'pricing' &&
+                  (() => {
+                    const pricingColumns = selectedBlock.data.columns ?? defaultPricingColumns
+                    const pricingItems = Array.isArray(selectedBlock.data.items) ? selectedBlock.data.items : []
+                    const pricingSource = selectedBlock.data.source ?? 'manual'
+                    return (
+                      <div className="space-y-4">
+                        <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
+                          {t('proposalEditor.blocks.pricingTable')}
                         </label>
-                      ))}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.productCatalog')}</label>
-                      <div className="relative">
-                        <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[16px] text-gray-400">
-                          search
-                        </span>
-                        <input
-                          value={productSearch}
-                          onChange={(event) => setProductSearch(event.target.value)}
-                          placeholder={t('proposalEditor.placeholders.productSearch')}
-                          className="w-full pl-7 pr-2 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
-                        />
-                      </div>
-                      <div className="max-h-40 overflow-y-auto space-y-2 rounded border border-dashed border-gray-200 dark:border-gray-700 p-2">
-                        {productsLoading ? (
-                          <p className="text-[11px] text-gray-400">{t('proposalEditor.loading.products')}</p>
-                        ) : filteredProductOptions.length === 0 ? (
-                          <p className="text-[11px] text-gray-400">{t('proposalEditor.empty.products')}</p>
-                        ) : (
-                          filteredProductOptions.map((product) => (
-                            <button
-                              key={product.id}
-                              onClick={() => addProductToPricing(selectedBlock.id, product)}
-                              className="w-full flex items-center justify-between gap-2 px-2 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary/40 hover:bg-primary/5 text-left text-xs"
-                            >
-                              <div>
-                                <p className="font-semibold text-[#0d121c] dark:text-white">{product.name}</p>
-                                {product.category && (
-                                  <p className="text-[10px] text-gray-400">{product.category}</p>
-                                )}
-                              </div>
-                              <span className="font-semibold text-primary">
-                                {formatCurrency(product.price, product.currency)}
-                              </span>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.lineItems')}</label>
-                      <div className="space-y-2">
-                        {selectedBlock.data.items.map((item) => (
-                          <div key={item.id} className="grid grid-cols-[1fr_64px_90px_auto] gap-2 items-center">
-                            <input
-                              value={item.name}
-                              onChange={(event) => updatePricingItem(selectedBlock.id, item.id, { name: event.target.value })}
-                              className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
-                            />
-                            <input
-                              type="number"
-                              min={1}
-                              value={item.qty}
-                              onChange={(event) => {
-                                const qtyValue = Number(event.target.value)
-                                updatePricingItem(selectedBlock.id, item.id, {
-                                  qty: Number.isFinite(qtyValue) ? Math.max(1, qtyValue) : 1,
-                                })
-                              }}
-                              className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-center"
-                            />
-                            <div className="relative">
+                        <div>
+                          <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.source')}</label>
+                          <select
+                            value={pricingSource}
+                            onChange={(event) =>
+                              updateBlockData(selectedBlock.id, { source: event.target.value as PricingData['source'] })
+                            }
+                            className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+                          >
+                            <option value="crm">{t('proposalEditor.fields.productCatalog')}</option>
+                            <option value="manual">{t('proposalEditor.fields.manual')}</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.columns')}</label>
+                          {Object.entries(pricingColumns).map(([key, value]) => (
+                            <label key={key} className="flex items-center gap-2 text-sm">
                               <input
-                                type="number"
-                                min={0}
-                                value={item.price}
-                                onChange={(event) => {
-                                  const priceValue = Number(event.target.value)
-                                  updatePricingItem(selectedBlock.id, item.id, {
-                                    price: Number.isFinite(priceValue) ? priceValue : 0,
+                                type="checkbox"
+                                checked={value}
+                                onChange={() =>
+                                  updateBlockData(selectedBlock.id, {
+                                    columns: { ...pricingColumns, [key]: !value },
                                   })
-                                }}
-                                className="w-full pr-10 pl-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-right"
+                                }
+                                className="rounded text-primary focus:ring-primary size-4"
                               />
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
-                                {item.currency ?? 'TRY'}
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => removePricingItem(selectedBlock.id, item.id)}
-                              className="text-xs text-red-500 hover:text-red-600"
-                            >
-                              {t('proposalEditor.actions.removeItem')}
-                            </button>
+                              <span className="capitalize text-[#0d121c] dark:text-white">{key}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.productCatalog')}</label>
+                          <div className="relative">
+                            <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[16px] text-gray-400">
+                              search
+                            </span>
+                            <input
+                              value={productSearch}
+                              onChange={(event) => setProductSearch(event.target.value)}
+                              placeholder={t('proposalEditor.placeholders.productSearch')}
+                              className="w-full pl-7 pr-2 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
+                            />
                           </div>
-                        ))}
+                          <div className="max-h-40 overflow-y-auto space-y-2 rounded border border-dashed border-gray-200 dark:border-gray-700 p-2">
+                            {productsLoading ? (
+                              <p className="text-[11px] text-gray-400">{t('proposalEditor.loading.products')}</p>
+                            ) : filteredProductOptions.length === 0 ? (
+                              <p className="text-[11px] text-gray-400">{t('proposalEditor.empty.products')}</p>
+                            ) : (
+                              filteredProductOptions.map((product) => (
+                                <button
+                                  key={product.id}
+                                  onClick={() => addProductToPricing(selectedBlock.id, product)}
+                                  className="w-full flex items-center justify-between gap-2 px-2 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary/40 hover:bg-primary/5 text-left text-xs"
+                                >
+                                  <div>
+                                    <p className="font-semibold text-[#0d121c] dark:text-white">{product.name}</p>
+                                    {product.category && (
+                                      <p className="text-[10px] text-gray-400">{product.category}</p>
+                                    )}
+                                  </div>
+                                  <span className="font-semibold text-primary">
+                                    {formatCurrency(product.price, product.currency)}
+                                  </span>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.lineItems')}</label>
+                          <div className="space-y-2">
+                            {pricingItems.map((item) => (
+                              <div key={item.id} className="grid grid-cols-[1fr_64px_90px_auto] gap-2 items-center">
+                                <input
+                                  value={item.name}
+                                  onChange={(event) => updatePricingItem(selectedBlock.id, item.id, { name: event.target.value })}
+                                  className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
+                                />
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={item.qty}
+                                  onChange={(event) => {
+                                    const qtyValue = Number(event.target.value)
+                                    updatePricingItem(selectedBlock.id, item.id, {
+                                      qty: Number.isFinite(qtyValue) ? Math.max(1, qtyValue) : 1,
+                                    })
+                                  }}
+                                  className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-center"
+                                />
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={item.price}
+                                    onChange={(event) => {
+                                      const priceValue = Number(event.target.value)
+                                      updatePricingItem(selectedBlock.id, item.id, {
+                                        price: Number.isFinite(priceValue) ? priceValue : 0,
+                                      })
+                                    }}
+                                    className="w-full pr-10 pl-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-right"
+                                  />
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
+                                    {item.currency ?? 'TRY'}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => removePricingItem(selectedBlock.id, item.id)}
+                                  className="text-xs text-red-500 hover:text-red-600"
+                                >
+                                  {t('proposalEditor.actions.removeItem')}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => addPricingItem(selectedBlock.id)}
+                            className="w-full py-2 rounded-lg border border-dashed border-gray-200 text-xs text-gray-500 hover:border-primary"
+                          >
+                            {t('proposalEditor.actions.addLineItem')}
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => addPricingItem(selectedBlock.id)}
-                        className="w-full py-2 rounded-lg border border-dashed border-gray-200 text-xs text-gray-500 hover:border-primary"
-                      >
-                        {t('proposalEditor.actions.addLineItem')}
-                      </button>
-                    </div>
-                  </div>
-                )}
+                    )
+                  })()}
 
                 {selectedBlock.type === 'video' && (
                   <div className="space-y-4">
@@ -2111,7 +2278,7 @@ export default function ProposalEditorPage() {
                     <div>
                       <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.columnCount')}</label>
                       <select
-                        value={selectedBlock.data.columns}
+                        value={selectedBlock.data.columns ?? 2}
                         onChange={(event) =>
                           updateBlockData(selectedBlock.id, { columns: Number(event.target.value) as 2 | 3 })
                         }
@@ -2122,7 +2289,7 @@ export default function ProposalEditorPage() {
                       </select>
                     </div>
                     <div className="space-y-3">
-                      {selectedBlock.data.images.map((image) => (
+                      {(Array.isArray(selectedBlock.data.images) ? selectedBlock.data.images : []).map((image) => (
                         <div key={image.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
                           <input
                             value={image.url}
@@ -2203,7 +2370,7 @@ export default function ProposalEditorPage() {
                       {t('proposalEditor.blocks.timeline')}
                     </label>
                     <div className="space-y-3">
-                      {selectedBlock.data.items.map((item) => (
+                      {(Array.isArray(selectedBlock.data.items) ? selectedBlock.data.items : []).map((item) => (
                         <div key={item.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
                           <input
                             value={item.title}
@@ -2610,9 +2777,11 @@ type DraftVersion = {
 function StepNav({
   mode,
   onChange,
+  hideSend = false,
 }: {
   mode: 'edit' | 'preview' | 'send'
   onChange: (mode: 'edit' | 'preview' | 'send') => void
+  hideSend?: boolean
 }) {
   const { t } = useI18n()
   const steps: { id: 'edit' | 'preview' | 'send'; label: string }[] = [
@@ -2620,9 +2789,10 @@ function StepNav({
     { id: 'preview', label: t('proposalEditor.steps.preview') },
     { id: 'send', label: t('proposalEditor.steps.send') },
   ]
+  const visibleSteps = hideSend ? steps.filter((step) => step.id !== 'send') : steps
   return (
     <div className="flex items-center gap-2 text-xs font-semibold text-[#48679d]">
-      {steps.map((step, index) => (
+      {visibleSteps.map((step, index) => (
         <div key={step.id} className="flex items-center gap-2">
           <button
             onClick={() => onChange(step.id)}
@@ -2634,7 +2804,7 @@ function StepNav({
           >
             {step.label}
           </button>
-          {index < steps.length - 1 && (
+          {index < visibleSteps.length - 1 && (
             <span className="material-symbols-outlined text-[16px] text-gray-400">chevron_right</span>
           )}
         </div>
@@ -2834,9 +3004,16 @@ function TemplateSaveModal({
   )
 }
 
-function BlockContent({ block }: { block: ProposalBlock }) {
+function BlockContent({
+  block,
+  resolveText,
+}: {
+  block: ProposalBlock
+  resolveText?: (value: string) => string
+}) {
   const { t, locale } = useI18n()
   const localeCode = locale === 'en' ? 'en-US' : 'tr-TR'
+  const resolve = resolveText ?? ((value: string) => value)
   const formatCurrency = (value: number, currency = 'TRY') => {
     try {
       return new Intl.NumberFormat(localeCode, { style: 'currency', currency, maximumFractionDigits: 0 }).format(value)
@@ -2866,8 +3043,8 @@ function BlockContent({ block }: { block: ProposalBlock }) {
           }}
         >
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">{block.data.title}</h1>
-            <p className="text-lg text-gray-200 opacity-90">{block.data.subtitle}</p>
+            <h1 className="text-3xl font-bold tracking-tight">{resolve(block.data.title)}</h1>
+            <p className="text-lg text-gray-200 opacity-90">{resolve(block.data.subtitle)}</p>
           </div>
         </div>
       )}
@@ -2875,13 +3052,13 @@ function BlockContent({ block }: { block: ProposalBlock }) {
       {block.type === 'heading' && (
         <div className={`p-8 ${headingAlignMap[block.data.align]}`}>
           <p className={`${headingSizeMap[block.data.level]} font-bold tracking-tight`}>
-            {block.data.text}
+            {resolve(block.data.text)}
           </p>
         </div>
       )}
 
       {block.type === 'text' && (
-        <div className="p-8 text-[color:var(--proposal-text)] leading-relaxed">{block.data.content}</div>
+        <div className="p-8 text-[color:var(--proposal-text)] leading-relaxed">{resolve(block.data.content)}</div>
       )}
 
       {block.type === 'pricing' && (
@@ -2891,42 +3068,64 @@ function BlockContent({ block }: { block: ProposalBlock }) {
             {t('proposalEditor.pricing.title')}
           </h3>
           {(() => {
-            const subtotalCurrency = block.data.items.find((item) => item.currency)?.currency ?? 'TRY'
+            const items = Array.isArray(block.data.items) ? block.data.items : []
+            const subtotalCurrency = items.find((item) => item.currency)?.currency ?? 'TRY'
+            const columns = block.data.columns ?? defaultPricingColumns
+            const visibleColumns = [
+              columns.description,
+              columns.quantity,
+              columns.unitPrice,
+              columns.total,
+            ].filter(Boolean).length
+            const canSplitSubtotal = visibleColumns > 1
+            const subtotalLabelSpan = canSplitSubtotal ? Math.max(visibleColumns - 1, 1) : 1
+            const subtotalValue = formatCurrency(
+              items.reduce((sum, item) => sum + (item.qty ?? 0) * (item.price ?? 0), 0),
+              subtotalCurrency
+            )
             return (
           <table className="w-full text-sm text-left">
             <thead className="text-xs uppercase text-gray-500 border-b border-gray-200 dark:border-gray-800">
               <tr>
-                {block.data.columns.description && <th className="pb-3 font-semibold">{t('proposalEditor.pricing.columns.description')}</th>}
-                {block.data.columns.quantity && <th className="pb-3 font-semibold text-center">{t('proposalEditor.pricing.columns.quantity')}</th>}
-                {block.data.columns.unitPrice && <th className="pb-3 font-semibold text-right">{t('proposalEditor.pricing.columns.unitPrice')}</th>}
-                {block.data.columns.total && <th className="pb-3 font-semibold text-right">{t('proposalEditor.pricing.columns.total')}</th>}
+                {columns.description && <th className="pb-3 font-semibold">{t('proposalEditor.pricing.columns.description')}</th>}
+                {columns.quantity && <th className="pb-3 font-semibold text-center">{t('proposalEditor.pricing.columns.quantity')}</th>}
+                {columns.unitPrice && <th className="pb-3 font-semibold text-right">{t('proposalEditor.pricing.columns.unitPrice')}</th>}
+                {columns.total && <th className="pb-3 font-semibold text-right">{t('proposalEditor.pricing.columns.total')}</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {block.data.items.map((item) => {
-                const total = item.qty * item.price
+              {items.map((item) => {
+                const total = (item.qty ?? 0) * (item.price ?? 0)
                 return (
                   <tr key={item.id}>
-                    {block.data.columns.description && (
-                      <td className="py-4 font-medium text-[color:var(--proposal-text)]">{item.name}</td>
+                    {columns.description && (
+                      <td className="py-4 font-medium text-[color:var(--proposal-text)]">{resolve(item.name)}</td>
                     )}
-                    {block.data.columns.quantity && <td className="py-4 text-center">{item.qty}</td>}
-                    {block.data.columns.unitPrice && (
+                    {columns.quantity && <td className="py-4 text-center">{item.qty}</td>}
+                    {columns.unitPrice && (
                       <td className="py-4 text-right">{formatCurrency(item.price, item.currency ?? subtotalCurrency)}</td>
                     )}
-                    {block.data.columns.total && (
+                    {columns.total && (
                       <td className="py-4 text-right font-semibold">{formatCurrency(total, item.currency ?? subtotalCurrency)}</td>
                     )}
                   </tr>
                 )
               })}
               <tr className="bg-primary/5">
-                <td className="py-4 text-right font-bold text-gray-500" colSpan={3}>
-                  {t('proposalEditor.pricing.subtotal')}
-                </td>
-                <td className="py-4 text-right font-bold text-[color:var(--proposal-accent)] text-lg">
-                  {formatCurrency(block.data.items.reduce((sum, item) => sum + item.qty * item.price, 0), subtotalCurrency)}
-                </td>
+                {canSplitSubtotal ? (
+                  <>
+                    <td className="py-4 text-right font-bold text-gray-500" colSpan={subtotalLabelSpan}>
+                      {t('proposalEditor.pricing.subtotal')}
+                    </td>
+                    <td className="py-4 text-right font-bold text-[color:var(--proposal-accent)] text-lg">
+                      {subtotalValue}
+                    </td>
+                  </>
+                ) : (
+                  <td className="py-4 text-right font-bold text-[color:var(--proposal-accent)] text-lg">
+                    {t('proposalEditor.pricing.subtotal')}: {subtotalValue}
+                  </td>
+                )}
               </tr>
             </tbody>
           </table>
@@ -2939,7 +3138,7 @@ function BlockContent({ block }: { block: ProposalBlock }) {
         <div className="p-8 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold">{t('proposalEditor.blocks.video')}</h4>
-            <span className="text-xs text-gray-400 truncate">{block.data.title}</span>
+            <span className="text-xs text-gray-400 truncate">{resolve(block.data.title)}</span>
           </div>
           {getEmbedUrl(block.data.url) ? (
             <div className="aspect-video w-full rounded-lg overflow-hidden bg-black">
@@ -2962,32 +3161,38 @@ function BlockContent({ block }: { block: ProposalBlock }) {
       {block.type === 'gallery' && (
         <div className="p-8 space-y-4">
           <h4 className="text-sm font-semibold">{t('proposalEditor.blocks.gallery')}</h4>
-          <div className={`grid gap-4 ${block.data.columns === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-            {block.data.images.map((image) => (
+          {(() => {
+            const galleryImages = Array.isArray(block.data.images) ? block.data.images : []
+            const columnCount = block.data.columns === 3 ? 3 : 2
+            return (
+              <div className={`grid gap-4 ${columnCount === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                {galleryImages.map((image) => (
               <div key={image.id} className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
                 <div
                   className="h-28 bg-cover bg-center"
                   style={{ backgroundImage: `url(\"${image.url}\")` }}
                 />
-                <div className="p-3 text-xs text-gray-500">{image.caption}</div>
+                <div className="p-3 text-xs text-gray-500">{resolve(image.caption)}</div>
               </div>
-            ))}
-          </div>
+                ))}
+              </div>
+            )
+          })()}
         </div>
       )}
 
       {block.type === 'testimonial' && (
         <div className="p-8 space-y-4">
           <span className="material-symbols-outlined text-3xl text-[color:var(--proposal-accent)]">format_quote</span>
-          <p className="text-lg italic text-[color:var(--proposal-text)]">"{block.data.quote}"</p>
+          <p className="text-lg italic text-[color:var(--proposal-text)]">"{resolve(block.data.quote)}"</p>
           <div className="flex items-center gap-3">
             <div
               className="size-10 rounded-full bg-cover bg-center border border-gray-200"
               style={{ backgroundImage: `url(\"${block.data.avatarUrl}\")` }}
             />
             <div>
-              <p className="text-sm font-semibold">{block.data.author}</p>
-              <p className="text-xs text-gray-500">{block.data.role}</p>
+              <p className="text-sm font-semibold">{resolve(block.data.author)}</p>
+              <p className="text-xs text-gray-500">{resolve(block.data.role)}</p>
             </div>
           </div>
         </div>
@@ -2997,20 +3202,20 @@ function BlockContent({ block }: { block: ProposalBlock }) {
         <div className="p-8 space-y-4">
           <h4 className="text-sm font-semibold">{t('proposalEditor.blocks.timeline')}</h4>
           <div className="space-y-4">
-            {block.data.items.map((item, itemIndex) => (
+            {(Array.isArray(block.data.items) ? block.data.items : []).map((item, itemIndex, arr) => (
               <div key={item.id} className="flex gap-4">
                 <div className="flex flex-col items-center">
                   <div className="size-2 rounded-full bg-[color:var(--proposal-accent)]"></div>
-                  {itemIndex !== block.data.items.length - 1 && (
+                  {itemIndex !== arr.length - 1 && (
                     <div className="w-px flex-1 bg-gray-200 dark:bg-gray-700 mt-1"></div>
                   )}
                 </div>
                 <div className="pb-2">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold">{item.title}</p>
-                    <span className="text-xs text-gray-400">{item.date}</span>
+                    <p className="text-sm font-semibold">{resolve(item.title)}</p>
+                    <span className="text-xs text-gray-400">{resolve(item.date)}</span>
                   </div>
-                  <p className="text-sm text-gray-500">{item.description}</p>
+                  <p className="text-sm text-gray-500">{resolve(item.description)}</p>
                 </div>
               </div>
             ))}
@@ -3020,7 +3225,7 @@ function BlockContent({ block }: { block: ProposalBlock }) {
 
       {block.type === 'countdown' && (
         <div className="p-8 space-y-4">
-          <h4 className="text-sm font-semibold">{block.data.label}</h4>
+          <h4 className="text-sm font-semibold">{resolve(block.data.label)}</h4>
           <div className="grid grid-cols-3 gap-4">
             {[
               { label: t('proposalEditor.fields.days'), value: block.data.days },
@@ -3055,7 +3260,7 @@ function BlockContent({ block }: { block: ProposalBlock }) {
                 : undefined
             }
           >
-            {block.data.label}
+            {resolve(block.data.label)}
           </div>
         </div>
       )}
@@ -3064,7 +3269,7 @@ function BlockContent({ block }: { block: ProposalBlock }) {
         <div className="p-8 rounded-b-lg">
           <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center text-gray-500">
             <span className="material-symbols-outlined text-3xl text-[color:var(--proposal-accent)] mb-2">draw</span>
-            <p className="text-sm font-semibold">{block.data.label}</p>
+            <p className="text-sm font-semibold">{resolve(block.data.label)}</p>
             <p className="text-xs">
               {block.data.required ? t('proposalEditor.signature.required') : t('proposalEditor.signature.optional')}
             </p>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Image from 'next/image'
 import SignatureCanvas from 'react-signature-canvas'
 import toast from 'react-hot-toast'
 import { useI18n } from '@/lib/i18n'
@@ -156,7 +157,14 @@ export function SignatureBlock({ slug, label, required, existingSignature }: Sig
       {hasSignature ? (
         <div className="mt-4 space-y-3">
           <div className="rounded-xl border border-dashed border-gray-200 bg-white p-4">
-            <img src={signatureImage} alt={t('publicProposal.signature.imageAlt')} className="max-h-28" />
+            <Image
+              src={signatureImage}
+              alt={t('publicProposal.signature.imageAlt')}
+              width={420}
+              height={120}
+              className="max-h-28 w-auto"
+              unoptimized
+            />
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
             <span className="font-semibold text-[#0d121c]">{signerName}</span>
