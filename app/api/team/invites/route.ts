@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { buildTeamInviteEmail } from '@/lib/notifications/email-templates'
-import { getServerT } from '@/lib/i18n/server'
+import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 const allowedRoles = ['admin', 'member', 'viewer']
@@ -74,6 +74,7 @@ export const GET = withApiLogging(async (_request: Request) => {
 
 export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
+  const locale = getServerLocale()
   const payload = (await request.json().catch(() => null)) as { email?: string; role?: string } | null
   const email = normalizeEmail(payload?.email)
 
@@ -95,7 +96,7 @@ export const POST = withApiLogging(async (request: Request) => {
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('team_id, full_name, language')
+    .select('team_id, full_name')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -130,7 +131,7 @@ export const POST = withApiLogging(async (request: Request) => {
     to: email,
     link: inviteLink,
     inviter: profile.full_name || t('api.team.inviteDefaultInviter'),
-    locale: profile.language === 'en' ? 'en' : 'tr',
+    locale,
   })
 
   return NextResponse.json({ invite: data, inviteLink })

@@ -4,10 +4,12 @@ import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { buildProposalDeliveryEmail, getProposalDefaults } from '@/lib/notifications/email-templates'
 import { sendTwilioMessage, getCredentialsFromEnv } from '@/lib/integrations/twilio'
 import type { TwilioCredentials } from '@/types/database'
-import { getServerT } from '@/lib/i18n/server'
+import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
 import { buildPublicProposalUrl } from '@/lib/proposals/link-utils'
 import { sanitizeProposalDesignSettings } from '@/lib/proposals/design-utils'
+import { ensureUserProfileAndTeam } from '@/lib/team/ensure-user-team'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
 type SendProposalPayload = {
   title?: string
@@ -122,6 +124,7 @@ const getTwilioCredentials = async (
 
 export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
+  const locale = getServerLocale()
   const payload = (await request.json().catch(() => null)) as SendProposalPayload | null
 
   if (!payload?.title || !payload.title.trim()) {
@@ -138,17 +141,20 @@ export const POST = withApiLogging(async (request: Request) => {
     return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('team_id, full_name, language')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (profileError || !profile?.team_id) {
+  let ensuredUser = await ensureUserProfileAndTeam(supabase, user)
+  if (!ensuredUser?.teamId) {
+    try {
+      const admin = createSupabaseAdminClient()
+      ensuredUser = await ensureUserProfileAndTeam(admin, user)
+    } catch {
+      // ignore admin fallback errors and return standard response below
+    }
+  }
+  if (!ensuredUser?.teamId) {
     return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
-  const teamId = profile.team_id
+  const teamId = ensuredUser.teamId
   const contactEmail = normalizeText(payload.contactEmail)
   const contactPhone = normalizeText(payload.contactPhone)
   const rawClientName = normalizeText(payload.clientName)
@@ -236,7 +242,6 @@ export const POST = withApiLogging(async (request: Request) => {
   }
 
   const method = payload.method ?? 'email'
-  const locale = profile.language === 'en' ? 'en' : 'tr'
   const proposalDefaults = getProposalDefaults({ locale, client: clientName })
   const anchorText = proposalDefaults.anchor || t('api.proposals.anchorText')
 

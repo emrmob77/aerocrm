@@ -1444,7 +1444,18 @@ export const Constants = {
 } as const
 
 // Custom types for integrations
-export type IntegrationProvider = 'twilio' | 'gmail' | 'slack' | 'gdrive' | 'zapier' | 'stripe'
+export type IntegrationProvider =
+  | 'twilio'
+  | 'gmail'
+  | 'slack'
+  | 'zoom'
+  | 'stripe'
+  | 'paypal'
+  | 'iyzico'
+  | 'gdrive'
+  | 'dropbox'
+  | 'zapier'
+  | 'webhook'
 export type IntegrationStatus = 'connected' | 'disconnected' | 'error'
 
 export type Integration = {

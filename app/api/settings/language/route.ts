@@ -4,6 +4,13 @@ import { getServerT } from '@/lib/i18n/server'
 import { normalizeLocale } from '@/lib/i18n/utils'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
 
+const isMissingLanguageColumn = (error: unknown) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'message' in error &&
+  typeof (error as { message?: unknown }).message === 'string' &&
+  (error as { message: string }).message.toLowerCase().includes('language')
+
 export const GET = withApiLogging(async () => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
@@ -22,12 +29,13 @@ export const GET = withApiLogging(async () => {
     .eq('id', user.id)
     .maybeSingle()
 
-  if (error) {
+  if (error && !isMissingLanguageColumn(error)) {
     return NextResponse.json({ error: t('api.settings.languageReadFailed') }, { status: 400 })
   }
 
-  const response = NextResponse.json({ language: normalizeLocale(profile?.language ?? null) })
-  response.cookies.set('aero_locale', normalizeLocale(profile?.language ?? null), {
+  const language = normalizeLocale(profile?.language ?? null)
+  const response = NextResponse.json({ language })
+  response.cookies.set('aero_locale', language, {
     path: '/',
     maxAge: 60 * 60 * 24 * 365,
   })
@@ -54,7 +62,7 @@ export const POST = withApiLogging(async (request: Request) => {
     .update({ language: next })
     .eq('id', user.id)
 
-  if (error) {
+  if (error && !isMissingLanguageColumn(error)) {
     return NextResponse.json({ error: t('api.settings.languageSaveFailed') }, { status: 400 })
   }
 

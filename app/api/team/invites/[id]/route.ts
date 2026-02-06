@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { buildTeamInviteEmail } from '@/lib/notifications/email-templates'
-import { getServerT } from '@/lib/i18n/server'
+import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
 
 const allowedRoles = ['admin', 'member', 'viewer']
@@ -44,6 +44,7 @@ const sendInviteEmail = async (params: { to: string; link: string; inviter: stri
 
 export const PATCH = withApiLogging(async (request: Request, { params }: { params: { id: string } }) => {
   const t = getServerT()
+  const locale = getServerLocale()
   if (!params.id) {
     return NextResponse.json({ error: t('api.team.inviteIdRequired') }, { status: 400 })
   }
@@ -62,7 +63,7 @@ export const PATCH = withApiLogging(async (request: Request, { params }: { param
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('team_id, full_name, language')
+    .select('team_id, full_name')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -116,7 +117,7 @@ export const PATCH = withApiLogging(async (request: Request, { params }: { param
     to: updated.email,
     link: inviteLink,
     inviter: profile.full_name || t('api.team.inviteDefaultInviter'),
-    locale: profile.language === 'en' ? 'en' : 'tr',
+    locale,
   })
 
   return NextResponse.json({ invite: updated, inviteLink })

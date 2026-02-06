@@ -9,9 +9,14 @@ const AVAILABLE_PROVIDERS: IntegrationProvider[] = [
   'twilio',
   'gmail',
   'slack',
-  'gdrive',
-  'zapier',
+  'zoom',
   'stripe',
+  'paypal',
+  'iyzico',
+  'gdrive',
+  'dropbox',
+  'zapier',
+  'webhook',
 ]
 
 export const GET = withApiLogging(async () => {

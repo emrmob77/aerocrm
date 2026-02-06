@@ -3,6 +3,8 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
 import { sanitizeProposalDesignSettings } from '@/lib/proposals/design-utils'
+import { ensureUserProfileAndTeam } from '@/lib/team/ensure-user-team'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
 const getTeamContext = async () => {
   const t = getServerT()
@@ -16,17 +18,21 @@ const getTeamContext = async () => {
     return { supabase, user: null, teamId: null, error: NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 }) }
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('team_id')
-    .eq('id', user.id)
-    .maybeSingle()
+  let ensuredUser = await ensureUserProfileAndTeam(supabase, user)
+  if (!ensuredUser?.teamId) {
+    try {
+      const admin = createSupabaseAdminClient()
+      ensuredUser = await ensureUserProfileAndTeam(admin, user)
+    } catch {
+      // ignore admin fallback errors and use common response below
+    }
+  }
 
-  if (profileError || !profile?.team_id) {
+  if (!ensuredUser?.teamId) {
     return { supabase, user: null, teamId: null, error: NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 }) }
   }
 
-  return { supabase, user, teamId: profile.team_id, error: null as NextResponse | null }
+  return { supabase, user, teamId: ensuredUser.teamId, error: null as NextResponse | null }
 }
 
 export const GET = withApiLogging(async (request: Request) => {

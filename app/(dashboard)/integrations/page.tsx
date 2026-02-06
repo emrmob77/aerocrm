@@ -42,7 +42,7 @@ const integrationConfigs = (t: (key: string) => string): IntegrationConfig[] => 
     icon: 'mail',
     iconColor: 'text-red-500',
     iconBg: 'bg-red-50 dark:bg-red-900/20',
-    comingSoon: true,
+    href: '/integrations/gmail',
     category: 'communication',
   },
   {
@@ -54,7 +54,7 @@ const integrationConfigs = (t: (key: string) => string): IntegrationConfig[] => 
     iconColor: 'text-purple-600',
     iconBg: 'bg-purple-50 dark:bg-purple-900/20',
     recommended: true,
-    comingSoon: true,
+    href: '/integrations/slack',
     category: 'communication',
   },
   {
@@ -65,7 +65,7 @@ const integrationConfigs = (t: (key: string) => string): IntegrationConfig[] => 
     icon: 'videocam',
     iconColor: 'text-blue-500',
     iconBg: 'bg-blue-50 dark:bg-blue-900/20',
-    comingSoon: true,
+    href: '/integrations/zoom',
     category: 'communication',
   },
   // Payment
@@ -89,7 +89,7 @@ const integrationConfigs = (t: (key: string) => string): IntegrationConfig[] => 
     icon: 'account_balance_wallet',
     iconColor: 'text-sky-700',
     iconBg: 'bg-sky-50 dark:bg-sky-900/20',
-    comingSoon: true,
+    href: '/integrations/paypal',
     category: 'payment',
   },
   {
@@ -100,7 +100,7 @@ const integrationConfigs = (t: (key: string) => string): IntegrationConfig[] => 
     icon: 'credit_card',
     iconColor: 'text-blue-800',
     iconBg: 'bg-blue-50 dark:bg-blue-900/20',
-    comingSoon: true,
+    href: '/integrations/iyzico',
     category: 'payment',
   },
   // Storage
@@ -112,7 +112,7 @@ const integrationConfigs = (t: (key: string) => string): IntegrationConfig[] => 
     icon: 'cloud',
     iconColor: 'text-yellow-600',
     iconBg: 'bg-yellow-50 dark:bg-yellow-900/20',
-    comingSoon: true,
+    href: '/integrations/gdrive',
     category: 'storage',
   },
   {
@@ -123,7 +123,7 @@ const integrationConfigs = (t: (key: string) => string): IntegrationConfig[] => 
     icon: 'folder_shared',
     iconColor: 'text-blue-600',
     iconBg: 'bg-blue-50 dark:bg-blue-900/20',
-    comingSoon: true,
+    href: '/integrations/dropbox',
     category: 'storage',
   },
   // Automation
@@ -136,7 +136,7 @@ const integrationConfigs = (t: (key: string) => string): IntegrationConfig[] => 
     iconColor: 'text-orange-600',
     iconBg: 'bg-orange-50 dark:bg-orange-900/20',
     recommended: true,
-    comingSoon: true,
+    href: '/integrations/zapier',
     category: 'automation',
   },
   {

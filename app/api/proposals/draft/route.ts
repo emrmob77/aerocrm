@@ -4,6 +4,8 @@ import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
 import { buildPublicProposalUrl } from '@/lib/proposals/link-utils'
 import { sanitizeProposalDesignSettings } from '@/lib/proposals/design-utils'
+import { ensureUserProfileAndTeam } from '@/lib/team/ensure-user-team'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
 type DraftProposalPayload = {
   proposalId?: string | null
@@ -78,17 +80,21 @@ export const POST = withApiLogging(async (request: Request) => {
     return NextResponse.json({ error: t('api.errors.sessionMissing') }, { status: 401 })
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('team_id, full_name')
-    .eq('id', user.id)
-    .maybeSingle()
+  let ensuredUser = await ensureUserProfileAndTeam(supabase, user)
+  if (!ensuredUser?.teamId) {
+    try {
+      const admin = createSupabaseAdminClient()
+      ensuredUser = await ensureUserProfileAndTeam(admin, user)
+    } catch {
+      // ignore admin fallback errors and use common response below
+    }
+  }
 
-  if (profileError || !profile?.team_id) {
+  if (!ensuredUser?.teamId) {
     return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
   }
 
-  const teamId = profile.team_id
+  const teamId = ensuredUser.teamId
   const contactEmail = normalizeText(payload.contactEmail)
   const contactPhone = normalizeText(payload.contactPhone)
   const rawClientName = normalizeText(payload.clientName)

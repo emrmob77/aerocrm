@@ -2,8 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { Database } from '@/types/database'
-
-type UserInsert = Database['public']['Tables']['users']['Insert']
+import { ensureUserProfileAndTeam } from '@/lib/team/ensure-user-team'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -39,28 +39,17 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/reset-password?recovery=1`)
       }
 
-      // Check if user profile exists, if not create one
       const { data: { user } } = await supabase.auth.getUser()
 
       if (user) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('id')
-          .eq('id', user.id)
-          .single()
-
-        if (!profile) {
-          // Create user profile for OAuth users
-          const newUser: UserInsert = {
-            id: user.id,
-            email: user.email!,
-            full_name: user.user_metadata.full_name || user.user_metadata.name || user.email?.split('@')[0] || 'User',
-            avatar_url: user.user_metadata.avatar_url || user.user_metadata.picture || null,
-            role: 'member',
+        const ensured = await ensureUserProfileAndTeam(supabase, user)
+        if (!ensured?.teamId) {
+          try {
+            const admin = createSupabaseAdminClient()
+            await ensureUserProfileAndTeam(admin, user)
+          } catch {
+            // If service-role is unavailable, continue with normal flow.
           }
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase.from('users') as any).insert(newUser)
         }
       }
 
