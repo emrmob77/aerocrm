@@ -65,7 +65,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const t = (key: string, vars?: Record<string, string | number>) => {
     const value = getNestedValue(messages[locale] as unknown as Record<string, unknown>, key)
-    if (!value || typeof value !== 'string') return key
+    if (value === undefined || value === null || typeof value !== 'string') return key
     return interpolateMessage(value, vars)
   }
 

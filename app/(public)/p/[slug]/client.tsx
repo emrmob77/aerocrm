@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import SignatureCanvas from 'react-signature-canvas'
 import toast from 'react-hot-toast'
 import { useI18n } from '@/lib/i18n'
@@ -79,6 +80,7 @@ type SignatureBlockProps = {
 }
 
 export function SignatureBlock({ slug, pdfUrl, label, required, existingSignature }: SignatureBlockProps) {
+  const router = useRouter()
   const { t, formatDate } = useI18n()
   const signatureRef = useRef<SignatureCanvas | null>(null)
   const [signerName, setSignerName] = useState(existingSignature?.name ?? '')
@@ -125,6 +127,7 @@ export function SignatureBlock({ slug, pdfUrl, label, required, existingSignatur
       setSignatureImage(dataUrl)
       setSignedAt(signedStamp)
       toast.success(t('publicProposal.signature.success'))
+      router.push(`/p/${encodeURIComponent(slug)}/thank-you`)
     } catch (error) {
       const messageText =
         error instanceof Error ? error.message : t('publicProposal.signature.errors.saveFailed')

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -11,6 +12,7 @@ import { planDefinitions, type PlanId } from '@/lib/billing/plans'
 type Plan = PlanId
 
 export default function RegisterPage() {
+  const router = useRouter()
   const { signUp, signInWithGoogle, loading: authLoading } = useAuth()
   const { t, get, formatNumber } = useI18n()
   const [selectedPlan, setSelectedPlan] = useState<Plan>('starter')
@@ -21,7 +23,6 @@ export default function RegisterPage() {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [emailSent, setEmailSent] = useState(false)
 
   const getPasswordStrength = () => {
     if (password.length === 0) return { level: 0, text: '', color: '' }
@@ -61,8 +62,9 @@ export default function RegisterPage() {
       }
       setIsLoading(false)
     } else {
-      setEmailSent(true)
       toast.success(t('auth.register.success'))
+      setIsLoading(false)
+      router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`)
     }
   }
 
@@ -79,45 +81,6 @@ export default function RegisterPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
-
-  // Email verification sent state
-  if (emailSent) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8 bg-aero-slate-50 dark:bg-aero-slate-900">
-        <div className="w-full max-w-md text-center">
-          <div className="w-20 h-20 rounded-full bg-aero-green-100 dark:bg-aero-green-900/30 flex items-center justify-center mx-auto mb-6">
-            <span className="material-symbols-outlined text-4xl text-aero-green-500">mark_email_read</span>
-          </div>
-          <h2 className="text-2xl font-bold text-aero-slate-900 dark:text-white mb-4">
-            {t('auth.register.emailSentTitle')}
-          </h2>
-          <p className="text-aero-slate-600 dark:text-aero-slate-400 mb-8">
-            {t('auth.register.emailSentBody', { email })} {t('auth.register.emailSentHelp')}
-          </p>
-          <div className="space-y-4">
-            <Link
-              href="/login"
-              className="block w-full py-3 px-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors"
-            >
-              {t('auth.register.goToLogin')}
-            </Link>
-            <p className="text-sm text-aero-slate-500">
-              {t('auth.forgot.noEmail')}{' '}
-              <button
-                onClick={() => {
-                  setEmailSent(false)
-                  setIsLoading(false)
-                }}
-                className="text-primary hover:underline"
-              >
-                {t('auth.register.retry')}
-              </button>
-            </p>
-          </div>
-        </div>
       </div>
     )
   }

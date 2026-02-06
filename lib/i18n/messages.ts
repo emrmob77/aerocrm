@@ -434,6 +434,17 @@ export const messages = {
         google: 'Google ile kayıt ol',
         success: 'Hesabınız oluşturuldu! E-posta adresinizi doğrulamak için gelen kutunuzu kontrol edin.',
       },
+      verifyPage: {
+        title: 'E-posta Doğrulama',
+        subtitle: 'Hesabınızı aktifleştirmek için gönderdiğimiz doğrulama e-postasındaki bağlantıyı açın.',
+        emailLabel: 'Doğrulama adresi',
+        checklistTitle: 'Sonraki adımlar',
+        stepInbox: 'Gelen kutunuzu kontrol edin.',
+        stepSpam: 'Spam/Promotions klasörünü de kontrol edin.',
+        stepLink: 'Doğrulama linkine tıklayıp giriş ekranına dönün.',
+        backToLogin: 'Giriş sayfasına dön',
+        backToRegister: 'Kayıt bilgilerini güncelle',
+      },
     },
     settings: {
       title: 'Ayarlar',
@@ -1377,6 +1388,12 @@ export const messages = {
           signatureRequired: 'Lütfen imzanızı ekleyin.',
           saveFailed: 'İmza kaydedilemedi.',
         },
+      },
+      confirmation: {
+        title: 'Teklifiniz başarıyla imzalandı',
+        description: 'İmzanız kaydedildi. İmzalı PDF dosyasını indirebilir veya teklifi tekrar görüntüleyebilirsiniz.',
+        download: 'İmzalı PDF indir',
+        backToProposal: 'Teklifi tekrar görüntüle',
       },
     },
     proposalPreview: {
@@ -3188,6 +3205,17 @@ export const messages = {
         google: 'Continue with Google',
         success: 'Your account was created! Check your inbox to verify your email.',
       },
+      verifyPage: {
+        title: 'Verify your email',
+        subtitle: 'Open the verification email we sent and follow the link to activate your account.',
+        emailLabel: 'Verification email',
+        checklistTitle: 'Next steps',
+        stepInbox: 'Check your inbox.',
+        stepSpam: 'Also check Spam/Promotions folders.',
+        stepLink: 'Open the verification link and return to the sign-in page.',
+        backToLogin: 'Back to login',
+        backToRegister: 'Update registration details',
+      },
     },
     settings: {
       title: 'Settings',
@@ -4131,6 +4159,12 @@ export const messages = {
           signatureRequired: 'Please add your signature.',
           saveFailed: 'Signature could not be saved.',
         },
+      },
+      confirmation: {
+        title: 'Your proposal has been signed successfully',
+        description: 'Your signature is recorded. You can download the signed PDF or review the proposal again.',
+        download: 'Download signed PDF',
+        backToProposal: 'View proposal again',
       },
     },
     proposalPreview: {
