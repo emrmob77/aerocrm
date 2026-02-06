@@ -53,7 +53,7 @@ export default function ProposalViewPage() {
   }
 
   return (
-    <div className="-m-8 bg-[#f5f6f8] dark:bg-[#101722] min-h-screen">
+    <div className="w-full bg-[#f5f6f8] dark:bg-[#101722] min-h-screen">
       {/* Urgency Banner */}
       <div className="w-full bg-primary/10 dark:bg-primary/20 border-b border-primary/20 sticky top-0 z-50 backdrop-blur-md">
         <div className="max-w-[960px] mx-auto px-4 py-2 flex items-center justify-between">

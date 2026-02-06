@@ -416,8 +416,7 @@ export default function ImportExportPage() {
   }
 
   return (
-    <div className="-m-8">
-      <main className="max-w-[1200px] mx-auto px-6 py-8 space-y-8">
+      <main className="w-full py-2 lg:py-4 space-y-8">
         <div className="flex flex-wrap justify-between items-center gap-4">
           <div>
             <div className="flex items-center gap-2 text-slate-500 mb-1">
@@ -690,6 +689,5 @@ export default function ImportExportPage() {
           </div>
         </section>
       </main>
-    </div>
   )
 }

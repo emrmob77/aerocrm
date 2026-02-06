@@ -514,8 +514,8 @@ export default function DealDetailsClient({
   }
 
   return (
-    <div className="-m-8">
-      <main className="flex-1 overflow-y-auto px-4 md:px-16 lg:px-24 py-8">
+    <div className="w-full py-2 lg:py-4">
+      <main className="w-full">
         <div className="max-w-[1200px] mx-auto">
           {/* Breadcrumbs & Heading */}
           <div className="mb-6">

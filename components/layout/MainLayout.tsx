@@ -14,12 +14,12 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const pathname = usePathname()
-  const isWideLayout = pathname?.startsWith('/proposals/new') || pathname?.startsWith('/contacts')
+  const isWideLayout = pathname?.startsWith('/proposals/new')
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false)
-  }, [])
+  }, [pathname])
 
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem('sidebar-collapsed') : null
@@ -78,7 +78,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             isWideLayout && 'lg:px-8 lg:pt-6'
           )}
         >
-          <div className={cn('mx-auto w-full', isWideLayout ? 'max-w-none' : 'max-w-[1200px]')}>
+          <div className={cn('mx-auto w-full', isWideLayout ? 'max-w-[1360px]' : 'max-w-[1200px]')}>
             {children}
           </div>
         </div>

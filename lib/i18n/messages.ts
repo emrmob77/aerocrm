@@ -82,6 +82,12 @@ export const messages = {
       collapse: 'Daralt',
       expand: 'Genişlet',
       general: 'Genel',
+      sections: {
+        core: 'Temel',
+        insights: 'İçgörüler',
+        automation: 'Otomasyon',
+        workspace: 'Çalışma Alanı',
+      },
       newRecord: 'Yeni Kayıt',
     },
     notFound: {
@@ -416,7 +422,7 @@ export const messages = {
         passwordConfirm: 'Şifreyi Onayla',
         agree: 'Şartları kabul ediyorum',
         agreeAnd: 've',
-        agreePrefix: '',
+        agreePrefix: 'Ben',
         agreeSuffix: 'kabul ediyorum',
         submit: 'Kayıt Ol',
         submitting: 'Kayıt oluşturuluyor...',
@@ -2853,6 +2859,12 @@ export const messages = {
       collapse: 'Collapse',
       expand: 'Expand',
       general: 'General',
+      sections: {
+        core: 'Core',
+        insights: 'Insights',
+        automation: 'Automation',
+        workspace: 'Workspace',
+      },
       newRecord: 'New Record',
     },
     notFound: {

@@ -121,8 +121,8 @@ export default function WebhookLogsPage() {
   }
 
   return (
-    <div className="-m-8">
-      <main className="max-w-[1280px] mx-auto px-6 py-8">
+    <div className="w-full py-2 lg:py-4">
+      <main className="w-full">
         {/* Header */}
         <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
           <div className="flex flex-col gap-1">

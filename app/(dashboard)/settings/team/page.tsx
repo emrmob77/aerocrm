@@ -414,8 +414,8 @@ export default function TeamSettingsPage() {
   }
 
   return (
-    <div className="-m-8">
-      <div className="flex-1 overflow-y-auto p-8 max-w-6xl mx-auto w-full space-y-8">
+    <div className="w-full py-2 lg:py-4">
+      <div className="w-full space-y-8">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Link href="/settings" className="text-[#48679d] dark:text-gray-400 hover:text-primary">{t('settings.title')}</Link>
           <span className="text-gray-300 dark:text-gray-600">/</span>

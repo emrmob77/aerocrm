@@ -190,8 +190,8 @@ export default function TwilioSettingsPage() {
   const isConnected = integration?.status === 'connected'
 
   return (
-    <div className="-m-8">
-      <main className="max-w-3xl mx-auto px-10 py-8">
+    <div className="w-full py-2 lg:py-4">
+      <main className="w-full max-w-3xl mx-auto">
         {/* Toast */}
         {toast && (
           <div

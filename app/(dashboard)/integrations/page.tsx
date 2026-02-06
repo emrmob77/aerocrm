@@ -325,8 +325,8 @@ export default async function IntegrationsPage({
   const automationConfigs = configs.filter((c) => c.category === 'automation')
 
   return (
-    <div className="-m-8">
-      <main className="max-w-[1200px] mx-auto px-10 py-8">
+    <div className="w-full py-2 lg:py-4">
+      <main className="w-full">
         {/* Page Heading */}
         <div className="flex flex-wrap justify-between gap-3 mb-6">
           <div className="flex min-w-72 flex-col gap-1">
@@ -375,7 +375,7 @@ export default async function IntegrationsPage({
 
       {/* Footer */}
       <footer className="bg-white dark:bg-slate-900 border-t border-[#e7ebf4] dark:border-slate-800 py-10">
-        <div className="max-w-[1200px] mx-auto px-10 flex justify-between items-center">
+        <div className="w-full px-4 lg:px-6 flex justify-between items-center">
           <div className="flex items-center gap-2 opacity-60">
             <span className="material-symbols-outlined">auto_awesome</span>
             <span className="text-sm font-medium">AERO CRM v2.4</span>

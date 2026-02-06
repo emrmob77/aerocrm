@@ -154,8 +154,8 @@ export default function StripeSettingsPage() {
   const isConnected = integration?.status === 'connected'
 
   return (
-    <div className="-m-8">
-      <main className="max-w-3xl mx-auto px-10 py-8">
+    <div className="w-full py-2 lg:py-4">
+      <main className="w-full max-w-3xl mx-auto">
         {toast && (
           <div
             className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${

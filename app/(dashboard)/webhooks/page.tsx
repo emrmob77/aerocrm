@@ -220,8 +220,8 @@ export default function WebhooksPage() {
   }
 
   return (
-    <div className="-m-8">
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="w-full py-2 lg:py-4">
+      <main className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Settings Sidebar */}
         <aside className="lg:col-span-3 space-y-6">
           <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-[#e2e8f0] dark:border-slate-700">

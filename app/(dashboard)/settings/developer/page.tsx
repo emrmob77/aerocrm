@@ -47,8 +47,8 @@ export default function DeveloperSettingsPage() {
   )
 
   return (
-    <div className="-m-8">
-      <div className="flex-1 overflow-y-auto p-8 max-w-6xl mx-auto w-full">
+    <div className="w-full py-2 lg:py-4">
+      <div className="w-full space-y-8">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 mb-4 text-sm font-medium">
           <Link href="/settings" className="text-[#48679d] dark:text-gray-400 hover:text-primary">{t('settings.title')}</Link>

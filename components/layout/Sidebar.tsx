@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -9,6 +10,12 @@ interface NavItem {
   label: string
   href: string
   icon: string
+}
+
+interface NavSection {
+  id: string
+  label: string
+  items: NavItem[]
 }
 
 interface SidebarProps {
@@ -21,27 +28,64 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
   const pathname = usePathname()
   const { t } = useI18n()
   const toggleCollapsed = () => onToggleCollapsed?.()
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    core: true,
+    insights: true,
+    automation: true,
+    workspace: true,
+    general: true,
+  })
 
-  const navItems: NavItem[] = [
-    { label: t('nav.dashboard'), href: '/dashboard', icon: 'dashboard' },
-    { label: t('nav.deals'), href: '/deals', icon: 'database' },
-    { label: t('nav.contacts'), href: '/contacts', icon: 'group' },
-    { label: t('nav.products'), href: '/products', icon: 'inventory_2' },
-    { label: t('nav.proposals'), href: '/proposals', icon: 'description' },
-    { label: t('nav.templates'), href: '/templates', icon: 'auto_awesome' },
-    { label: t('nav.sales'), href: '/sales', icon: 'handshake' },
-    { label: t('nav.reports'), href: '/reports', icon: 'bar_chart' },
-    { label: t('nav.analytics'), href: '/analytics', icon: 'analytics' },
-    { label: t('nav.notifications'), href: '/notifications', icon: 'notifications' },
-    { label: t('nav.webhooks'), href: '/webhooks', icon: 'webhook' },
-    { label: t('nav.integrations'), href: '/integrations', icon: 'extension' },
-    { label: t('nav.settings'), href: '/settings', icon: 'settings' },
+  const itemMap = {
+    dashboard: { label: t('nav.dashboard'), href: '/dashboard', icon: 'dashboard' },
+    deals: { label: t('nav.deals'), href: '/deals', icon: 'database' },
+    contacts: { label: t('nav.contacts'), href: '/contacts', icon: 'group' },
+    products: { label: t('nav.products'), href: '/products', icon: 'inventory_2' },
+    proposals: { label: t('nav.proposals'), href: '/proposals', icon: 'description' },
+    templates: { label: t('nav.templates'), href: '/templates', icon: 'auto_awesome' },
+    sales: { label: t('nav.sales'), href: '/sales', icon: 'handshake' },
+    reports: { label: t('nav.reports'), href: '/reports', icon: 'bar_chart' },
+    analytics: { label: t('nav.analytics'), href: '/analytics', icon: 'analytics' },
+    notifications: { label: t('nav.notifications'), href: '/notifications', icon: 'notifications' },
+    webhooks: { label: t('nav.webhooks'), href: '/webhooks', icon: 'webhook' },
+    integrations: { label: t('nav.integrations'), href: '/integrations', icon: 'extension' },
+    settings: { label: t('nav.settings'), href: '/settings', icon: 'settings' },
+  } as const
+
+  const navSections: NavSection[] = [
+    {
+      id: 'core',
+      label: t('sidebar.sections.core'),
+      items: [itemMap.dashboard, itemMap.deals, itemMap.contacts, itemMap.products, itemMap.proposals, itemMap.templates],
+    },
+    {
+      id: 'insights',
+      label: t('sidebar.sections.insights'),
+      items: [itemMap.sales, itemMap.reports, itemMap.analytics, itemMap.notifications],
+    },
+    {
+      id: 'automation',
+      label: t('sidebar.sections.automation'),
+      items: [itemMap.webhooks, itemMap.integrations],
+    },
+    {
+      id: 'workspace',
+      label: t('sidebar.sections.workspace'),
+      items: [itemMap.settings],
+    },
   ]
 
-  const generalItems: NavItem[] = [
+  const utilityItems: NavItem[] = [
     { label: t('nav.search'), href: '/search', icon: 'search' },
     { label: t('nav.importExport'), href: '/reports/import-export', icon: 'swap_vert' },
   ]
+
+  const toggleSection = (sectionId: string) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [sectionId]: !prev[sectionId],
+    }))
+  }
 
   return (
     <aside
@@ -110,60 +154,98 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
       </div>
 
       {/* Navigation */}
-      <nav className={cn('flex-1 px-3 py-3 space-y-3', collapsed && 'px-2')}>
-        <div className="space-y-1">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                title={collapsed ? item.label : undefined}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-[13px]',
-                  isActive
-                    ? 'bg-primary/10 text-primary font-semibold'
-                    : 'text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800',
-                  collapsed && 'justify-center px-2'
-                )}
-              >
-                <span className="material-symbols-outlined">{item.icon}</span>
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            )
-          })}
-        </div>
-
-        <div>
-          {!collapsed && (
-            <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-              {t('sidebar.general')}
-            </p>
-          )}
-          <div className="space-y-1">
-            {generalItems.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onClose}
-                  title={collapsed ? item.label : undefined}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-[13px]',
-                    isActive
-                      ? 'bg-primary/10 text-primary font-semibold'
-                      : 'text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800',
-                    collapsed && 'justify-center px-2'
-                  )}
+      <nav className={cn('flex-1 px-3 py-3 space-y-4', collapsed && 'px-2')}>
+        {navSections.map((section) => {
+          const sectionOpen = collapsed || openSections[section.id] !== false
+          return (
+            <div key={section.id} className="space-y-1">
+              {!collapsed && (
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.id)}
+                  className="w-full px-3 mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                  aria-expanded={sectionOpen}
+                  aria-controls={`sidebar-section-${section.id}`}
                 >
-                  <span className="material-symbols-outlined">{item.icon}</span>
-                  {!collapsed && <span>{item.label}</span>}
-                </Link>
-              )
-            })}
-          </div>
+                  <span>{section.label}</span>
+                  <span className="material-symbols-outlined text-base">
+                    {sectionOpen ? 'expand_less' : 'expand_more'}
+                  </span>
+                </button>
+              )}
+              {sectionOpen && (
+                <div id={`sidebar-section-${section.id}`} className="space-y-1">
+                  {section.items.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={onClose}
+                        title={collapsed ? item.label : undefined}
+                        aria-current={isActive ? 'page' : undefined}
+                        aria-label={collapsed ? item.label : undefined}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
+                          isActive
+                            ? 'bg-primary/10 text-primary font-semibold'
+                            : 'text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800',
+                          collapsed && 'justify-center px-2'
+                        )}
+                      >
+                        <span className="material-symbols-outlined">{item.icon}</span>
+                        {!collapsed && <span>{item.label}</span>}
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        <div className="pt-2 border-t border-[#e7ebf4] dark:border-gray-800">
+          {!collapsed && (
+            <button
+              type="button"
+              onClick={() => toggleSection('general')}
+              className="w-full px-3 mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              aria-expanded={openSections.general !== false}
+              aria-controls="sidebar-section-general"
+            >
+              <span>{t('sidebar.general')}</span>
+              <span className="material-symbols-outlined text-base">
+                {openSections.general !== false ? 'expand_less' : 'expand_more'}
+              </span>
+            </button>
+          )}
+          {(collapsed || openSections.general !== false) && (
+            <div id="sidebar-section-general" className="space-y-1">
+              {utilityItems.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onClose}
+                    title={collapsed ? item.label : undefined}
+                    aria-current={isActive ? 'page' : undefined}
+                    aria-label={collapsed ? item.label : undefined}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
+                      isActive
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-slate-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800',
+                      collapsed && 'justify-center px-2'
+                    )}
+                  >
+                    <span className="material-symbols-outlined">{item.icon}</span>
+                    {!collapsed && <span>{item.label}</span>}
+                  </Link>
+                )
+              })}
+            </div>
+          )}
         </div>
       </nav>
 
