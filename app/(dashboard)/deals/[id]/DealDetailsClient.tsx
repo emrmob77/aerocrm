@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
@@ -44,6 +44,7 @@ type DealProductRow = Database['public']['Tables']['deal_products']['Row']
 type ProductRow = Database['public']['Tables']['products']['Row']
 type ProposalRow = Database['public']['Tables']['proposals']['Row']
 type ActivityRow = Database['public']['Tables']['activities']['Row']
+type TeamMemberRow = Pick<UserRow, 'id' | 'full_name' | 'email' | 'role' | 'avatar_url' | 'allowed_screens'>
 
 type DealProductItem = DealProductRow & {
   product?: ProductRow | null
@@ -66,13 +67,13 @@ type DealDetailsClientProps = {
   teamId: string | null
   initialDeal: DealRow | null
   initialContact: ContactRow | null
-  initialOwner: UserRow | null
+  initialOwner: TeamMemberRow | null
   initialDealProducts: DealProductItem[]
   initialProposals: ProposalRow[]
   initialActivities: ActivityRow[]
   initialFiles: DealFileRow[]
   initialContacts: ContactRow[]
-  initialTeamMembers: UserRow[]
+  initialTeamMembers: TeamMemberRow[]
   initialProducts: ProductRow[]
   averageDays: number | null
   initialError?: string | null
@@ -123,14 +124,19 @@ export default function DealDetailsClient({
 
   const [deal, setDeal] = useState<DealRow | null>(initialDeal)
   const [contact, setContact] = useState<ContactRow | null>(initialContact)
-  const [owner, setOwner] = useState<UserRow | null>(initialOwner)
+  const [owner, setOwner] = useState<TeamMemberRow | null>(initialOwner)
   const [dealProducts, setDealProducts] = useState<DealProductItem[]>(initialDealProducts)
-  const [proposals] = useState<ProposalRow[]>(initialProposals)
-  const [activities] = useState<ActivityRow[]>(initialActivities)
+  const [proposals, setProposals] = useState<ProposalRow[]>(initialProposals)
+  const [activities, setActivities] = useState<ActivityRow[]>(initialActivities)
   const [files, setFiles] = useState<DealFileRow[]>(initialFiles)
   const [filesError, setFilesError] = useState<string | null>(null)
 
-  const [teamMembers] = useState<UserRow[]>(initialTeamMembers)
+  const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>(() => {
+    if (initialOwner && !initialTeamMembers.some((member) => member.id === initialOwner.id)) {
+      return [initialOwner, ...initialTeamMembers]
+    }
+    return initialTeamMembers
+  })
   const [contacts] = useState<ContactRow[]>(initialContacts)
   const [products] = useState<ProductRow[]>(initialProducts)
 
@@ -170,6 +176,200 @@ export default function DealDetailsClient({
     if (!isEditing) return owner
     return teamMembers.find((item) => item.id === draft.ownerId) ?? owner
   }, [owner, teamMembers, draft.ownerId, isEditing])
+
+  useEffect(() => {
+    if (initialOwner && !initialTeamMembers.some((member) => member.id === initialOwner.id)) {
+      setTeamMembers([initialOwner, ...initialTeamMembers])
+      return
+    }
+    setTeamMembers(initialTeamMembers)
+  }, [initialOwner, initialTeamMembers])
+
+  useEffect(() => {
+    if (!_teamId) return
+
+    let isCancelled = false
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null
+
+    const loadTeamMembers = async () => {
+      try {
+        const response = await fetch('/api/team/members', { cache: 'no-store' })
+        const payload = await response.json().catch(() => null)
+        if (!response.ok) return
+
+        const nextMembers = ((payload?.members ?? []) as Array<{
+          id: string
+          full_name: string
+          email: string
+          role: string
+          avatar_url: string | null
+          allowed_screens?: string[] | null
+        }>).map((member) => ({
+          id: member.id,
+          full_name: member.full_name,
+          email: member.email,
+          role: member.role,
+          avatar_url: member.avatar_url,
+          allowed_screens: member.allowed_screens ?? null,
+        }))
+
+        if (isCancelled) return
+
+        setTeamMembers(nextMembers)
+      } catch {
+        // no-op: keep SSR members as fallback
+      }
+    }
+
+    const scheduleLoadMembers = () => {
+      if (refreshTimer) {
+        clearTimeout(refreshTimer)
+      }
+      refreshTimer = setTimeout(() => {
+        loadTeamMembers()
+      }, 250)
+    }
+
+    const shouldLoadMembers =
+      initialTeamMembers.length === 0 ||
+      Boolean(deal?.user_id && !initialTeamMembers.some((member) => member.id === deal.user_id))
+    if (shouldLoadMembers) {
+      loadTeamMembers()
+    }
+
+    const channel = supabase
+      .channel(`deal-details-members-${_teamId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'users', filter: `team_id=eq.${_teamId}` },
+        scheduleLoadMembers
+      )
+      .subscribe()
+
+    return () => {
+      isCancelled = true
+      if (refreshTimer) {
+        clearTimeout(refreshTimer)
+      }
+      supabase.removeChannel(channel)
+    }
+  }, [_teamId, deal?.user_id, initialTeamMembers, supabase])
+
+  useEffect(() => {
+    if (!dealId) return
+
+    const dealChannel = supabase
+      .channel(`deal-details-row-${dealId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'deals', filter: `id=eq.${dealId}` },
+        (payload) => {
+          const nextDeal = payload.new as DealRow
+          if (!nextDeal?.id) return
+
+          setDeal((prev) => (prev ? { ...prev, ...nextDeal } : nextDeal))
+          if (!isEditing) {
+            setDraft({
+              title: nextDeal.title ?? '',
+              value: nextDeal.value ?? 0,
+              stage: normalizeStage(nextDeal.stage),
+              expectedCloseDate: nextDeal.expected_close_date ? nextDeal.expected_close_date.slice(0, 10) : '',
+              probability: nextDeal.probability ?? 0,
+              contactId: nextDeal.contact_id ?? '',
+              ownerId: nextDeal.user_id ?? authUserId,
+              notes: nextDeal.notes ?? '',
+            })
+            setNotesValue(nextDeal.notes ?? '')
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(dealChannel)
+    }
+  }, [authUserId, dealId, isEditing, supabase])
+
+  useEffect(() => {
+    if (!dealId) return
+
+    const proposalChannel = supabase
+      .channel(`deal-details-proposals-${dealId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'proposals', filter: `deal_id=eq.${dealId}` },
+        (payload) => {
+          const proposal = payload.new as ProposalRow
+          if (!proposal?.id) return
+          setProposals((prev) => (prev.some((row) => row.id === proposal.id) ? prev : [proposal, ...prev]))
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'proposals', filter: `deal_id=eq.${dealId}` },
+        (payload) => {
+          const proposal = payload.new as ProposalRow
+          if (!proposal?.id) return
+          setProposals((prev) => prev.map((row) => (row.id === proposal.id ? { ...row, ...proposal } : row)))
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'proposals', filter: `deal_id=eq.${dealId}` },
+        (payload) => {
+          const proposal = payload.old as ProposalRow
+          if (!proposal?.id) return
+          setProposals((prev) => prev.filter((row) => row.id !== proposal.id))
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(proposalChannel)
+    }
+  }, [dealId, supabase])
+
+  useEffect(() => {
+    if (!dealId) return
+
+    const activityChannel = supabase
+      .channel(`deal-details-activities-${dealId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'activities', filter: `entity_id=eq.${dealId}` },
+        (payload) => {
+          const activity = payload.new as ActivityRow
+          if (!activity?.id || activity.entity_type !== 'deal') return
+          setActivities((prev) => (prev.some((row) => row.id === activity.id) ? prev : [activity, ...prev]))
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(activityChannel)
+    }
+  }, [dealId, supabase])
+
+  useEffect(() => {
+    if (!deal?.user_id) return
+    const nextOwner = teamMembers.find((member) => member.id === deal.user_id)
+    if (nextOwner) {
+      setOwner(nextOwner)
+    }
+  }, [deal?.user_id, teamMembers])
+
+  useEffect(() => {
+    if (teamMembers.length === 0) return
+    const exists = teamMembers.some((member) => member.id === draft.ownerId)
+    if (exists) return
+
+    const fallbackOwnerId = deal?.user_id && teamMembers.some((member) => member.id === deal.user_id)
+      ? deal.user_id
+      : teamMembers[0]?.id
+
+    if (!fallbackOwnerId) return
+    setDraft((prev) => ({ ...prev, ownerId: fallbackOwnerId }))
+  }, [deal?.user_id, draft.ownerId, teamMembers])
 
   const stageConfigs = useMemo(() => getStageConfigs(t), [t])
 
@@ -230,6 +430,8 @@ export default function DealDetailsClient({
 
     const stageChanged = normalizeStage(deal.stage) !== draft.stage
     const ownerChanged = deal.user_id !== draft.ownerId
+    let ownerNotificationDelivered = true
+    let ownerNotificationReason: 'preferences_disabled' | 'insert_failed' | null = null
 
     if (stageChanged) {
       const response = await fetch('/api/deals/stage', {
@@ -255,6 +457,8 @@ export default function DealDetailsClient({
         toast.error(payload?.error || t('deals.detail.toasts.ownerUpdateError'))
         return
       }
+      ownerNotificationDelivered = payload?.notificationDelivered !== false
+      ownerNotificationReason = (payload?.notificationReason as 'preferences_disabled' | 'insert_failed' | null) ?? null
     }
 
     const updates: Partial<DealRow> = {
@@ -284,6 +488,13 @@ export default function DealDetailsClient({
     setContact(contacts.find((item) => item.id === updated.contact_id) ?? contact)
     setOwner(teamMembers.find((item) => item.id === updated.user_id) ?? owner)
     toast.success(t('deals.detail.toasts.updated'))
+    if (ownerChanged && !ownerNotificationDelivered) {
+      if (ownerNotificationReason === 'preferences_disabled') {
+        toast.error(t('deals.detail.toasts.ownerAssignedNotificationDisabled'))
+      } else {
+        toast.error(t('deals.detail.toasts.ownerAssignedNoNotification'))
+      }
+    }
     setIsEditing(false)
   }
 
@@ -528,7 +739,7 @@ export default function DealDetailsClient({
               <span className="text-gray-500 text-sm">{selectedContact?.company || t('deals.detail.breadcrumbFallback')}</span>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 min-w-0 flex-1">
                 {isEditing ? (
                   <input
                     value={draft.title}
@@ -536,7 +747,7 @@ export default function DealDetailsClient({
                     className="text-2xl md:text-3xl font-extrabold text-[#0d121c] dark:text-white bg-transparent border-b border-primary/40 focus:outline-none"
                   />
                 ) : (
-                  <h1 className="text-[#0d121c] dark:text-white text-3xl font-extrabold tracking-tight">
+                  <h1 className="text-[#0d121c] dark:text-white text-3xl font-extrabold tracking-tight break-words leading-tight">
                     {deal.title}
                   </h1>
                 )}
@@ -562,6 +773,12 @@ export default function DealDetailsClient({
                     {t('deals.detail.lastUpdated', {
                       value: formatRelativeTime(deal.updated_at ?? deal.created_at ?? new Date().toISOString(), t),
                     })}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                    <span className="material-symbols-outlined text-sm">person</span>
+                    <span className="font-semibold text-[#0d121c] dark:text-white">
+                      {selectedOwner?.full_name || t('deals.detail.stats.ownerFallback')}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -640,8 +857,12 @@ export default function DealDetailsClient({
                     <select
                       value={draft.ownerId}
                       onChange={(event) => setDraft((prev) => ({ ...prev, ownerId: event.target.value }))}
+                      disabled={teamMembers.length === 0}
                       className="text-sm font-bold text-[#0d121c] dark:text-white bg-transparent border-b border-primary/30 focus:outline-none"
                     >
+                      {teamMembers.length === 0 && (
+                        <option value="">{t('deals.detail.stats.ownerFallback')}</option>
+                      )}
                       {teamMembers.map((member) => (
                         <option key={member.id} value={member.id}>
                           {member.full_name}
@@ -660,6 +881,9 @@ export default function DealDetailsClient({
                       </div>
                       <p className="text-[#0d121c] dark:text-white text-lg font-bold">
                         {selectedOwner?.full_name || t('deals.detail.stats.ownerFallback')}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {selectedOwner?.email || '-'}
                       </p>
                     </div>
                   )}

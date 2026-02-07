@@ -620,6 +620,61 @@ export type Database = {
           },
         ]
       }
+      proposal_versions: {
+        Row: {
+          blocks: Json | null
+          created_at: string | null
+          design_settings: Json | null
+          id: string
+          proposal_id: string
+          team_id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          blocks?: Json | null
+          created_at?: string | null
+          design_settings?: Json | null
+          id?: string
+          proposal_id: string
+          team_id: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          blocks?: Json | null
+          created_at?: string | null
+          design_settings?: Json | null
+          id?: string
+          proposal_id?: string
+          team_id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_versions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_versions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_versions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           blocks: Json
@@ -951,6 +1006,7 @@ export type Database = {
       }
       users: {
         Row: {
+          allowed_screens: string[] | null
           avatar_url: string | null
           created_at: string | null
           email: string
@@ -962,6 +1018,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          allowed_screens?: string[] | null
           avatar_url?: string | null
           created_at?: string | null
           email: string
@@ -973,6 +1030,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          allowed_screens?: string[] | null
           avatar_url?: string | null
           created_at?: string | null
           email?: string

@@ -153,6 +153,12 @@ export const useOptimisticDealUpdates = ({
             )
           )
           toast.error(payload?.error || t('deals.assignError'))
+        } else if (payload?.notificationDelivered === false) {
+          if (payload?.notificationReason === 'preferences_disabled') {
+            toast.error(t('deals.assignNotificationDisabled'))
+          } else {
+            toast.error(t('deals.assignNotificationWarning'))
+          }
         }
       } catch (error) {
         setDeals((prev) =>

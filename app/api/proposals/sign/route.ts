@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
 import { applySignatureToBlocks } from '@/lib/proposals/signature-utils'
+import type { Database } from '@/types/database'
+import { notifyInApp } from '@/lib/notifications/server'
 
 type SignPayload = {
   slug?: string
@@ -57,13 +60,13 @@ export const POST = withApiLogging(async (request: Request) => {
 
   if (proposal.status !== 'signed' && proposal.user_id) {
     const title = proposal.title ?? t('api.proposals.fallbackTitle')
-    await supabase.from('notifications').insert({
-      user_id: proposal.user_id,
+    await notifyInApp(supabase as unknown as SupabaseClient<Database>, {
+      userId: proposal.user_id,
+      category: 'proposals',
       type: 'proposal_signed',
       title: t('api.proposals.notifications.signedTitle'),
       message: t('api.proposals.notifications.signedMessage', { title }),
-      read: false,
-      action_url: `/proposals/${proposal.id}`,
+      actionUrl: `/proposals/${proposal.id}`,
       metadata: {
         proposal_id: proposal.id,
         status: 'signed',

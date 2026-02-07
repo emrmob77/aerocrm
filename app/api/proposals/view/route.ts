@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
+import type { Database } from '@/types/database'
+import { notifyInApp } from '@/lib/notifications/server'
 
 type ViewPayload = {
   slug?: string
@@ -46,13 +49,13 @@ export const POST = withApiLogging(async (request: Request) => {
 
   if (shouldNotify && proposal.user_id) {
     const title = proposal.title ?? t('api.proposals.fallbackTitle')
-    await supabase.from('notifications').insert({
-      user_id: proposal.user_id,
+    await notifyInApp(supabase as unknown as SupabaseClient<Database>, {
+      userId: proposal.user_id,
+      category: 'proposals',
       type: 'proposal_viewed',
       title: t('api.proposals.notifications.viewedTitle'),
       message: t('api.proposals.notifications.viewedMessage', { title }),
-      read: false,
-      action_url: `/proposals/${proposal.id}`,
+      actionUrl: `/proposals/${proposal.id}`,
       metadata: {
         proposal_id: proposal.id,
         status: 'viewed',

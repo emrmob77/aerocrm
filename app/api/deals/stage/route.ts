@@ -48,10 +48,15 @@ export const POST = withApiLogging(async (request: Request) => {
     .from('deals')
     .select('id, stage, title, value, contact_id, user_id, team_id')
     .eq('id', payload.dealId)
-    .eq('team_id', profile.team_id)
     .single()
 
   if (currentError || !current) {
+    return NextResponse.json({ error: t('api.deals.notFound') }, { status: 404 })
+  }
+
+  const isLegacyOwnedDeal = !current.team_id && current.user_id === user.id
+  const isTeamDeal = current.team_id === profile.team_id
+  if (!isLegacyOwnedDeal && !isTeamDeal) {
     return NextResponse.json({ error: t('api.deals.notFound') }, { status: 404 })
   }
 
@@ -64,9 +69,12 @@ export const POST = withApiLogging(async (request: Request) => {
 
   const { data: updated, error } = await supabase
     .from('deals')
-    .update({ stage: getDbStage(nextStage), updated_at: updatedAt })
+    .update({
+      stage: getDbStage(nextStage),
+      team_id: current.team_id ?? profile.team_id,
+      updated_at: updatedAt,
+    })
     .eq('id', payload.dealId)
-    .eq('team_id', profile.team_id)
     .select('id, stage, title, value, contact_id, user_id, team_id, updated_at')
     .single()
 

@@ -5,8 +5,17 @@ import { withApiLogging } from '@/lib/monitoring/api-logger'
 import { sanitizeProposalDesignSettings } from '@/lib/proposals/design-utils'
 import { ensureUserProfileAndTeam } from '@/lib/team/ensure-user-team'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database'
 
-const getTeamContext = async () => {
+type TeamContext = {
+  supabase: SupabaseClient<Database>
+  user: { id: string } | null
+  teamId: string | null
+  error: NextResponse | null
+}
+
+const getTeamContext = async (): Promise<TeamContext> => {
   const t = getServerT()
   const supabase = await createServerSupabaseClient()
   const {
@@ -48,12 +57,16 @@ export const GET = withApiLogging(async (request: Request) => {
   if (context.error) {
     return context.error
   }
+  const teamId = context.teamId
+  if (!teamId) {
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
+  }
 
-  const { data: versions, error } = await (context.supabase as any)
+  const { data: versions, error } = await context.supabase
     .from('proposal_versions')
     .select('id, title, created_at')
     .eq('proposal_id', proposalId)
-    .eq('team_id', context.teamId)
+    .eq('team_id', teamId)
     .order('created_at', { ascending: false })
     .limit(20)
 
@@ -87,12 +100,16 @@ export const POST = withApiLogging(async (request: Request) => {
   if (context.error) {
     return context.error
   }
+  const teamId = context.teamId
+  if (!teamId) {
+    return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
+  }
 
-  const { data: version, error: versionError } = await (context.supabase as any)
+  const { data: version, error: versionError } = await context.supabase
     .from('proposal_versions')
     .select('id, proposal_id, title, blocks, design_settings, created_at')
     .eq('id', versionId)
-    .eq('team_id', context.teamId)
+    .eq('team_id', teamId)
     .maybeSingle()
 
   if (versionError || !version?.proposal_id) {
@@ -108,7 +125,7 @@ export const POST = withApiLogging(async (request: Request) => {
       status: 'draft',
     })
     .eq('id', version.proposal_id)
-    .eq('team_id', context.teamId)
+    .eq('team_id', teamId)
     .select('id, title, blocks, design_settings')
     .single()
 

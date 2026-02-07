@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { DndContext, PointerSensor, useSensor, useSensors, useDraggable, useDroppable, type DragEndEvent } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
@@ -29,6 +29,7 @@ export type DealCardData = {
 
 type DealsBoardProps = {
   initialDeals: DealCardData[]
+  initialMembers?: Array<{ id: string; name: string; avatarUrl: string | null }>
   teamId: string | null
   userId: string | null
 }
@@ -52,7 +53,7 @@ const getAvatarStyle = (seed: string) => {
   return avatarPalette[hash % avatarPalette.length]
 }
 
-export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
+export function DealsBoard({ initialDeals, initialMembers = [], teamId, userId }: DealsBoardProps) {
   const supabase = useMemo(() => getSupabaseClient(), [])
   const { t, locale } = useI18n()
   const stageConfigs = useMemo(() => getStageConfigs(t), [t])
@@ -68,38 +69,80 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
   const [minValue, setMinValue] = useState('')
   const [maxValue, setMaxValue] = useState('')
   const [showFilters, setShowFilters] = useState(false)
-  const [members, setMembers] = useState<Array<{ id: string; name: string; avatarUrl: string | null }>>([])
+  const [members, setMembers] = useState<Array<{ id: string; name: string; avatarUrl: string | null }>>(initialMembers)
 
   useEffect(() => {
     setDeals(initialDeals)
   }, [initialDeals])
 
   useEffect(() => {
+    setMembers(initialMembers)
+  }, [initialMembers])
+
+  const loadMembers = useCallback(async () => {
     if (!teamId && !userId) return
 
-    const loadMembers = async () => {
-      let query = supabase
-        .from('users')
-        .select('id, full_name, avatar_url')
-        .order('created_at', { ascending: true })
-
-      if (teamId) {
-        query = query.eq('team_id', teamId)
-      } else if (userId) {
-        query = query.eq('id', userId)
+    if (teamId) {
+      try {
+        const response = await fetch('/api/team/members', { cache: 'no-store' })
+        const payload = await response.json().catch(() => null)
+        if (response.ok) {
+          const nextMembers = ((payload?.members ?? []) as Array<{ id: string; full_name: string; avatar_url: string | null }>).map((member) => ({
+            id: member.id,
+            name: member.full_name || t('deals.ownerFallback'),
+            avatarUrl: member.avatar_url ?? null,
+          }))
+          setMembers(nextMembers)
+          return
+        }
+      } catch {
+        // fall through to supabase query fallback
       }
-
-      const { data } = await query
-      const nextMembers = (data ?? []).map((member) => ({
-        id: member.id,
-        name: member.full_name || t('deals.ownerFallback'),
-        avatarUrl: member.avatar_url ?? null,
-      }))
-      setMembers(nextMembers)
     }
 
+    let query = supabase
+      .from('users')
+      .select('id, full_name, avatar_url')
+      .order('created_at', { ascending: true })
+
+    if (teamId) {
+      query = query.eq('team_id', teamId)
+    } else if (userId) {
+      query = query.eq('id', userId)
+    }
+
+    const { data } = await query
+    const nextMembers = (data ?? []).map((member) => ({
+      id: member.id,
+      name: member.full_name || t('deals.ownerFallback'),
+      avatarUrl: member.avatar_url ?? null,
+    }))
+    setMembers(nextMembers)
+  }, [supabase, t, teamId, userId])
+
+  useEffect(() => {
+    if (initialMembers.length > 0) return
     loadMembers()
-  }, [supabase, teamId, userId, t])
+  }, [initialMembers.length, loadMembers])
+
+  useEffect(() => {
+    if (!teamId) return
+
+    const channel = supabase
+      .channel(`deal-members-${teamId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'users', filter: `team_id=eq.${teamId}` },
+        () => {
+          loadMembers()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loadMembers, supabase, teamId])
 
   const memberMap = useMemo(
     () => new Map(members.map((member) => [member.id, member])),
@@ -164,15 +207,19 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
           const contactName = contactInfo?.data?.full_name ?? t('deals.newRecord')
           const company = contactInfo?.data?.company ?? t('common.unknown')
 
-          const ownerInfo = row.user_id
-            ? await supabase
-                .from('users')
-                .select('full_name, avatar_url')
-                .eq('id', row.user_id)
-                .single()
-            : null
+          const knownOwner = row.user_id ? memberMap.get(row.user_id) : undefined
+          let ownerName = knownOwner?.name ?? t('deals.ownerFallback')
+          let ownerAvatarUrl = knownOwner?.avatarUrl ?? null
 
-          const ownerName = ownerInfo?.data?.full_name ?? t('deals.ownerFallback')
+          if (row.user_id && !knownOwner) {
+            const ownerInfo = await supabase
+              .from('users')
+              .select('full_name, avatar_url')
+              .eq('id', row.user_id)
+              .single()
+            ownerName = ownerInfo?.data?.full_name ?? ownerName
+            ownerAvatarUrl = ownerInfo?.data?.avatar_url ?? ownerAvatarUrl
+          }
 
           setDeals(prev => {
             if (prev.some(deal => deal.id === row.id)) {
@@ -189,7 +236,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
               contactInitials: createInitials(contactName),
               ownerName,
               ownerInitials: createInitials(ownerName),
-              ownerAvatarUrl: ownerInfo?.data?.avatar_url ?? null,
+              ownerAvatarUrl,
               ownerId: row.user_id ?? null,
               updatedAt: row.updated_at ?? row.created_at ?? new Date().toISOString(),
               createdAt: row.created_at ?? row.updated_at ?? new Date().toISOString(),
@@ -237,7 +284,7 @@ export function DealsBoard({ initialDeals, teamId, userId }: DealsBoardProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase, teamId, userId, t])
+  }, [memberMap, supabase, teamId, t, userId])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 

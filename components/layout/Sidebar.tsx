@@ -1,15 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
+import { useUser } from '@/hooks'
+import { getFirstAllowedPath, resolveAllowedScreens, TeamScreenKey } from '@/lib/team/screen-access'
+import type { User } from '@/types'
 
 interface NavItem {
   label: string
   href: string
   icon: string
+  screenKey: TeamScreenKey
 }
 
 interface NavSection {
@@ -22,11 +26,14 @@ interface SidebarProps {
   onClose?: () => void
   collapsed?: boolean
   onToggleCollapsed?: () => void
+  initialUser?: User | null
 }
 
-export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: SidebarProps) {
+export function Sidebar({ onClose, collapsed = false, onToggleCollapsed, initialUser = null }: SidebarProps) {
   const pathname = usePathname()
   const { t } = useI18n()
+  const { user: profileFromStore, loading } = useUser()
+  const user = profileFromStore ?? (loading ? initialUser : null)
   const toggleCollapsed = () => onToggleCollapsed?.()
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     core: true,
@@ -37,19 +44,19 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
   })
 
   const itemMap = {
-    dashboard: { label: t('nav.dashboard'), href: '/dashboard', icon: 'dashboard' },
-    deals: { label: t('nav.deals'), href: '/deals', icon: 'database' },
-    contacts: { label: t('nav.contacts'), href: '/contacts', icon: 'group' },
-    products: { label: t('nav.products'), href: '/products', icon: 'inventory_2' },
-    proposals: { label: t('nav.proposals'), href: '/proposals', icon: 'description' },
-    templates: { label: t('nav.templates'), href: '/templates', icon: 'auto_awesome' },
-    sales: { label: t('nav.sales'), href: '/sales', icon: 'handshake' },
-    reports: { label: t('nav.reports'), href: '/reports', icon: 'bar_chart' },
-    analytics: { label: t('nav.analytics'), href: '/analytics', icon: 'analytics' },
-    notifications: { label: t('nav.notifications'), href: '/notifications', icon: 'notifications' },
-    webhooks: { label: t('nav.webhooks'), href: '/webhooks', icon: 'webhook' },
-    integrations: { label: t('nav.integrations'), href: '/integrations', icon: 'extension' },
-    settings: { label: t('nav.settings'), href: '/settings', icon: 'settings' },
+    dashboard: { label: t('nav.dashboard'), href: '/dashboard', icon: 'dashboard', screenKey: 'dashboard' },
+    deals: { label: t('nav.deals'), href: '/deals', icon: 'database', screenKey: 'deals' },
+    contacts: { label: t('nav.contacts'), href: '/contacts', icon: 'group', screenKey: 'contacts' },
+    products: { label: t('nav.products'), href: '/products', icon: 'inventory_2', screenKey: 'products' },
+    proposals: { label: t('nav.proposals'), href: '/proposals', icon: 'description', screenKey: 'proposals' },
+    templates: { label: t('nav.templates'), href: '/templates', icon: 'auto_awesome', screenKey: 'templates' },
+    sales: { label: t('nav.sales'), href: '/sales', icon: 'handshake', screenKey: 'sales' },
+    reports: { label: t('nav.reports'), href: '/reports', icon: 'bar_chart', screenKey: 'reports' },
+    analytics: { label: t('nav.analytics'), href: '/analytics', icon: 'analytics', screenKey: 'analytics' },
+    notifications: { label: t('nav.notifications'), href: '/notifications', icon: 'notifications', screenKey: 'notifications' },
+    webhooks: { label: t('nav.webhooks'), href: '/webhooks', icon: 'webhook', screenKey: 'webhooks' },
+    integrations: { label: t('nav.integrations'), href: '/integrations', icon: 'extension', screenKey: 'integrations' },
+    settings: { label: t('nav.settings'), href: '/settings', icon: 'settings', screenKey: 'settings' },
   } as const
 
   const navSections: NavSection[] = [
@@ -76,9 +83,32 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
   ]
 
   const utilityItems: NavItem[] = [
-    { label: t('nav.search'), href: '/search', icon: 'search' },
-    { label: t('nav.importExport'), href: '/reports/import-export', icon: 'swap_vert' },
+    { label: t('nav.search'), href: '/search', icon: 'search', screenKey: 'search' },
+    { label: t('nav.importExport'), href: '/reports/import-export', icon: 'swap_vert', screenKey: 'import_export' },
   ]
+
+  const allowedScreenSet = useMemo(() => {
+    if (!user) {
+      return new Set<TeamScreenKey>()
+    }
+    return new Set(resolveAllowedScreens(user?.allowed_screens))
+  }, [user])
+  const homeHref = useMemo(
+    () => (!user ? '/dashboard' : getFirstAllowedPath(user?.allowed_screens)),
+    [user]
+  )
+  const showLoadingSkeleton = loading && !user
+
+  const filteredNavSections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => allowedScreenSet.has(item.screenKey)),
+    }))
+    .filter((section) => section.items.length > 0)
+
+  const filteredUtilityItems = utilityItems.filter((item) => allowedScreenSet.has(item.screenKey))
+
+  const canCreateDeal = allowedScreenSet.has('deals')
 
   const toggleSection = (sectionId: string) => {
     setOpenSections((prev) => ({
@@ -101,7 +131,7 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
         )}
       >
         <Link
-          href="/dashboard"
+          href={homeHref}
           className={cn('flex items-center gap-3', collapsed && 'justify-center')}
           onClick={onClose}
         >
@@ -155,7 +185,14 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
 
       {/* Navigation */}
       <nav className={cn('flex-1 px-3 py-3 space-y-4', collapsed && 'px-2')}>
-        {navSections.map((section) => {
+        {showLoadingSkeleton && (
+          <div className="space-y-2 px-2 pt-2">
+            <div className="h-8 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
+            <div className="h-8 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
+            <div className="h-8 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
+          </div>
+        )}
+        {filteredNavSections.map((section) => {
           const sectionOpen = collapsed || openSections[section.id] !== false
           return (
             <div key={section.id} className="space-y-1">
@@ -221,7 +258,7 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
           )}
           {(collapsed || openSections.general !== false) && (
             <div id="sidebar-section-general" className="space-y-1">
-              {utilityItems.map((item) => {
+              {filteredUtilityItems.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
                 return (
                   <Link
@@ -250,20 +287,22 @@ export function Sidebar({ onClose, collapsed = false, onToggleCollapsed }: Sideb
       </nav>
 
       {/* Bottom Action Button */}
-      <div className={cn('p-3 border-t border-[#e7ebf4] dark:border-gray-800', collapsed && 'px-2')}>
-        <Link
-          href="/deals/new"
-          onClick={onClose}
-          title={collapsed ? t('sidebar.newRecord') : undefined}
-          className={cn(
-            'w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-lg py-2.5 font-bold text-sm transition-all shadow-lg shadow-primary/20',
-            collapsed && 'px-0'
-          )}
-        >
-          <span className="material-symbols-outlined text-sm">add</span>
-          {!collapsed && <span>{t('sidebar.newRecord')}</span>}
-        </Link>
-      </div>
+      {canCreateDeal && (
+        <div className={cn('p-3 border-t border-[#e7ebf4] dark:border-gray-800', collapsed && 'px-2')}>
+          <Link
+            href="/deals/new"
+            onClick={onClose}
+            title={collapsed ? t('sidebar.newRecord') : undefined}
+            className={cn(
+              'w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-lg py-2.5 font-bold text-sm transition-all shadow-lg shadow-primary/20',
+              collapsed && 'px-0'
+            )}
+          >
+            <span className="material-symbols-outlined text-sm">add</span>
+            {!collapsed && <span>{t('sidebar.newRecord')}</span>}
+          </Link>
+        </div>
+      )}
     </aside>
   )
 }

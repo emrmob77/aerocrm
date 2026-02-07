@@ -6,6 +6,8 @@ import { buildPublicProposalUrl } from '@/lib/proposals/link-utils'
 import { sanitizeProposalDesignSettings } from '@/lib/proposals/design-utils'
 import { ensureUserProfileAndTeam } from '@/lib/team/ensure-user-team'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database, Json } from '@/types/database'
 
 type DraftProposalPayload = {
   proposalId?: string | null
@@ -31,15 +33,15 @@ const createProposalVersion = async ({
   blocks,
   designSettings,
 }: {
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>
+  supabase: SupabaseClient<Database>
   proposalId: string
   teamId: string
   userId: string
   title: string
-  blocks: unknown
-  designSettings: ReturnType<typeof sanitizeProposalDesignSettings>
+  blocks: Json
+  designSettings: Json
 }) => {
-  const { data: version, error } = await (supabase as any)
+  const { data: version, error } = await supabase
     .from('proposal_versions')
     .insert({
       proposal_id: proposalId,
@@ -155,8 +157,8 @@ export const POST = withApiLogging(async (request: Request) => {
     contactId = newContact.id
   }
 
-  const blocks = payload.blocks ?? []
-  const designSettings = sanitizeProposalDesignSettings(payload.designSettings)
+  const blocks = (payload.blocks ?? []) as Json
+  const designSettings = sanitizeProposalDesignSettings(payload.designSettings) as Json
 
   if (payload.proposalId) {
     const { data: proposal, error: proposalError } = await supabase

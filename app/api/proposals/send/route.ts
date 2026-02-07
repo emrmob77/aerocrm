@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { dispatchWebhookEvent } from '@/lib/webhooks/dispatch'
 import { buildProposalDeliveryEmail, getProposalDefaults } from '@/lib/notifications/email-templates'
 import { sendTwilioMessage, getCredentialsFromEnv } from '@/lib/integrations/twilio'
-import type { TwilioCredentials } from '@/types/database'
+import type { Database, TwilioCredentials } from '@/types/database'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
 import { buildPublicProposalUrl } from '@/lib/proposals/link-utils'
 import { sanitizeProposalDesignSettings } from '@/lib/proposals/design-utils'
 import { ensureUserProfileAndTeam } from '@/lib/team/ensure-user-team'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { notifyInApp } from '@/lib/notifications/server'
 
 type SendProposalPayload = {
   title?: string
@@ -306,8 +308,9 @@ export const POST = withApiLogging(async (request: Request) => {
     }
 
     const proposalTitle = proposal.title ?? t('api.proposals.fallbackTitle')
-    await supabase.from('notifications').insert({
-      user_id: user.id,
+    await notifyInApp(supabase as unknown as SupabaseClient<Database>, {
+      userId: user.id,
+      category: 'proposals',
       type: method === 'link' ? 'proposal_link' : 'proposal_sent',
       title:
         method === 'link'
@@ -317,8 +320,7 @@ export const POST = withApiLogging(async (request: Request) => {
         method === 'link'
           ? t('api.proposals.notifications.linkCreatedMessage', { title: proposalTitle })
           : t('api.proposals.notifications.sentMessage', { title: proposalTitle }),
-      read: false,
-      action_url: `/proposals/${proposal.id}`,
+      actionUrl: `/proposals/${proposal.id}`,
       metadata: {
         proposal_id: proposal.id,
         status: finalStatus,

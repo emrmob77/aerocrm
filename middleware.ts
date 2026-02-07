@@ -21,6 +21,7 @@ const csrfBypassPrefixes = [
 
 const rateLimitBypassPrefixes = [
   '/api/stripe/webhook',
+  '/api/monitoring/usage',
 ]
 
 const isUnsafeMethod = (method: string) =>

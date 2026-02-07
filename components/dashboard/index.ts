@@ -1,4 +1,5 @@
 export { ActivityFeed } from './ActivityFeed'
+export { DashboardAutoRefresh } from './DashboardAutoRefresh'
 export { MetricsGrid } from './MetricsGrid'
 export { QuickActions } from './QuickActions'
 export { WebhookActivity } from './WebhookActivity'

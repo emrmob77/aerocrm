@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import DealDetailsClient from './DealDetailsClient'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import type { Database } from '@/types/database'
 import { normalizeStage } from '@/components/deals/stage-utils'
 import { getServerT } from '@/lib/i18n/server'
@@ -11,6 +12,7 @@ export const dynamic = 'force-dynamic'
 type DealRow = Database['public']['Tables']['deals']['Row']
 type ContactRow = Database['public']['Tables']['contacts']['Row']
 type UserRow = Database['public']['Tables']['users']['Row']
+type TeamMemberRow = Pick<UserRow, 'id' | 'full_name' | 'email' | 'role' | 'avatar_url' | 'allowed_screens'>
 type DealProductRow = Database['public']['Tables']['deal_products']['Row']
 type ProductRow = Database['public']['Tables']['products']['Row']
 type ProposalRow = Database['public']['Tables']['proposals']['Row']
@@ -77,34 +79,38 @@ export default async function DealDetailsPage({ params }: { params: { id: string
     )
   }
 
-  let contact: ContactRow | null = null
-  if (dealRow.contact_id) {
-    const { data: contactRow } = await supabase
-      .from('contacts')
-      .select('*')
-      .eq('id', dealRow.contact_id)
-      .maybeSingle()
-    contact = contactRow ?? null
-  }
+  const admin = (() => {
+    try {
+      return createSupabaseAdminClient()
+    } catch {
+      return null
+    }
+  })()
+  const membersClient = teamId && admin ? admin : supabase
 
-  let owner: UserRow | null = null
-  if (dealRow.user_id) {
-    const { data: ownerRow } = await supabase
-      .from('users')
-      .select('id, full_name, avatar_url, email, role, team_id, created_at, updated_at, language')
-      .eq('id', dealRow.user_id)
-      .maybeSingle()
-    owner = ownerRow ?? null
-  }
+  const contactPromise = dealRow.contact_id
+    ? supabase
+        .from('contacts')
+        .select('*')
+        .eq('id', dealRow.contact_id)
+        .maybeSingle()
+    : Promise.resolve({ data: null, error: null })
+  const ownerPromise = dealRow.user_id
+    ? membersClient
+        .from('users')
+        .select('id, full_name, avatar_url, email, role, allowed_screens')
+        .eq('id', dealRow.user_id)
+        .maybeSingle()
+    : Promise.resolve({ data: null, error: null })
 
   const contactsQuery = supabase
     .from('contacts')
     .select('id, full_name, email, phone, company, position, address, user_id, team_id, created_at, updated_at')
     .order('created_at', { ascending: false })
 
-  const membersQuery = supabase
+  const membersQuery = membersClient
     .from('users')
-    .select('id, full_name, avatar_url, email, role, team_id, created_at, updated_at')
+    .select('id, full_name, avatar_url, email, role, allowed_screens')
     .order('full_name', { ascending: true })
 
   const productsQuery = supabase
@@ -123,18 +129,74 @@ export default async function DealDetailsPage({ params }: { params: { id: string
     productsQuery.eq('team_id', user.id)
   }
 
-  const [contactsRes, membersRes, productsRes] = await Promise.all([
-    contactsQuery,
-    membersQuery,
-    productsQuery,
-  ])
-
-  const { data: dealProductRows } = await supabase
+  const dealProductsPromise = supabase
     .from('deal_products')
     .select('*')
     .eq('deal_id', params.id)
     .order('created_at', { ascending: false })
 
+  const proposalPromise = supabase
+    .from('proposals')
+    .select('id, title, status, created_at, updated_at, public_url, deal_id, contact_id, user_id, team_id, blocks, expires_at, signed_at, signature_data')
+    .eq('deal_id', params.id)
+    .order('created_at', { ascending: false })
+
+  const activityPromise = supabase
+    .from('activities')
+    .select('id, type, title, description, user_id, team_id, entity_type, entity_id, metadata, created_at')
+    .eq('entity_type', 'deal')
+    .eq('entity_id', params.id)
+    .order('created_at', { ascending: false })
+
+  const filePromise = supabaseDb
+    .from('deal_files')
+    .select('id, deal_id, name, file_path, file_size, mime_type, uploaded_by, created_at')
+    .eq('deal_id', params.id)
+    .order('created_at', { ascending: false })
+
+  const averagePromise = teamId
+    ? supabase
+        .from('deals')
+        .select('created_at, stage')
+        .eq('team_id', teamId)
+    : Promise.resolve({ data: null, error: null })
+
+  const [
+    contactRes,
+    ownerRes,
+    contactsRes,
+    membersRes,
+    productsRes,
+    dealProductsRes,
+    proposalRes,
+    activityRes,
+    fileRes,
+    averageRes,
+  ] = await Promise.all([
+    contactPromise,
+    ownerPromise,
+    contactsQuery,
+    membersQuery,
+    productsQuery,
+    dealProductsPromise,
+    proposalPromise,
+    activityPromise,
+    filePromise,
+    averagePromise,
+  ])
+
+  const contact = (contactRes.data ?? null) as ContactRow | null
+  let owner = (ownerRes.data ?? null) as TeamMemberRow | null
+  let teamMembers = (membersRes.data ?? []) as TeamMemberRow[]
+
+  if (!owner && dealRow.user_id) {
+    owner = teamMembers.find((member) => member.id === dealRow.user_id) ?? null
+  }
+  if (owner && !teamMembers.some((member) => member.id === owner.id)) {
+    teamMembers = [owner, ...teamMembers]
+  }
+
+  const dealProductRows = dealProductsRes.data ?? []
   const productIds = (dealProductRows ?? []).map((item) => item.product_id)
   let productMap = new Map<string, ProductRow>()
   if (productIds.length > 0) {
@@ -150,33 +212,9 @@ export default async function DealDetailsPage({ params }: { params: { id: string
     product: productMap.get(item.product_id) ?? null,
   })) as DealProductItem[]
 
-  const { data: proposalRows } = await supabase
-    .from('proposals')
-    .select('id, title, status, created_at, updated_at, public_url, deal_id, contact_id, user_id, team_id, blocks, expires_at, signed_at, signature_data')
-    .eq('deal_id', params.id)
-    .order('created_at', { ascending: false })
-
-  const { data: activityRows } = await supabase
-    .from('activities')
-    .select('id, type, title, description, user_id, team_id, entity_type, entity_id, metadata, created_at')
-    .eq('entity_type', 'deal')
-    .eq('entity_id', params.id)
-    .order('created_at', { ascending: false })
-
-  const { data: fileRows } = await supabaseDb
-    .from('deal_files')
-    .select('id, deal_id, name, file_path, file_size, mime_type, uploaded_by, created_at')
-    .eq('deal_id', params.id)
-    .order('created_at', { ascending: false })
-
   let averageDays: number | null = null
   if (teamId) {
-    const { data: averageRows } = await supabase
-      .from('deals')
-      .select('created_at, stage')
-      .eq('team_id', teamId)
-
-    const rows = averageRows ?? []
+    const rows = averageRes.data ?? []
     const openDeals = rows.filter((row) => {
       const stage = normalizeStage(row.stage)
       return stage !== 'won' && stage !== 'lost'
@@ -203,11 +241,11 @@ export default async function DealDetailsPage({ params }: { params: { id: string
       initialContact={contact}
       initialOwner={owner}
       initialDealProducts={dealProducts}
-      initialProposals={(proposalRows ?? []) as ProposalRow[]}
-      initialActivities={(activityRows ?? []) as ActivityRow[]}
-      initialFiles={(fileRows ?? []) as DealFileRow[]}
+      initialProposals={(proposalRes.data ?? []) as ProposalRow[]}
+      initialActivities={(activityRes.data ?? []) as ActivityRow[]}
+      initialFiles={(fileRes.data ?? []) as DealFileRow[]}
       initialContacts={(contactsRes.data ?? []) as ContactRow[]}
-      initialTeamMembers={(membersRes.data ?? []) as UserRow[]}
+      initialTeamMembers={teamMembers}
       initialProducts={(productsRes.data ?? []) as ProductRow[]}
       averageDays={averageDays}
     />

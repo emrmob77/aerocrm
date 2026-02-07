@@ -1,8 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
-import { ActivityFeed, MetricsGrid, QuickActions, WebhookActivity, mapActivityRow, type DashboardActivity } from '@/components/dashboard'
+import { ActivityFeed, DashboardAutoRefresh, MetricsGrid, QuickActions, WebhookActivity, mapActivityRow, type DashboardActivity } from '@/components/dashboard'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { buildDashboardMetrics } from '@/lib/dashboard/metrics'
+
+export const dynamic = 'force-dynamic'
 
 const quickActions = (t: (key: string) => string) => [
   { label: t('dashboard.quickActions.newDeal'), icon: 'add_task', href: '/deals/new' },
@@ -173,6 +175,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      <DashboardAutoRefresh teamId={teamId} userId={user?.id ?? null} />
       <div className="flex flex-col gap-1">
         <h2 className="text-3xl font-extrabold text-[#0d121c] dark:text-white tracking-tight">
           {greeting}, {displayName}!

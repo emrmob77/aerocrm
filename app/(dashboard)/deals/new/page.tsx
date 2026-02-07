@@ -72,14 +72,19 @@ export default function NewDealPage() {
       const teamId = profile?.team_id ?? null
 
       if (teamId) {
-        const { data: contactsData } = await supabase
-          .from('contacts')
-          .select('id, full_name, company, email')
-          .eq('team_id', teamId)
-          .order('created_at', { ascending: false })
+        const [contactsResult, membersResult] = await Promise.all([
+          supabase
+            .from('contacts')
+            .select('id, full_name, company, email')
+            .eq('team_id', teamId)
+            .order('created_at', { ascending: false }),
+          fetch('/api/team/members', { cache: 'no-store' })
+            .then((response) => response.json().catch(() => null))
+            .catch(() => null),
+        ])
 
         setContacts(
-          (contactsData ?? []).map((contact) => ({
+          (contactsResult.data ?? []).map((contact) => ({
             id: contact.id,
             name: contact.full_name,
             company: contact.company,
@@ -87,18 +92,27 @@ export default function NewDealPage() {
           }))
         )
 
-        const { data: membersData } = await supabase
-          .from('users')
-          .select('id, full_name, avatar_url')
-          .eq('team_id', teamId)
-          .order('full_name', { ascending: true })
-
-        const mappedMembers = (membersData ?? []).map((member) => ({
+        const apiMembers = (membersResult?.members ?? []) as Array<{
+          id: string
+          full_name: string
+          avatar_url: string | null
+        }>
+        const mappedMembers = apiMembers.map((member) => ({
           id: member.id,
           name: member.full_name,
           avatar: member.avatar_url,
         }))
-        setTeamMembers(mappedMembers)
+        if (mappedMembers.length > 0) {
+          setTeamMembers(mappedMembers)
+        } else {
+          setTeamMembers([
+            {
+              id: user.id,
+              name: profile?.full_name ?? user.email ?? t('header.userFallback'),
+              avatar: null,
+            },
+          ])
+        }
       } else {
         const { data: contactsData } = await supabase
           .from('contacts')

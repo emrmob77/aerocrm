@@ -57,7 +57,7 @@ export default function MonitoringSettingsPage() {
     }
 
     loadOverview()
-  }, [])
+  }, [t])
 
   const handleExport = async () => {
     setExporting(true)

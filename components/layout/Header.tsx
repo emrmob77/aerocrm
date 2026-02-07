@@ -11,6 +11,7 @@ import { useSupabase, useTeamPresence, useUser } from '@/hooks'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
 import { useI18n } from '@/lib/i18n'
 import { insertRealtimeNotification, updateRealtimeNotificationRead } from '@/lib/notifications/realtime-utils'
+import type { User } from '@/types'
 
 // Breadcrumb mapping
 const pageTitleKeys: Record<string, string> = {
@@ -31,6 +32,7 @@ const pageTitleKeys: Record<string, string> = {
 
 interface HeaderProps {
   onMenuClick?: () => void
+  initialUser?: User | null
 }
 
 type SearchResults = {
@@ -66,11 +68,12 @@ type SearchMetaItem = {
   name?: string
 }
 
-export function Header({ onMenuClick }: HeaderProps) {
+export function Header({ onMenuClick, initialUser = null }: HeaderProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { signOut } = useAuth()
-  const { user: profile, authUser } = useUser()
+  const { user: profileFromStore, authUser, loading } = useUser()
+  const profile = profileFromStore ?? (loading ? initialUser : null)
   const supabase = useSupabase()
   const { theme, setTheme } = useAppStore()
   const { t, locale, setLocale } = useI18n()
@@ -117,10 +120,11 @@ export function Header({ onMenuClick }: HeaderProps) {
     (authUser?.user_metadata?.picture as string | undefined) ||
     null
 
-  const roleLabel =
-    profile?.role === 'owner'
+  const roleLabel = !profile
+    ? ''
+    : profile.role === 'owner'
       ? t('header.roleOwner')
-      : profile?.role === 'admin'
+      : profile.role === 'admin'
         ? t('header.roleAdmin')
         : t('header.roleMember')
 
@@ -688,7 +692,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               <p className="text-sm font-bold text-[#0d121c] dark:text-white">
                 {displayName}
               </p>
-              <p className="text-xs text-[#48679d] dark:text-gray-400">
+              <p className="text-xs text-[#48679d] dark:text-gray-400 min-h-[16px]">
                 {roleLabel}
               </p>
             </div>

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { buildTeamInviteEmail } from '@/lib/notifications/email-templates'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
+import { canManageTeam } from '@/lib/team/member-permissions'
+import type { Database } from '@/types/database'
+import { notifyInApp } from '@/lib/notifications/server'
 
 const allowedRoles = ['admin', 'member', 'viewer']
 
@@ -19,22 +23,54 @@ const sendInviteEmail = async (params: { to: string; link: string; inviter: stri
 
   const template = buildTeamInviteEmail({ inviter: params.inviter, link: params.link, locale: params.locale })
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: [params.to],
-      subject: template.subject,
-      text: template.text,
-      html: template.html,
-    }),
-  })
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: [params.to],
+        subject: template.subject,
+        text: template.text,
+        html: template.html,
+      }),
+    })
 
-  return response.ok
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+const notifyInviteeIfKnownUser = async (params: {
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>
+  email: string
+  token: string
+  actorUserId: string
+  t: ReturnType<typeof getServerT>
+}) => {
+  const { data: invitee } = await params.supabase
+    .from('users')
+    .select('id')
+    .eq('email', params.email)
+    .maybeSingle()
+
+  if (!invitee?.id || invitee.id === params.actorUserId) {
+    return
+  }
+
+  await notifyInApp(params.supabase as unknown as SupabaseClient<Database>, {
+    userId: invitee.id,
+    category: 'system',
+    type: 'team_invite',
+    title: params.t('api.team.notifications.inviteTitle'),
+    message: params.t('api.team.notifications.inviteMessage'),
+    actionUrl: `/invite/${params.token}`,
+    metadata: { token: params.token },
+  })
 }
 
 export const GET = withApiLogging(async (_request: Request) => {
@@ -96,12 +132,16 @@ export const POST = withApiLogging(async (request: Request) => {
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('team_id, full_name')
+    .select('team_id, full_name, role')
     .eq('id', user.id)
     .maybeSingle()
 
   if (profileError || !profile?.team_id) {
     return NextResponse.json({ error: t('api.errors.teamMissing') }, { status: 400 })
+  }
+
+  if (!canManageTeam(profile.role)) {
+    return NextResponse.json({ error: t('api.errors.forbidden') }, { status: 403 })
   }
 
   const token = crypto.randomUUID()
@@ -127,12 +167,20 @@ export const POST = withApiLogging(async (request: Request) => {
 
   const origin = new URL(request.url).origin
   const inviteLink = buildInviteLink(origin, token)
-  await sendInviteEmail({
+  const emailDelivered = await sendInviteEmail({
     to: email,
     link: inviteLink,
     inviter: profile.full_name || t('api.team.inviteDefaultInviter'),
     locale,
   })
 
-  return NextResponse.json({ invite: data, inviteLink })
+  await notifyInviteeIfKnownUser({
+    supabase,
+    email,
+    token,
+    actorUserId: user.id,
+    t,
+  })
+
+  return NextResponse.json({ invite: data, inviteLink, emailDelivered })
 })

@@ -2,9 +2,27 @@
 
 import { useReportWebVitals } from 'next/web-vitals'
 
+type WindowWithVitalsCache = Window & {
+  __aeroReportedWebVitals?: Set<string>
+}
+
+const getVitalsCache = () => {
+  const globalWindow = window as WindowWithVitalsCache
+  if (!globalWindow.__aeroReportedWebVitals) {
+    globalWindow.__aeroReportedWebVitals = new Set<string>()
+  }
+  return globalWindow.__aeroReportedWebVitals
+}
+
 export function WebVitalsReporter() {
   useReportWebVitals((metric) => {
     if (typeof window === 'undefined') return
+    if (process.env.NODE_ENV !== 'production') return
+
+    const cache = getVitalsCache()
+    const dedupeKey = `${metric.id}:${metric.name}:${window.location.pathname}`
+    if (cache.has(dedupeKey)) return
+    cache.add(dedupeKey)
 
     const payload = {
       path: window.location.pathname,
