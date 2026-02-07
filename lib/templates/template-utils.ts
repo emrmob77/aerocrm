@@ -1,7 +1,7 @@
 export type TemplatePayload = {
   name?: string
-  description?: string
-  category?: string
+  description?: string | null
+  category?: string | null
   is_public?: boolean
   blocks?: unknown
 }
@@ -14,7 +14,7 @@ export type NormalizedTemplatePayload = {
   blocks: unknown[]
 }
 
-const toTrimmedOrNull = (value?: string) => {
+const toTrimmedOrNull = (value?: string | null) => {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : null

@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
-import type { PlanId } from '@/lib/billing/plans'
+import { normalizePlanId, type PlanId } from '@/lib/billing/plans'
 
 type BillingPlan = {
   id: PlanId
@@ -30,12 +31,15 @@ type BillingOverview = {
 }
 
 export default function BillingSettingsPage() {
-  const { t, formatNumber } = useI18n()
+  const searchParams = useSearchParams()
+  const { t, formatNumber, locale } = useI18n()
   const [overview, setOverview] = useState<BillingOverview | null>(null)
   const [loading, setLoading] = useState(true)
   const [busyPlan, setBusyPlan] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isMarketingIntent = searchParams.get('source') === 'marketing'
+  const pendingPlanId = isMarketingIntent ? normalizePlanId(searchParams.get('plan')) : null
 
   useEffect(() => {
     const loadOverview = async () => {
@@ -66,7 +70,12 @@ export default function BillingSettingsPage() {
       const response = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ price_id: plan.priceId, plan_id: plan.id }),
+        body: JSON.stringify({
+          price_id: plan.priceId,
+          plan_id: plan.id,
+          success_url: `${window.location.origin}/checkout/success`,
+          cancel_url: `${window.location.origin}/checkout/cancel`,
+        }),
       })
       const data = await response.json()
       if (!response.ok) {
@@ -108,6 +117,105 @@ export default function BillingSettingsPage() {
     )
   }
 
+  const pendingPlanName =
+    pendingPlanId && overview?.plans
+      ? overview.plans.find((plan) => plan.id === pendingPlanId)?.name ?? pendingPlanId
+      : null
+  const subscriptionStatus = (overview?.subscription?.status || '').toLowerCase()
+  const isConnected = overview?.status === 'connected'
+
+  const lifecycleCard = (() => {
+    if (!isConnected) {
+      return {
+        tone: 'border-slate-200 bg-slate-50 text-slate-700',
+        title:
+          locale === 'tr' ? 'Stripe bağlantısı tamamlanmamış' : 'Stripe connection is not completed',
+        description:
+          locale === 'tr'
+            ? 'Ödeme yaşam döngüsü durumları için önce Stripe entegrasyonunu bağlayın.'
+            : 'Connect Stripe integration first to manage payment lifecycle states.',
+        showPortal: false,
+        showRetry: false,
+        showPending: false,
+      }
+    }
+
+    if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') {
+      return {
+        tone: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+        title:
+          locale === 'tr'
+            ? subscriptionStatus === 'trialing'
+              ? 'Deneme süreci aktif'
+              : 'Abonelik aktif'
+            : subscriptionStatus === 'trialing'
+              ? 'Trial period is active'
+              : 'Subscription is active',
+        description:
+          locale === 'tr'
+            ? 'Ödeme tarafı sağlıklı görünüyor. Plan değişikliği veya kart yönetimi için Stripe Portal kullanabilirsiniz.'
+            : 'Billing looks healthy. Use Stripe Portal for plan changes or card management.',
+        showPortal: true,
+        showRetry: false,
+        showPending: false,
+      }
+    }
+
+    if (subscriptionStatus === 'past_due' || subscriptionStatus === 'unpaid') {
+      return {
+        tone: 'border-amber-200 bg-amber-50 text-amber-800',
+        title: locale === 'tr' ? 'Ödeme tekrar denemesi gerekiyor' : 'Payment retry is required',
+        description:
+          locale === 'tr'
+            ? 'Kart veya tahsilat sorunu nedeniyle ödeme tamamlanmamış olabilir. Retry sayfasından adımları takip edin.'
+            : 'Payment may have failed due to card or collection issues. Follow the steps on the retry page.',
+        showPortal: true,
+        showRetry: true,
+        showPending: false,
+      }
+    }
+
+    if (subscriptionStatus === 'incomplete' || subscriptionStatus === 'incomplete_expired') {
+      return {
+        tone: 'border-orange-200 bg-orange-50 text-orange-800',
+        title: locale === 'tr' ? 'Ödeme doğrulaması bekleniyor' : 'Payment verification is pending',
+        description:
+          locale === 'tr'
+            ? 'Banka doğrulaması veya ödeme onayı tamamlanmamış olabilir. Pending sayfasından durumu doğrulayın.'
+            : 'Bank verification or payment confirmation may still be pending. Check the pending page for next steps.',
+        showPortal: true,
+        showRetry: false,
+        showPending: true,
+      }
+    }
+
+    if (subscriptionStatus === 'canceled' || subscriptionStatus === 'cancelled') {
+      return {
+        tone: 'border-rose-200 bg-rose-50 text-rose-800',
+        title: locale === 'tr' ? 'Abonelik iptal edilmiş' : 'Subscription is canceled',
+        description:
+          locale === 'tr'
+            ? 'Devam etmek için yeni bir plan seçebilir veya Stripe Portal üzerinden yeniden etkinleştirme yapabilirsiniz.'
+            : 'Choose a new plan or reactivate from Stripe Portal to continue.',
+        showPortal: true,
+        showRetry: false,
+        showPending: false,
+      }
+    }
+
+    return {
+      tone: 'border-slate-200 bg-slate-50 text-slate-700',
+      title: locale === 'tr' ? 'Abonelik durumu izleniyor' : 'Subscription status is being monitored',
+      description:
+        locale === 'tr'
+          ? 'Ödeme yaşam döngüsü için Stripe Portal ve plan kartlarını kullanarak işlem yapabilirsiniz.'
+          : 'Use Stripe Portal and plan cards to manage billing lifecycle actions.',
+      showPortal: true,
+      showRetry: false,
+      showPending: false,
+    }
+  })()
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
@@ -120,6 +228,50 @@ export default function BillingSettingsPage() {
           {error}
         </div>
       )}
+
+      {pendingPlanId && overview?.planId !== pendingPlanId && (
+        <div className="rounded-lg border border-aero-blue-200 bg-aero-blue-50 px-4 py-3 text-sm text-aero-blue-800">
+          {locale === 'tr'
+            ? `Marketing sayfasında seçtiğiniz plan: ${pendingPlanName}. Bu planı aşağıdan devam ettirebilirsiniz.`
+            : `Selected plan from marketing: ${pendingPlanName}. Continue with this plan below.`}
+        </div>
+      )}
+
+      <div className={`rounded-lg border px-4 py-3 ${lifecycleCard.tone}`}>
+        <p className="text-sm font-semibold">{lifecycleCard.title}</p>
+        <p className="mt-1 text-sm">{lifecycleCard.description}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {lifecycleCard.showRetry && (
+            <Link href="/checkout/retry" className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+              {locale === 'tr' ? 'Retry adımlarını gör' : 'View retry steps'}
+            </Link>
+          )}
+          {lifecycleCard.showPending && (
+            <Link href="/checkout/pending" className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+              {locale === 'tr' ? 'Pending adımlarını gör' : 'View pending steps'}
+            </Link>
+          )}
+          {!isConnected && (
+            <Link href="/integrations/stripe" className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+              {locale === 'tr' ? 'Stripe ayarına git' : 'Open Stripe settings'}
+            </Link>
+          )}
+          {lifecycleCard.showPortal && (
+            <button
+              type="button"
+              onClick={openPortal}
+              disabled={portalLoading}
+              className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+            >
+              {portalLoading
+                ? t('billing.redirecting')
+                : locale === 'tr'
+                  ? 'Stripe Portal aç'
+                  : 'Open Stripe Portal'}
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('billing.usageTitle')}</h2>
@@ -198,7 +350,9 @@ export default function BillingSettingsPage() {
                 <div
                   key={plan.id}
                   className={`rounded-2xl border p-5 flex flex-col gap-4 ${
-                    plan.recommended
+                    pendingPlanId === plan.id && !isCurrent
+                      ? 'border-aero-blue-400 bg-aero-blue-50/70'
+                      : plan.recommended
                       ? 'border-primary bg-primary/5'
                       : 'border-[#e7ebf4] dark:border-gray-800'
                   }`}

@@ -8,6 +8,11 @@ export default function VerifyEmailPage() {
   const searchParams = useSearchParams()
   const { t } = useI18n()
   const email = searchParams.get('email')?.trim()
+  const plan = searchParams.get('plan')?.trim()
+  const loginHref = plan
+    ? `/login?redirect=${encodeURIComponent(`/settings/billing?source=marketing&plan=${plan}`)}`
+    : '/login'
+  const registerHref = plan ? `/register?plan=${plan}` : '/register'
 
   return (
     <div className="min-h-screen flex items-center justify-center p-8 bg-aero-slate-50 dark:bg-aero-slate-900">
@@ -54,13 +59,13 @@ export default function VerifyEmailPage() {
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
           <Link
-            href="/login"
+            href={loginHref}
             className="inline-flex items-center justify-center h-11 px-5 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors"
           >
             {t('auth.verifyPage.backToLogin')}
           </Link>
           <Link
-            href="/register"
+            href={registerHref}
             className="inline-flex items-center justify-center h-11 px-5 rounded-lg border border-aero-slate-200 dark:border-aero-slate-700 text-aero-slate-700 dark:text-aero-slate-200 font-semibold hover:border-primary/40 hover:text-primary transition-colors"
           >
             {t('auth.verifyPage.backToRegister')}

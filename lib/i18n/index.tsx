@@ -41,9 +41,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = locale
+  }, [locale])
 
+  useEffect(() => {
     fetch('/api/settings/language')
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.language && !hasManualLocaleChange.current) {
           const normalized = normalizeLocale(data.language)
@@ -53,7 +55,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => undefined)
-  }, [locale])
+  }, [])
 
   const setLocale = (next: Locale) => {
     hasManualLocaleChange.current = true

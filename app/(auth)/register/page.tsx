@@ -1,18 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useI18n } from '@/lib/i18n'
-import { planDefinitions, type PlanId } from '@/lib/billing/plans'
+import { normalizePlanId, planDefinitions, type PlanId } from '@/lib/billing/plans'
+import { trackMarketingEvent } from '@/lib/analytics/marketing-events'
 
 type Plan = PlanId
 
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { signUp, signInWithGoogle, loading: authLoading } = useAuth()
   const { t, get, formatNumber } = useI18n()
   const [selectedPlan, setSelectedPlan] = useState<Plan>('starter')
@@ -23,6 +25,22 @@ export default function RegisterPage() {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const rawPlan = searchParams.get('plan')
+    const nextPlan = normalizePlanId(rawPlan)
+    setSelectedPlan(nextPlan)
+
+    if (rawPlan) {
+      trackMarketingEvent(
+        {
+          path: `/funnel/flow/checkout_start_${nextPlan}`,
+          method: 'FUNNEL_FLOW',
+        },
+        { dedupeKey: `checkout-start:${nextPlan}` }
+      )
+    }
+  }, [searchParams])
 
   const getPasswordStrength = () => {
     if (password.length === 0) return { level: 0, text: '', color: '' }
@@ -64,7 +82,7 @@ export default function RegisterPage() {
     } else {
       toast.success(t('auth.register.success'))
       setIsLoading(false)
-      router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`)
+      router.push(`/verify-email?email=${encodeURIComponent(email.trim())}&plan=${selectedPlan}`)
     }
   }
 

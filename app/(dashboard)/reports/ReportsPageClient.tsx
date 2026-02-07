@@ -198,6 +198,13 @@ export default function ReportsPageClient({
           <p className="text-[#48679d] dark:text-gray-400 mt-1">{t('reports.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/reports/funnel"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-[#e7ebf4] dark:border-gray-700 text-[#0d121c] dark:text-white rounded-lg text-sm font-bold hover:border-primary/30 hover:text-primary transition-colors"
+          >
+            <span className="material-symbols-outlined text-lg">monitoring</span>
+            {locale === 'tr' ? 'Funnel' : 'Funnel'}
+          </Link>
           <div className="flex bg-white dark:bg-slate-800 border border-[#e7ebf4] dark:border-gray-700 rounded-lg p-1">
             {dateRanges.map((range) => (
               <button
