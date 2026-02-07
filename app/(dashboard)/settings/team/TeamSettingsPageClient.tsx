@@ -445,6 +445,18 @@ export default function TeamSettingsPageClient({
     }
     return base
   }
+  const handleCopyInviteLink = async (token: string) => {
+    const link = `${window.location.origin}/invite/${token}`
+    try {
+      if (!navigator?.clipboard) {
+        throw new Error('Clipboard API not available')
+      }
+      await navigator.clipboard.writeText(link)
+      toast.success(t('common.copied'))
+    } catch {
+      toast.error(t('common.copyFailed'))
+    }
+  }
 
   const openPermissionsModal = (member: MemberRow) => {
     setPermissionsMember(member)
@@ -1019,6 +1031,16 @@ export default function TeamSettingsPageClient({
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      {isTeamManager && row.type === 'invite' && (
+                        <button
+                          onClick={() => handleCopyInviteLink(row.token)}
+                          className="p-1.5 text-gray-400 hover:text-primary transition-colors"
+                          aria-label={t('common.copy')}
+                          title={t('common.copy')}
+                        >
+                          <span className="material-symbols-outlined text-xl">content_copy</span>
+                        </button>
+                      )}
                       {isTeamManager && row.type === 'invite' && row.status !== 'accepted' && (
                         <button
                           onClick={() => handleResendInvite(row.id)}

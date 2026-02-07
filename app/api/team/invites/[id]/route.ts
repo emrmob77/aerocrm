@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { buildTeamInviteEmail } from '@/lib/notifications/email-templates'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
 import { canManageTeam } from '@/lib/team/member-permissions'
 import type { Database } from '@/types/database'
 import { notifyInApp } from '@/lib/notifications/server'
+import { resolveRequestOrigin } from '@/lib/url/request-origin'
 
 const allowedRoles = ['admin', 'member', 'viewer']
 
@@ -66,7 +68,15 @@ const notifyInviteeIfKnownUser = async (params: {
   actorUserId: string
   t: ReturnType<typeof getServerT>
 }) => {
-  const { data: invitee } = await params.supabase
+  const lookupClient = (() => {
+    try {
+      return createSupabaseAdminClient()
+    } catch {
+      return params.supabase
+    }
+  })()
+
+  const { data: invitee } = await lookupClient
     .from('users')
     .select('id')
     .ilike('email', normalizeEmail(params.email))
@@ -167,7 +177,7 @@ export const PATCH = withApiLogging(async (request: Request, { params }: { param
     return NextResponse.json({ error: t('api.team.inviteUpdateFailed') }, { status: 400 })
   }
 
-  const origin = new URL(request.url).origin
+  const origin = resolveRequestOrigin(request)
   const inviteLink = buildInviteLink(origin, token)
   const emailDelivery = await sendInviteEmail({
     to: updated.email,

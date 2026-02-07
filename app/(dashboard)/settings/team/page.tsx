@@ -5,6 +5,7 @@ import TeamSettingsPageClient, {
   type MemberRow,
 } from './TeamSettingsPageClient'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,8 +70,10 @@ const mapMembers = (rows: MemberQueryRow[]): MemberRow[] =>
     allowedScreens: row.allowed_screens ?? null,
   }))
 
-const mapInvites = (rows: InviteQueryRow[]): InviteRow[] =>
-  dedupeVisibleInvites(rows).map((row) => ({
+const mapInvites = (rows: InviteQueryRow[], memberEmails: Set<string>): InviteRow[] =>
+  dedupeVisibleInvites(rows)
+    .filter((row) => !memberEmails.has(normalizeEmail(row.email)))
+    .map((row) => ({
     id: row.id,
     email: row.email,
     role: row.role,
@@ -95,6 +98,13 @@ const mapDeals = (rows: DealQueryRow[]): DealRow[] =>
 
 export default async function TeamSettingsPage() {
   const supabase = await createServerSupabaseClient()
+  const dataClient = (() => {
+    try {
+      return createSupabaseAdminClient()
+    } catch {
+      return supabase
+    }
+  })()
   const {
     data: { user: authUser },
   } = await supabase.auth.getUser()
@@ -103,7 +113,7 @@ export default async function TeamSettingsPage() {
     redirect('/login')
   }
 
-  const { data: profile } = await supabase
+  const { data: profile } = await dataClient
     .from('users')
     .select('id, role, team_id')
     .eq('id', authUser.id)
@@ -132,17 +142,17 @@ export default async function TeamSettingsPage() {
   }
 
   const [membersResult, invitesResult, dealsResult] = await Promise.all([
-    supabase
+    dataClient
       .from('users')
       .select('id, full_name, email, role, avatar_url, allowed_screens')
       .eq('team_id', teamId)
       .order('full_name', { ascending: true }),
-    supabase
+    dataClient
       .from('team_invites')
       .select('id, email, role, status, token, created_at, expires_at')
       .eq('team_id', teamId)
       .order('created_at', { ascending: false }),
-    supabase
+    dataClient
       .from('deals')
       .select('id, title, value, stage, user_id, contact:contacts(full_name)')
       .eq('team_id', teamId)
@@ -150,7 +160,8 @@ export default async function TeamSettingsPage() {
   ])
 
   const initialMembers = mapMembers((membersResult.data ?? []) as MemberQueryRow[])
-  const initialInvites = mapInvites((invitesResult.data ?? []) as InviteQueryRow[])
+  const memberEmailSet = new Set(initialMembers.map((member) => normalizeEmail(member.email)))
+  const initialInvites = mapInvites((invitesResult.data ?? []) as InviteQueryRow[], memberEmailSet)
   const initialDeals = mapDeals((dealsResult.data ?? []) as DealQueryRow[])
 
   return (

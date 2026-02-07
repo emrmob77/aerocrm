@@ -1,17 +1,46 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { useUser } from '@/hooks'
+import { getSupabaseClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n'
 
 export default function InviteAcceptPage({ params }: { params: { token: string } }) {
   const { t } = useI18n()
   const router = useRouter()
-  const { authUser, loading } = useUser()
+  const [authState, setAuthState] = useState<'authenticated' | 'unauthenticated'>('unauthenticated')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    let isMounted = true
+    const supabase = getSupabaseClient()
+
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!isMounted) return
+      setAuthState(user ? 'authenticated' : 'unauthenticated')
+    }
+
+    loadUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return
+      if (session?.user) {
+        setAuthState('authenticated')
+        return
+      }
+      setAuthState((current) => (current === 'authenticated' ? 'authenticated' : 'unauthenticated'))
+    })
+
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
 
   const handleAccept = async () => {
     if (isSubmitting) return
@@ -48,9 +77,7 @@ export default function InviteAcceptPage({ params }: { params: { token: string }
           {t('invite.subtitle')}
         </p>
 
-        {loading ? (
-          <p className="text-sm text-gray-500">{t('invite.checking')}</p>
-        ) : authUser ? (
+        {authState === 'authenticated' ? (
           <button
             onClick={handleAccept}
             disabled={isSubmitting}
@@ -62,7 +89,7 @@ export default function InviteAcceptPage({ params }: { params: { token: string }
           <div className="space-y-3">
             <p className="text-sm text-gray-500">{t('invite.loginPrompt')}</p>
             <Link
-              href="/login"
+              href={`/login?redirect=${encodeURIComponent(`/invite/${params.token}`)}`}
               className="inline-flex w-full justify-center h-11 items-center rounded-lg border border-[#e7ebf4] text-sm font-bold text-[#0d121c] hover:bg-gray-50"
             >
               {t('invite.login')}
