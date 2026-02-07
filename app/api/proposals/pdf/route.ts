@@ -34,6 +34,7 @@ export const GET = withApiLogging(async (request: Request) => {
     .from('proposals')
     .select('id, title, status, public_url, signed_at, signature_data, blocks, contact:contacts(full_name)')
     .like('public_url', `%/p/${slug}`)
+    .is('deleted_at', null)
     .maybeSingle()
 
   if (error || !proposal?.id) {

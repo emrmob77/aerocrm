@@ -1,6 +1,7 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { messages, type Locale } from './messages'
 import { getNestedValue, interpolateMessage, localeFormatMap, normalizeLocale } from './utils'
 
@@ -23,23 +24,28 @@ const readCookie = (name: string) => {
   return match ? decodeURIComponent(match[1]) : null
 }
 
+const getInitialLocale = (): Locale => {
+  if (typeof window === 'undefined') return 'tr'
+
+  const cookieLocale = readCookie(LOCALE_STORAGE_KEY)
+  const stored = localStorage.getItem(LOCALE_STORAGE_KEY)
+  const htmlLang = document.documentElement.lang
+
+  return normalizeLocale(cookieLocale || stored || htmlLang || null)
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('tr')
+  const router = useRouter()
+  const [locale, setLocaleState] = useState<Locale>(getInitialLocale)
+  const hasManualLocaleChange = useRef(false)
 
   useEffect(() => {
-    const cookieLocale = readCookie(LOCALE_STORAGE_KEY)
-    const stored = typeof window !== 'undefined' ? localStorage.getItem(LOCALE_STORAGE_KEY) : null
-    const initial = cookieLocale || stored
-    if (initial) {
-      const normalized = normalizeLocale(initial)
-      setLocaleState(normalized)
-      document.documentElement.lang = normalized
-    }
+    document.documentElement.lang = locale
 
     fetch('/api/settings/language')
       .then((res) => res.json())
       .then((data) => {
-        if (data?.language) {
+        if (data?.language && !hasManualLocaleChange.current) {
           const normalized = normalizeLocale(data.language)
           setLocaleState(normalized)
           localStorage.setItem(LOCALE_STORAGE_KEY, normalized)
@@ -47,15 +53,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => undefined)
-  }, [])
+  }, [locale])
 
   const setLocale = (next: Locale) => {
+    hasManualLocaleChange.current = true
     setLocaleState(next)
     if (typeof window !== 'undefined') {
       localStorage.setItem(LOCALE_STORAGE_KEY, next)
       document.cookie = `${LOCALE_STORAGE_KEY}=${next}; path=/; max-age=31536000`
       document.documentElement.lang = next
     }
+    router.refresh()
     fetch('/api/settings/language', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

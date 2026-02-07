@@ -161,6 +161,7 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
     .from('proposals')
     .select('id, title, blocks, design_settings, status, public_url, expires_at, contact:contacts(full_name)')
     .like('public_url', `%/p/${slug}`)
+    .is('deleted_at', null)
     .maybeSingle()
 
   if (error || !proposal) {

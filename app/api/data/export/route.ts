@@ -146,6 +146,7 @@ export const GET = withApiLogging(async (request: Request) => {
       .from('proposals')
       .select('title, status, expires_at, signed_at, created_at, deal_id, contact:contacts(full_name, email)')
       .eq('team_id', profile.team_id)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
     headers = [

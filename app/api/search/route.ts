@@ -133,6 +133,7 @@ export const POST = withApiLogging(async (request: Request) => {
     let proposalsQuery = supabase
       .from('proposals')
       .select('id, title, status, updated_at, contact:contacts(full_name)')
+      .is('deleted_at', null)
       .order('updated_at', { ascending: false })
       .limit(20)
       .or(`title.ilike.${like}`)

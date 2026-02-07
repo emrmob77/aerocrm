@@ -25,6 +25,7 @@ export const POST = withApiLogging(async (request: Request) => {
     .from('proposals')
     .select('id, status, public_url, title, user_id, team_id')
     .like('public_url', `%/p/${slug}`)
+    .is('deleted_at', null)
     .maybeSingle()
 
   if (!proposal?.id) {

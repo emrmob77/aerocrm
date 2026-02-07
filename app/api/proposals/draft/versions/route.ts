@@ -126,6 +126,7 @@ export const POST = withApiLogging(async (request: Request) => {
     })
     .eq('id', version.proposal_id)
     .eq('team_id', teamId)
+    .is('deleted_at', null)
     .select('id, title, blocks, design_settings')
     .single()
 

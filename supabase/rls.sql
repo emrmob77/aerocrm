@@ -22,24 +22,38 @@ ALTER TABLE templates ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public read proposals" ON proposals;
 CREATE POLICY "Public read proposals" ON proposals
-FOR SELECT
-USING (public_url IS NOT NULL);
+FOR SELECT TO anon, authenticated
+USING (
+  public_url IS NOT NULL
+  AND public_url LIKE '%/p/%'
+  AND deleted_at IS NULL
+);
 
 DROP POLICY IF EXISTS "Public update proposals" ON proposals;
 CREATE POLICY "Public update proposals" ON proposals
-FOR UPDATE
-USING (public_url IS NOT NULL)
-WITH CHECK (public_url IS NOT NULL);
+FOR UPDATE TO anon, authenticated
+USING (
+  public_url IS NOT NULL
+  AND public_url LIKE '%/p/%'
+  AND deleted_at IS NULL
+)
+WITH CHECK (
+  public_url IS NOT NULL
+  AND public_url LIKE '%/p/%'
+  AND deleted_at IS NULL
+);
 
 DROP POLICY IF EXISTS "Public insert proposal views" ON proposal_views;
 CREATE POLICY "Public insert proposal views" ON proposal_views
-FOR INSERT
+FOR INSERT TO anon, authenticated
 WITH CHECK (
   EXISTS (
     SELECT 1
     FROM proposals p
     WHERE p.id = proposal_id
       AND p.public_url IS NOT NULL
+      AND p.public_url LIKE '%/p/%'
+      AND p.deleted_at IS NULL
   )
 );
 

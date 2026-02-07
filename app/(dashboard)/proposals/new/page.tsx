@@ -1043,6 +1043,7 @@ export default function ProposalEditorPage() {
         .from('proposals')
         .select('id, title, blocks, design_settings, public_url, contacts(full_name, company, email, phone)')
         .eq('id', proposalId)
+        .is('deleted_at', null)
         .maybeSingle()
 
       if (error || !data) {

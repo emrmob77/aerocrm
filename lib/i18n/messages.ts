@@ -289,6 +289,10 @@ export const messages = {
         titleRequired: 'Teklif başlığı zorunludur.',
         saveFailed: 'Teklif kaydedilemedi.',
         notFound: 'Teklif bulunamadı.',
+        trashMoveFailed: 'Teklif çöpe taşınamadı.',
+        restoreFailed: 'Teklif geri yüklenemedi.',
+        permanentDeleteFailed: 'Teklif kalıcı olarak silinemedi.',
+        notInTrash: 'Teklif çöp kutusunda değil.',
         contactCreateFailed: 'Kişi oluşturulamadı.',
         draftUpdateFailed: 'Taslak güncellenemedi.',
         draftCreateFailed: 'Taslak kaydedilemedi.',
@@ -1336,6 +1340,18 @@ export const messages = {
       actions: {
         new: 'Yeni Teklif',
         view: 'Görüntüle',
+        trash: 'Çöpe Taşı',
+        trashBin: 'Çöp Kutusu',
+        restore: 'Geri Yükle',
+        deletePermanently: 'Kalıcı Olarak Sil',
+        backToList: 'Listeye Dön',
+      },
+      filters: {
+        searchPlaceholder: 'Teklif başlığına göre ara...',
+        statusLabel: 'Durum',
+        statusAll: 'Tüm durumlar',
+        apply: 'Uygula',
+        reset: 'Sıfırla',
       },
       table: {
         title: 'Teklif',
@@ -1343,7 +1359,8 @@ export const messages = {
         value: 'Değer',
         status: 'Durum',
         date: 'Tarih',
-        actions: 'Eylemler',
+        deletedAt: 'Silinme Tarihi',
+        actions: 'İşlemler',
       },
       status: {
         signed: 'İmzalandı',
@@ -1359,6 +1376,26 @@ export const messages = {
         signed: 'İmzalanan',
         pending: 'Bekleyen',
         totalValue: 'Toplam Değer',
+        inTrash: 'Çöp Kutusundaki',
+      },
+      emptyActive: 'Aktif teklif bulunmuyor.',
+      trash: {
+        title: 'Teklif Çöp Kutusu',
+        subtitle: 'Silinen teklifleri geri yükleyin veya kalıcı olarak kaldırın.',
+        empty: 'Çöp kutusunda teklif yok.',
+      },
+      confirm: {
+        trash: 'Bu teklifi çöp kutusuna taşımak istediğinizden emin misiniz?',
+        restore: 'Bu teklifi geri yüklemek istiyor musunuz?',
+        permanentDelete: 'Bu teklif kalıcı olarak silinecek. Devam etmek istiyor musunuz?',
+      },
+      toasts: {
+        trashed: 'Teklif çöp kutusuna taşındı.',
+        restored: 'Teklif geri yüklendi.',
+        permanentlyDeleted: 'Teklif kalıcı olarak silindi.',
+        trashFailed: 'Teklif çöpe taşınamadı.',
+        restoreFailed: 'Teklif geri yüklenemedi.',
+        permanentDeleteFailed: 'Teklif kalıcı olarak silinemedi.',
       },
       samples: {
         0: {
@@ -3126,6 +3163,10 @@ export const messages = {
         titleRequired: 'Proposal title is required.',
         saveFailed: 'Proposal could not be saved.',
         notFound: 'Proposal not found.',
+        trashMoveFailed: 'Proposal could not be moved to trash.',
+        restoreFailed: 'Proposal could not be restored.',
+        permanentDeleteFailed: 'Proposal could not be permanently deleted.',
+        notInTrash: 'Proposal is not in the recycle bin.',
         contactCreateFailed: 'Contact could not be created.',
         draftUpdateFailed: 'Draft could not be updated.',
         draftCreateFailed: 'Draft could not be saved.',
@@ -4173,6 +4214,18 @@ export const messages = {
       actions: {
         new: 'New Proposal',
         view: 'View',
+        trash: 'Move to Trash',
+        trashBin: 'Recycle Bin',
+        restore: 'Restore',
+        deletePermanently: 'Delete Permanently',
+        backToList: 'Back to List',
+      },
+      filters: {
+        searchPlaceholder: 'Search by proposal title...',
+        statusLabel: 'Status',
+        statusAll: 'All Statuses',
+        apply: 'Apply',
+        reset: 'Reset',
       },
       table: {
         title: 'Proposal',
@@ -4180,6 +4233,7 @@ export const messages = {
         value: 'Value',
         status: 'Status',
         date: 'Date',
+        deletedAt: 'Deleted At',
         actions: 'Actions',
       },
       status: {
@@ -4196,6 +4250,26 @@ export const messages = {
         signed: 'Signed',
         pending: 'Pending',
         totalValue: 'Total Value',
+        inTrash: 'In Recycle Bin',
+      },
+      emptyActive: 'No active proposals found.',
+      trash: {
+        title: 'Proposal Recycle Bin',
+        subtitle: 'Restore deleted proposals or remove them permanently.',
+        empty: 'No proposals in trash.',
+      },
+      confirm: {
+        trash: 'Are you sure you want to move this proposal to trash?',
+        restore: 'Are you sure you want to restore this proposal?',
+        permanentDelete: 'This will permanently delete the proposal and cannot be undone. Continue?',
+      },
+      toasts: {
+        trashed: 'Proposal moved to trash.',
+        restored: 'Proposal restored.',
+        permanentlyDeleted: 'Proposal permanently deleted.',
+        trashFailed: 'Proposal could not be moved to trash.',
+        restoreFailed: 'Proposal could not be restored.',
+        permanentDeleteFailed: 'Proposal could not be permanently deleted.',
       },
       samples: {
         0: {

@@ -172,6 +172,7 @@ export const POST = withApiLogging(async (request: Request) => {
       })
       .eq('id', payload.proposalId)
       .eq('team_id', teamId)
+      .is('deleted_at', null)
       .select('id, public_url')
       .single()
 
