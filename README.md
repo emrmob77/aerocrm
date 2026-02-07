@@ -86,6 +86,7 @@ aerocrm/
 - [Görev Listesi](./tasks.md)
 - [UI/UX Dokümantasyonu](./aero-crm-uiux-documentation.md)
 - [Marketing + Satın Alma Sprint Planı](./docs/marketing-purchase-sprint-plan.md)
+- [Pricing Paket Stratejisi](./docs/pricing-package-strategy.md)
 
 ## 🧪 Test
 

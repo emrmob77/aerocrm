@@ -111,6 +111,8 @@ export const POST = withApiLogging(async (request: Request) => {
     const { data: updatedUser, error: userError } = await admin
       .from('users')
       .update({
+        email: normalizeEmail(user.email) || normalizeEmail(invite.email),
+        full_name: displayName,
         team_id: invite.team_id,
         role: invite.role,
       })
@@ -145,6 +147,7 @@ export const POST = withApiLogging(async (request: Request) => {
         invite_id: invite.id,
         accepted_by: user.id,
       },
+      respectPreferences: false,
     })
   }
 

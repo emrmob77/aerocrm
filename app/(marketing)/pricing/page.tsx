@@ -42,7 +42,7 @@ export default function PricingPage() {
         <p className="mx-auto max-w-2xl text-aero-slate-600">{copy.pricing.subtitle}</p>
       </section>
 
-      <section className="grid gap-5 md:grid-cols-2">
+      <section className="grid gap-5 md:grid-cols-3">
         {copy.pricing.plans.map((plan) => (
           <article
             key={plan.id}
@@ -94,16 +94,22 @@ export default function PricingPage() {
             <thead>
               <tr className="border-b border-aero-slate-200 text-aero-slate-500">
                 <th className="px-3 py-2 font-semibold">{isTr ? 'Özellik' : 'Feature'}</th>
-                <th className="px-3 py-2 font-semibold">Solo</th>
-                <th className="px-3 py-2 font-semibold">Pro</th>
+                {copy.pricing.plans.map((plan) => (
+                  <th key={plan.id} className="px-3 py-2 font-semibold">
+                    {plan.name}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {copy.pricing.compareRows.map((row) => (
                 <tr key={row.label} className="border-b border-aero-slate-100">
                   <td className="px-3 py-2 font-semibold text-aero-slate-700">{row.label}</td>
-                  <td className="px-3 py-2 text-aero-slate-600">{row.solo}</td>
-                  <td className="px-3 py-2 text-aero-slate-600">{row.pro}</td>
+                  {copy.pricing.plans.map((plan) => (
+                    <td key={`${row.label}-${plan.id}`} className="px-3 py-2 text-aero-slate-600">
+                      {row.values[plan.id] || '-'}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>

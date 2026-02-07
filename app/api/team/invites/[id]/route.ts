@@ -14,11 +14,16 @@ const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() ||
 
 const buildInviteLink = (origin: string, token: string) => `${origin}/invite/${token}`
 
+type InviteEmailResult = {
+  delivered: boolean
+  reason?: 'missing_config' | 'provider_error'
+}
+
 const sendInviteEmail = async (params: { to: string; link: string; inviter: string; locale?: 'tr' | 'en' }) => {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.RESEND_FROM_EMAIL
   if (!apiKey || !from) {
-    return false
+    return { delivered: false, reason: 'missing_config' } satisfies InviteEmailResult
   }
 
   const template = buildTeamInviteEmail({
@@ -44,9 +49,13 @@ const sendInviteEmail = async (params: { to: string; link: string; inviter: stri
       }),
     })
 
-    return response.ok
+    if (response.ok) {
+      return { delivered: true } satisfies InviteEmailResult
+    }
+
+    return { delivered: false, reason: 'provider_error' } satisfies InviteEmailResult
   } catch {
-    return false
+    return { delivered: false, reason: 'provider_error' } satisfies InviteEmailResult
   }
 }
 
@@ -60,7 +69,9 @@ const notifyInviteeIfKnownUser = async (params: {
   const { data: invitee } = await params.supabase
     .from('users')
     .select('id')
-    .eq('email', params.email)
+    .ilike('email', normalizeEmail(params.email))
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   if (!invitee?.id || invitee.id === params.actorUserId) {
@@ -75,6 +86,7 @@ const notifyInviteeIfKnownUser = async (params: {
     message: params.t('api.team.notifications.inviteMessage'),
     actionUrl: `/invite/${params.token}`,
     metadata: { token: params.token },
+    respectPreferences: false,
   })
 }
 
@@ -157,7 +169,7 @@ export const PATCH = withApiLogging(async (request: Request, { params }: { param
 
   const origin = new URL(request.url).origin
   const inviteLink = buildInviteLink(origin, token)
-  const emailDelivered = await sendInviteEmail({
+  const emailDelivery = await sendInviteEmail({
     to: updated.email,
     link: inviteLink,
     inviter: profile.full_name || t('api.team.inviteDefaultInviter'),
@@ -172,7 +184,12 @@ export const PATCH = withApiLogging(async (request: Request, { params }: { param
     t,
   })
 
-  return NextResponse.json({ invite: updated, inviteLink, emailDelivered })
+  return NextResponse.json({
+    invite: updated,
+    inviteLink,
+    emailDelivered: emailDelivery.delivered,
+    emailErrorReason: emailDelivery.reason ?? null,
+  })
 })
 
 export const DELETE = withApiLogging(async (_: Request, { params }: { params: { id: string } }) => {

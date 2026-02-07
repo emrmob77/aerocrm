@@ -14,11 +14,50 @@ const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() ||
 
 const buildInviteLink = (origin: string, token: string) => `${origin}/invite/${token}`
 
+type InviteEmailResult = {
+  delivered: boolean
+  reason?: 'missing_config' | 'provider_error'
+}
+
+type InviteListRow = {
+  id: string
+  email: string
+  role: string
+  status: string
+  token: string
+  created_at: string
+  expires_at: string | null
+}
+
+const createdAtMs = (value: string | null | undefined) => {
+  if (!value) return 0
+  const parsed = new Date(value).getTime()
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+const dedupeVisibleInvites = (rows: InviteListRow[]) => {
+  const latestByEmail = new Map<string, InviteListRow>()
+
+  rows.forEach((row) => {
+    if (row.status === 'revoked') {
+      return
+    }
+
+    const key = normalizeEmail(row.email)
+    const existing = latestByEmail.get(key)
+    if (!existing || createdAtMs(row.created_at) > createdAtMs(existing.created_at)) {
+      latestByEmail.set(key, row)
+    }
+  })
+
+  return Array.from(latestByEmail.values()).sort((a, b) => createdAtMs(b.created_at) - createdAtMs(a.created_at))
+}
+
 const sendInviteEmail = async (params: { to: string; link: string; inviter: string; locale?: 'tr' | 'en' }) => {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.RESEND_FROM_EMAIL
   if (!apiKey || !from) {
-    return false
+    return { delivered: false, reason: 'missing_config' } satisfies InviteEmailResult
   }
 
   const template = buildTeamInviteEmail({ inviter: params.inviter, link: params.link, locale: params.locale })
@@ -39,9 +78,13 @@ const sendInviteEmail = async (params: { to: string; link: string; inviter: stri
       }),
     })
 
-    return response.ok
+    if (response.ok) {
+      return { delivered: true } satisfies InviteEmailResult
+    }
+
+    return { delivered: false, reason: 'provider_error' } satisfies InviteEmailResult
   } catch {
-    return false
+    return { delivered: false, reason: 'provider_error' } satisfies InviteEmailResult
   }
 }
 
@@ -55,7 +98,9 @@ const notifyInviteeIfKnownUser = async (params: {
   const { data: invitee } = await params.supabase
     .from('users')
     .select('id')
-    .eq('email', params.email)
+    .ilike('email', normalizeEmail(params.email))
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   if (!invitee?.id || invitee.id === params.actorUserId) {
@@ -70,6 +115,7 @@ const notifyInviteeIfKnownUser = async (params: {
     message: params.t('api.team.notifications.inviteMessage'),
     actionUrl: `/invite/${params.token}`,
     metadata: { token: params.token },
+    respectPreferences: false,
   })
 }
 
@@ -105,7 +151,7 @@ export const GET = withApiLogging(async (_request: Request) => {
     return NextResponse.json({ error: t('api.team.invitesFetchFailed') }, { status: 400 })
   }
 
-  return NextResponse.json({ invites: data ?? [] })
+  return NextResponse.json({ invites: dedupeVisibleInvites((data ?? []) as InviteListRow[]) })
 })
 
 export const POST = withApiLogging(async (request: Request) => {
@@ -147,19 +193,53 @@ export const POST = withApiLogging(async (request: Request) => {
   const token = crypto.randomUUID()
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
-  const { data, error } = await supabase
+  const { data: acceptedInvite } = await supabase
     .from('team_invites')
-    .insert({
-      team_id: profile.team_id,
-      email,
-      role,
-      token,
-      invited_by: user.id,
-      status: 'pending',
-      expires_at: expiresAt,
-    })
-    .select('id, email, role, status, token, created_at, expires_at')
-    .single()
+    .select('id')
+    .eq('team_id', profile.team_id)
+    .ilike('email', email)
+    .eq('status', 'accepted')
+    .limit(1)
+    .maybeSingle()
+
+  if (acceptedInvite?.id) {
+    return NextResponse.json({ error: t('api.team.inviteAlreadyAccepted') }, { status: 400 })
+  }
+
+  const { data: existingInvite } = await supabase
+    .from('team_invites')
+    .select('id, status')
+    .eq('team_id', profile.team_id)
+    .ilike('email', email)
+    .in('status', ['pending', 'revoked'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const inviteMutation = existingInvite
+    ? supabase
+        .from('team_invites')
+        .update({
+          role,
+          token,
+          invited_by: user.id,
+          status: 'pending',
+          expires_at: expiresAt,
+          accepted_at: null,
+        })
+        .eq('id', existingInvite.id)
+        .eq('team_id', profile.team_id)
+    : supabase.from('team_invites').insert({
+        team_id: profile.team_id,
+        email,
+        role,
+        token,
+        invited_by: user.id,
+        status: 'pending',
+        expires_at: expiresAt,
+      })
+
+  const { data, error } = await inviteMutation.select('id, email, role, status, token, created_at, expires_at').single()
 
   if (error || !data) {
     return NextResponse.json({ error: t('api.team.inviteCreateFailed') }, { status: 400 })
@@ -167,7 +247,7 @@ export const POST = withApiLogging(async (request: Request) => {
 
   const origin = new URL(request.url).origin
   const inviteLink = buildInviteLink(origin, token)
-  const emailDelivered = await sendInviteEmail({
+  const emailDelivery = await sendInviteEmail({
     to: email,
     link: inviteLink,
     inviter: profile.full_name || t('api.team.inviteDefaultInviter'),
@@ -182,5 +262,10 @@ export const POST = withApiLogging(async (request: Request) => {
     t,
   })
 
-  return NextResponse.json({ invite: data, inviteLink, emailDelivered })
+  return NextResponse.json({
+    invite: data,
+    inviteLink,
+    emailDelivered: emailDelivery.delivered,
+    emailErrorReason: emailDelivery.reason ?? null,
+  })
 })

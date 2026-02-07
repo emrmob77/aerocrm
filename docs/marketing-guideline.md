@@ -31,6 +31,14 @@ This guideline standardizes the public marketing surface (`/`, `/pricing`, `/fea
   - TR: action-first (`Planları Gör`, `Hesap Oluştur`, `Demo planla`)
   - EN: action-first (`View Pricing`, `Create Account`, `Book demo`)
 
+## Packaging Standard
+- Pricing page must always expose 3 tiers mapped to product plan IDs:
+  - `starter`
+  - `growth` (recommended)
+  - `scale`
+- Public pricing IDs must match register and billing IDs directly.
+- Legacy aliases (`solo`, `pro`, `team`) are accepted only as backward-compatibility redirects.
+
 ## Copy Standards
 - Keep sentence length under ~18 words when possible.
 - Use concrete outcomes (time saved, fewer manual steps, better visibility).

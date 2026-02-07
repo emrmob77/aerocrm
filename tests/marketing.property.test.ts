@@ -12,6 +12,7 @@ describe('Marketing property tests', () => {
 
     expect(trPlans.length).toBe(enPlans.length)
     expect(trPlans.map((plan) => plan.id)).toEqual(enPlans.map((plan) => plan.id))
+    expect(trPlans.map((plan) => plan.id)).toEqual(['starter', 'growth', 'scale'])
   })
 
   it('returns non-empty copy blocks for any supported locale', () => {

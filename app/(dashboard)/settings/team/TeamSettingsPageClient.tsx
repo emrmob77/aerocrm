@@ -43,6 +43,8 @@ export type DealRow = {
   contactName: string
 }
 
+type InviteStatus = 'pending' | 'expired' | 'accepted' | 'revoked'
+
 type InitialCurrentUser = {
   id: string
   role: string
@@ -75,7 +77,7 @@ type TeamTableRow =
       name: string
       email: string
       role: string
-      status: string
+      status: InviteStatus
       token: string
       createdAt: string
       expiresAt: string | null
@@ -91,6 +93,35 @@ const getInitials = (value: string) => {
 const isInviteExpired = (invite: InviteRow) => {
   if (!invite.expires_at) return false
   return new Date(invite.expires_at).getTime() < Date.now()
+}
+
+const resolveInviteStatus = (invite: InviteRow): InviteStatus => {
+  if (invite.status === 'accepted') return 'accepted'
+  if (invite.status === 'revoked') return 'revoked'
+  if (invite.status === 'pending' && isInviteExpired(invite)) return 'expired'
+  return 'pending'
+}
+
+const createdAtMs = (value: string | null | undefined) => {
+  if (!value) return 0
+  const parsed = new Date(value).getTime()
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+const dedupeInvitesByEmail = (rows: InviteRow[]) => {
+  const latestByEmail = new Map<string, InviteRow>()
+
+  rows.forEach((row) => {
+    if (row.status === 'revoked') return
+
+    const key = row.email.trim().toLowerCase()
+    const existing = latestByEmail.get(key)
+    if (!existing || createdAtMs(row.created_at) > createdAtMs(existing.created_at)) {
+      latestByEmail.set(key, row)
+    }
+  })
+
+  return Array.from(latestByEmail.values()).sort((a, b) => createdAtMs(b.created_at) - createdAtMs(a.created_at))
 }
 
 const mapMembers = (
@@ -255,11 +286,6 @@ export default function TeamSettingsPageClient({
         return
       }
 
-      if (teamId === initialTeamId) {
-        setIsLoading(false)
-        return
-      }
-
       setIsLoading(true)
       try {
         await Promise.all([refreshTeamRows(), refreshDeals()])
@@ -308,8 +334,9 @@ export default function TeamSettingsPageClient({
     }
   }, [authLoading, initialAuthUserId, refreshTeamRows, resolvedAuthUserId, supabase, teamId])
 
-  const pendingInvites = invites.filter((invite) => invite.status === 'pending' && !isInviteExpired(invite))
-  const expiredInvites = invites.filter((invite) => invite.status === 'pending' && isInviteExpired(invite))
+  const visibleInvites = useMemo(() => dedupeInvitesByEmail(invites), [invites])
+  const pendingInvites = visibleInvites.filter((invite) => invite.status === 'pending' && !isInviteExpired(invite))
+  const expiredInvites = visibleInvites.filter((invite) => invite.status === 'pending' && isInviteExpired(invite))
 
   const tableRows = useMemo<TeamTableRow[]>(() => {
     const memberRows = members.map((member) => ({
@@ -323,15 +350,19 @@ export default function TeamSettingsPageClient({
       status: 'active' as const,
     }))
 
-    const inviteRows = invites
-      .filter((invite) => invite.status !== 'accepted')
+    const memberEmailSet = new Set(members.map((member) => member.email.trim().toLowerCase()))
+    const inviteRows = visibleInvites
+      .filter((invite) => {
+        if (invite.status === 'accepted') return false
+        return !memberEmailSet.has(invite.email.trim().toLowerCase())
+      })
       .map((invite) => ({
         id: invite.id,
         type: 'invite' as const,
         name: invite.email.split('@')[0] || t('teamSettings.inviteFallback'),
         email: invite.email,
         role: invite.role,
-        status: isInviteExpired(invite) ? 'expired' : invite.status,
+        status: resolveInviteStatus(invite),
         token: invite.token,
         createdAt: invite.created_at,
         expiresAt: invite.expires_at,
@@ -342,7 +373,7 @@ export default function TeamSettingsPageClient({
     if (!query) return allRows
 
     return allRows.filter((row) => row.name.toLowerCase().includes(query) || row.email.toLowerCase().includes(query))
-  }, [members, invites, searchQuery, t])
+  }, [members, searchQuery, t, visibleInvites])
 
   const performanceRows = useMemo(() => {
     const map = new Map(
@@ -407,6 +438,13 @@ export default function TeamSettingsPageClient({
   }, [assignDealId, assignableDeals])
 
   const getAllowedScreensCount = (allowedScreens: string[] | null) => resolveAllowedScreens(allowedScreens).length
+  const getInviteEmailFailureMessage = (baseKey: string, reason?: string | null) => {
+    const base = t(baseKey)
+    if (reason === 'missing_config') {
+      return `${base} ${t('teamSettings.errors.inviteEmailConfigMissing')}`
+    }
+    return base
+  }
 
   const openPermissionsModal = (member: MemberRow) => {
     setPermissionsMember(member)
@@ -450,6 +488,7 @@ export default function TeamSettingsPageClient({
       const invite = payload?.invite as InviteRow
       const inviteLink = payload?.inviteLink as string | undefined
       const emailDelivered = Boolean(payload?.emailDelivered)
+      const emailErrorReason = payload?.emailErrorReason as string | null | undefined
       setInvites((prev) => [invite, ...prev])
       setInviteEmail('')
       setInviteRole('member')
@@ -458,10 +497,16 @@ export default function TeamSettingsPageClient({
       if (inviteLink && navigator.clipboard) {
         await navigator.clipboard.writeText(inviteLink)
         toast.success(
-          emailDelivered ? t('teamSettings.success.inviteSentCopied') : t('teamSettings.success.inviteSentCopiedNoEmail')
+          emailDelivered
+            ? t('teamSettings.success.inviteSentCopied')
+            : getInviteEmailFailureMessage('teamSettings.success.inviteSentCopiedNoEmail', emailErrorReason)
         )
       } else {
-        toast.success(emailDelivered ? t('teamSettings.success.inviteSent') : t('teamSettings.success.inviteSentNoEmail'))
+        toast.success(
+          emailDelivered
+            ? t('teamSettings.success.inviteSent')
+            : getInviteEmailFailureMessage('teamSettings.success.inviteSentNoEmail', emailErrorReason)
+        )
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('teamSettings.errors.inviteFailed'))
@@ -585,6 +630,7 @@ export default function TeamSettingsPageClient({
       const updated = payload?.invite as InviteRow
       const inviteLink = payload?.inviteLink as string | undefined
       const emailDelivered = Boolean(payload?.emailDelivered)
+      const emailErrorReason = payload?.emailErrorReason as string | null | undefined
       setInvites((prev) => prev.map((invite) => (invite.id === updated.id ? updated : invite)))
 
       if (inviteLink && navigator.clipboard) {
@@ -592,11 +638,13 @@ export default function TeamSettingsPageClient({
         toast.success(
           emailDelivered
             ? t('teamSettings.success.inviteRenewedCopied')
-            : t('teamSettings.success.inviteRenewedCopiedNoEmail')
+            : getInviteEmailFailureMessage('teamSettings.success.inviteRenewedCopiedNoEmail', emailErrorReason)
         )
       } else {
         toast.success(
-          emailDelivered ? t('teamSettings.success.inviteRenewed') : t('teamSettings.success.inviteRenewedNoEmail')
+          emailDelivered
+            ? t('teamSettings.success.inviteRenewed')
+            : getInviteEmailFailureMessage('teamSettings.success.inviteRenewedNoEmail', emailErrorReason)
         )
       }
     } catch (error) {
@@ -952,6 +1000,16 @@ export default function TeamSettingsPageClient({
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                         {t('teamSettings.status.expired')}
                       </span>
+                    ) : row.status === 'accepted' ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-800">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                        {t('teamSettings.status.accepted')}
+                      </span>
+                    ) : row.status === 'revoked' ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+                        {t('teamSettings.status.revoked')}
+                      </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-800">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
@@ -961,7 +1019,7 @@ export default function TeamSettingsPageClient({
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      {isTeamManager && row.type === 'invite' && (
+                      {isTeamManager && row.type === 'invite' && row.status !== 'accepted' && (
                         <button
                           onClick={() => handleResendInvite(row.id)}
                           disabled={resendingInviteId === row.id}
@@ -970,7 +1028,7 @@ export default function TeamSettingsPageClient({
                           {resendingInviteId === row.id ? t('teamSettings.actions.sending') : t('teamSettings.actions.resend')}
                         </button>
                       )}
-                      {isTeamManager && row.type === 'invite' && (
+                      {isTeamManager && row.type === 'invite' && row.status !== 'accepted' && row.status !== 'revoked' && (
                         <button
                           onClick={() => handleRevokeInvite(row.id)}
                           disabled={revokingInviteId === row.id}

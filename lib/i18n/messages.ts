@@ -780,6 +780,8 @@ export const messages = {
       status: {
         active: 'Aktif',
         expired: 'Süresi doldu',
+        accepted: 'Kabul edildi',
+        revoked: 'İptal edildi',
         pending: 'Davet bekliyor',
       },
       actions: {
@@ -804,6 +806,7 @@ export const messages = {
       },
       errors: {
         emailRequired: 'E-posta adresi girin.',
+        inviteEmailConfigMissing: 'E-posta ayarı eksik (RESEND_API_KEY / RESEND_FROM_EMAIL).',
         inviteFailed: 'Davet gönderilemedi.',
         inviteRenewFailed: 'Davet yenilenemedi.',
         inviteRevokeFailed: 'Davet iptal edilemedi.',
@@ -3654,6 +3657,8 @@ export const messages = {
       status: {
         active: 'Active',
         expired: 'Expired',
+        accepted: 'Accepted',
+        revoked: 'Revoked',
         pending: 'Invite pending',
       },
       actions: {
@@ -3678,6 +3683,7 @@ export const messages = {
       },
       errors: {
         emailRequired: 'Enter an email address.',
+        inviteEmailConfigMissing: 'Email configuration is missing (RESEND_API_KEY / RESEND_FROM_EMAIL).',
         inviteFailed: 'Invite could not be sent.',
         inviteRenewFailed: 'Invite could not be renewed.',
         inviteRevokeFailed: 'Invite could not be revoked.',

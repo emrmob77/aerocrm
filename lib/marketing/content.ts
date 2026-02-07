@@ -1,4 +1,5 @@
 import type { Locale } from '@/lib/i18n/messages'
+import type { PlanId } from '@/lib/billing/plans'
 
 type Highlight = {
   title: string
@@ -11,7 +12,7 @@ type Step = {
 }
 
 type PricingPlan = {
-  id: string
+  id: PlanId
   name: string
   price: string
   period: string
@@ -85,8 +86,7 @@ export type MarketingCopy = {
     compareTitle: string
     compareRows: {
       label: string
-      solo: string
-      pro: string
+      values: Record<PlanId, string>
     }[]
     faqTitle: string
     faqItems: FaqItem[]
@@ -213,31 +213,43 @@ const marketingCopy: Record<Locale, MarketingCopy> = {
       subtitle: 'Tüm planlar 14 gün ücretsiz deneme ile başlar. Kredi kartı zorunlu değildir.',
       plans: [
         {
-          id: 'solo',
-          name: 'Aero Solo',
-          price: '$19',
+          id: 'starter',
+          name: 'Starter',
+          price: '$29',
           period: '/kullanıcı/ay',
-          description: 'Tek kişilik ekipler ve başlangıç aşaması için.',
-          cta: 'Solo ile Başla',
-          features: ['10 teklif / ay', 'Temel CRM', 'E-posta bildirimleri', 'Standart destek'],
+          description: 'İlk satış operasyonunu kuran küçük ekipler için temel paket.',
+          cta: 'Starter ile Başla',
+          features: ['3 kullanıcı', '10 teklif / ay', '5 GB depolama', 'Temel CRM + teklif yönetimi', 'Standart destek'],
         },
         {
-          id: 'pro',
-          name: 'Aero Pro',
-          price: '$49',
+          id: 'growth',
+          name: 'Growth',
+          price: '$79',
           period: '/kullanıcı/ay',
-          description: 'Büyüyen ekipler için gelişmiş otomasyon ve raporlama.',
-          cta: 'Pro ile Başla',
+          description: 'Büyüyen ekipler için otomasyon, entegrasyon ve raporlama odaklı paket.',
+          cta: 'Growth ile Başla',
           popular: true,
-          features: ['Sınırsız teklif', 'Ekip yönetimi', 'Webhook ve API', 'Öncelikli destek'],
+          features: ['10 kullanıcı', '200 teklif / ay', '50 GB depolama', 'Ekip rolleri + atama', 'Webhook / API / Twilio', 'Öncelikli destek'],
+        },
+        {
+          id: 'scale',
+          name: 'Scale',
+          price: '$149',
+          period: '/kullanıcı/ay',
+          description: 'Yüksek hacimli ve operasyonel görünürlüğe ihtiyaç duyan ekipler için.',
+          cta: 'Scale ile Başla',
+          features: ['25 kullanıcı', 'Sınırsız teklif', '200 GB depolama', 'Monitoring ve API kullanım logları', 'Gelişmiş entegrasyon yönetimi', 'Öncelikli destek + onboarding'],
         },
       ],
       compareTitle: 'Plan karşılaştırması',
       compareRows: [
-        { label: 'Teklif limiti', solo: '10 / ay', pro: 'Sınırsız' },
-        { label: 'Takım üyesi rolleri', solo: 'Yok', pro: 'Var' },
-        { label: 'API / Webhook', solo: 'Yok', pro: 'Var' },
-        { label: 'Destek seviyesi', solo: 'Standart', pro: 'Öncelikli' },
+        { label: 'Kullanıcı limiti', values: { starter: '3', growth: '10', scale: '25' } },
+        { label: 'Teklif limiti', values: { starter: '10 / ay', growth: '200 / ay', scale: 'Sınırsız' } },
+        { label: 'Depolama', values: { starter: '5 GB', growth: '50 GB', scale: '200 GB' } },
+        { label: 'Takım rolleri ve atama', values: { starter: 'Yok', growth: 'Var', scale: 'Var' } },
+        { label: 'Webhook / API / Twilio', values: { starter: 'Yok', growth: 'Var', scale: 'Var' } },
+        { label: 'Monitoring & kullanım logları', values: { starter: 'Yok', growth: 'Sınırlı', scale: 'Tam' } },
+        { label: 'Destek seviyesi', values: { starter: 'Standart', growth: 'Öncelikli', scale: 'Öncelikli + onboarding' } },
       ],
       faqTitle: 'Fiyatlandırma ile ilgili sık sorulanlar',
       faqItems: [
@@ -465,31 +477,43 @@ const marketingCopy: Record<Locale, MarketingCopy> = {
       subtitle: 'All plans include a 14-day free trial. No credit card required to start.',
       plans: [
         {
-          id: 'solo',
-          name: 'Aero Solo',
-          price: '$19',
+          id: 'starter',
+          name: 'Starter',
+          price: '$29',
           period: '/user/mo',
-          description: 'For solo operators and early-stage teams.',
-          cta: 'Start Solo',
-          features: ['10 proposals / month', 'Core CRM', 'Email alerts', 'Standard support'],
+          description: 'For small teams launching their first structured sales workflow.',
+          cta: 'Start Starter',
+          features: ['3 users', '10 proposals / month', '5 GB storage', 'Core CRM + proposal workflows', 'Standard support'],
         },
         {
-          id: 'pro',
-          name: 'Aero Pro',
-          price: '$49',
+          id: 'growth',
+          name: 'Growth',
+          price: '$79',
           period: '/user/mo',
-          description: 'For growing teams that need automation and visibility.',
-          cta: 'Start Pro',
+          description: 'For scaling teams that need automation, integrations, and analytics.',
+          cta: 'Start Growth',
           popular: true,
-          features: ['Unlimited proposals', 'Team controls', 'Webhook and API', 'Priority support'],
+          features: ['10 users', '200 proposals / month', '50 GB storage', 'Team roles + assignment', 'Webhook / API / Twilio', 'Priority support'],
+        },
+        {
+          id: 'scale',
+          name: 'Scale',
+          price: '$149',
+          period: '/user/mo',
+          description: 'For high-volume teams requiring stronger operational visibility and controls.',
+          cta: 'Start Scale',
+          features: ['25 users', 'Unlimited proposals', '200 GB storage', 'Monitoring and API usage logs', 'Advanced integration operations', 'Priority support + onboarding'],
         },
       ],
       compareTitle: 'Plan comparison',
       compareRows: [
-        { label: 'Proposal limit', solo: '10 / month', pro: 'Unlimited' },
-        { label: 'Team roles', solo: 'Not included', pro: 'Included' },
-        { label: 'API / Webhook', solo: 'Not included', pro: 'Included' },
-        { label: 'Support level', solo: 'Standard', pro: 'Priority' },
+        { label: 'User limit', values: { starter: '3', growth: '10', scale: '25' } },
+        { label: 'Proposal limit', values: { starter: '10 / month', growth: '200 / month', scale: 'Unlimited' } },
+        { label: 'Storage', values: { starter: '5 GB', growth: '50 GB', scale: '200 GB' } },
+        { label: 'Team roles and assignment', values: { starter: 'Not included', growth: 'Included', scale: 'Included' } },
+        { label: 'Webhook / API / Twilio', values: { starter: 'Not included', growth: 'Included', scale: 'Included' } },
+        { label: 'Monitoring and usage logs', values: { starter: 'Not included', growth: 'Limited', scale: 'Full' } },
+        { label: 'Support level', values: { starter: 'Standard', growth: 'Priority', scale: 'Priority + onboarding' } },
       ],
       faqTitle: 'Pricing FAQ',
       faqItems: [

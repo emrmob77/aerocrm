@@ -7,6 +7,11 @@ const brandName = 'AERO CRM'
 export const buildSoftwareApplicationSchema = (locale: Locale) => {
   const siteUrl = getMarketingSiteUrl()
   const copy = getMarketingCopy(locale)
+  const prices = copy.pricing.plans
+    .map((plan) => Number(plan.price.replace('$', '').trim()))
+    .filter((value) => Number.isFinite(value))
+  const lowPrice = prices.length > 0 ? Math.min(...prices) : 0
+  const highPrice = prices.length > 0 ? Math.max(...prices) : 0
 
   return {
     '@context': 'https://schema.org',
@@ -19,9 +24,9 @@ export const buildSoftwareApplicationSchema = (locale: Locale) => {
     offers: {
       '@type': 'AggregateOffer',
       priceCurrency: 'USD',
-      lowPrice: '19',
-      highPrice: '49',
-      offerCount: '2',
+      lowPrice: String(lowPrice),
+      highPrice: String(highPrice),
+      offerCount: String(copy.pricing.plans.length),
     },
   }
 }

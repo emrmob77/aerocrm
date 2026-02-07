@@ -36,6 +36,29 @@ type DealQueryRow = {
   contact: { full_name?: string } | Array<{ full_name?: string }> | null
 }
 
+const normalizeEmail = (value: string) => value.trim().toLowerCase()
+const createdAtMs = (value: string | null | undefined) => {
+  if (!value) return 0
+  const parsed = new Date(value).getTime()
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+const dedupeVisibleInvites = (rows: InviteQueryRow[]) => {
+  const latestByEmail = new Map<string, InviteQueryRow>()
+
+  rows.forEach((row) => {
+    if (row.status === 'revoked') return
+
+    const key = normalizeEmail(row.email)
+    const existing = latestByEmail.get(key)
+    if (!existing || createdAtMs(row.created_at) > createdAtMs(existing.created_at)) {
+      latestByEmail.set(key, row)
+    }
+  })
+
+  return Array.from(latestByEmail.values()).sort((a, b) => createdAtMs(b.created_at) - createdAtMs(a.created_at))
+}
+
 const mapMembers = (rows: MemberQueryRow[]): MemberRow[] =>
   rows.map((row) => ({
     id: row.id,
@@ -47,7 +70,7 @@ const mapMembers = (rows: MemberQueryRow[]): MemberRow[] =>
   }))
 
 const mapInvites = (rows: InviteQueryRow[]): InviteRow[] =>
-  rows.map((row) => ({
+  dedupeVisibleInvites(rows).map((row) => ({
     id: row.id,
     email: row.email,
     role: row.role,

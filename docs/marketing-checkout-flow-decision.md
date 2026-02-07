@@ -17,8 +17,8 @@ Because of this constraint, the purchase funnel for anonymous traffic is:
 4. User completes auth flow, then continues to billing flow in-app
 
 ## Implemented in this sprint
-- Pricing CTAs now pass `plan` query (`solo`, `pro`)
-- Register page normalizes marketing aliases to internal plan IDs (`starter`, `growth`, `scale`)
+- Pricing CTAs now pass internal `plan` IDs (`starter`, `growth`, `scale`)
+- Register page still normalizes legacy aliases (`solo`, `pro`, `team`) for backward compatibility
 - Plan preselection is applied automatically from query string
 
 ## Next implementation steps
