@@ -406,11 +406,13 @@ export default function TeamSettingsPageClient({
       }
     })
 
-    return Array.from(map.values()).map((entry) => ({
-      ...entry,
-      winRate: entry.closed > 0 ? Math.round((entry.won / entry.closed) * 100) : 0,
-    }))
-  }, [members, deals])
+    return Array.from(map.values())
+      .map((entry) => ({
+        ...entry,
+        winRate: entry.closed > 0 ? Math.round((entry.won / entry.closed) * 100) : 0,
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name, locale === 'en' ? 'en' : 'tr'))
+  }, [members, deals, locale])
 
   const totalPipeline = performanceRows.reduce((sum, row) => sum + row.pipeline, 0)
   const totalDeals = performanceRows.reduce((sum, row) => sum + row.deals, 0)

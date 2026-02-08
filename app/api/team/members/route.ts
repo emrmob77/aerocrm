@@ -39,7 +39,7 @@ export const GET = withApiLogging(async () => {
     .from('users')
     .select('id, full_name, email, role, avatar_url, allowed_screens')
     .eq('team_id', profile.team_id)
-    .order('created_at', { ascending: true })
+    .order('full_name', { ascending: true })
 
   if (error) {
     return NextResponse.json({ error: t('api.team.membersFetchFailed') }, { status: 400 })
