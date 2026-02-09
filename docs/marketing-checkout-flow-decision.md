@@ -20,8 +20,9 @@ Because of this constraint, the purchase funnel for anonymous traffic is:
 - Pricing CTAs now pass internal `plan` IDs (`starter`, `growth`, `scale`)
 - Register page still normalizes legacy aliases (`solo`, `pro`, `team`) for backward compatibility
 - Plan preselection is applied automatically from query string
+- After auth verification/login, users continue with `/settings/billing?source=marketing&plan=...`
+- Billing page shows pending marketing plan intent banner when current plan differs
+- Recovery states are available on `/checkout/retry` and `/checkout/pending`
 
 ## Next implementation steps
-- After auth verification/login, route user to `/settings/billing` with intent context
-- Add in-app banner on billing page for pending plan intent
 - Optional: create platform-level Stripe checkout endpoint for fully anonymous checkout in a later phase

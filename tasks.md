@@ -392,12 +392,12 @@ Bu görev listesi, AERO CRM platformunun SSR optimizasyonlu, gerçek zamanlı ve
   - Monitoring ve logging kurulumu ✅
   - Backup stratejisi implementasyonu ✅
 
-- [ ] 31. Marketing Site + Satın Alma Funnel (Yeni)
-  - Public sayfaları tamamla: `/`, `/pricing`, `/contact`, `/features`, `/integrations`, `/security`, `/faq`, `/book-demo`
-  - Satın alma akışını tamamla: checkout başlangıcı, success/cancel/retry/pending durumları
-  - TR/EN metin paritesini sağla ve `docs/marketing-guideline.md` oluştur
-  - SEO + yapılandırılmış veri + funnel event tracking + dönüşüm dashboard
-  - Ayrıntılı sprint planı: `docs/marketing-purchase-sprint-plan.md`
+- [x] 31. Marketing Site + Satın Alma Funnel (Yeni) ✅
+  - Public sayfaları tamamla: `/`, `/pricing`, `/contact`, `/features`, `/platform/integrations`, `/security`, `/faq`, `/book-demo` ✅
+  - Satın alma akışını tamamla: marketing `plan` intent -> `/register?plan=...` -> `/settings/billing` handoff + success/cancel/retry/pending durumları ✅
+  - TR/EN metin paritesini sağla ve `docs/marketing-guideline.md` oluştur ✅
+  - SEO + yapılandırılmış veri + funnel event tracking + dönüşüm dashboard ✅
+  - Ayrıntılı sprint planı: `docs/marketing-purchase-sprint-plan.md` ✅
   - _Gereksinimler: 18.x, 20.x, 22.x + büyüme/dönüşüm odaklı public web_
 
 ## Notlar
