@@ -158,11 +158,18 @@ const getBadge = (t: (key: string) => string, status: string, isExpired: boolean
   }
 }
 
-export default async function PublicProposalPage({ params }: { params: { slug: string } }) {
+export default async function PublicProposalPage({
+  params,
+  searchParams,
+}: {
+  params: { slug: string }
+  searchParams?: { print?: string }
+}) {
   const supabase = await createServerSupabaseClient()
   const t = getServerT()
   const locale = getServerLocale() === 'en' ? 'en-US' : 'tr-TR'
   const slug = params.slug
+  const isPrintMode = searchParams?.print === '1'
 
   const { data: proposal, error } = await supabase
     .from('proposals')
@@ -195,9 +202,74 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
   const badge = getBadge(t, String(proposal.status ?? 'pending'), isExpired)
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] text-[#0d121c]">
-      {!isExpired && <ProposalViewTracker slug={slug} />}
-      <header className="px-4 sm:px-6 pt-8 pb-6">
+    <div className={`min-h-screen bg-[#f4f6fb] text-[#0d121c] ${isPrintMode ? 'proposal-print-root' : ''}`}>
+      {isPrintMode && (
+        <style dangerouslySetInnerHTML={{ __html: `
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+
+          html,
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          .proposal-print-root {
+            min-height: auto !important;
+            background: #ffffff !important;
+          }
+
+          .proposal-print-header {
+            padding: 0 0 8mm 0 !important;
+            page-break-inside: avoid;
+            break-inside: avoid-page;
+          }
+
+          .proposal-print-main {
+            padding: 0 !important;
+          }
+
+          .proposal-print-container {
+            max-width: 190mm !important;
+            margin: 0 auto !important;
+            display: block !important;
+          }
+
+          .proposal-print-section {
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            overflow: visible !important;
+          }
+
+          .proposal-print-content {
+            padding: 0 !important;
+            gap: 5mm !important;
+          }
+
+          .proposal-print-avoid-break {
+            page-break-inside: avoid;
+            break-inside: avoid-page;
+          }
+
+          .proposal-print-pricing-row {
+            page-break-inside: avoid;
+            break-inside: avoid-page;
+          }
+
+          img {
+            max-width: 100% !important;
+            height: auto !important;
+          }
+        ` }} />
+      )}
+      {!isExpired && !isPrintMode && <ProposalViewTracker slug={slug} />}
+      <header className={`px-4 sm:px-6 pt-8 pb-6 ${isPrintMode ? 'proposal-print-header' : ''}`}>
         <div className="mx-auto w-full max-w-5xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.2em] text-[#48679d]">{t('publicProposal.header.kicker')}</p>
@@ -218,9 +290,9 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
         </div>
       </header>
 
-      <main className="px-4 sm:px-6 pb-16">
-        <div className="mx-auto w-full max-w-5xl grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <section className="rounded-3xl bg-white shadow-xl border border-[#e7ebf4] overflow-hidden">
+      <main className={`px-4 sm:px-6 pb-16 ${isPrintMode ? 'proposal-print-main' : ''}`}>
+        <div className={`mx-auto w-full max-w-5xl grid gap-6 ${isPrintMode ? 'proposal-print-container' : 'lg:grid-cols-[minmax(0,1fr)_280px]'}`}>
+          <section className={`rounded-3xl bg-white border border-[#e7ebf4] overflow-hidden ${isPrintMode ? 'proposal-print-section' : 'shadow-xl'}`}>
             {isExpired ? (
               <div className="p-10 text-center space-y-3">
                 <div className="mx-auto size-16 rounded-full bg-red-100 text-red-500 flex items-center justify-center">
@@ -242,13 +314,22 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
                   fontSize: `${designSettings.fontScale}%`,
                 }}
               >
-                <div className="flex flex-col gap-6 py-10 px-6 sm:px-10">
+                <div className={`flex flex-col gap-6 px-6 sm:px-10 ${isPrintMode ? 'py-8 proposal-print-content' : 'py-10'}`}>
                   {blocks.map((block) => (
-                    <div key={block.id} className="overflow-hidden" style={{ borderRadius: `${designSettings.radius}px` }}>
+                    <div
+                      key={block.id}
+                      className={`overflow-hidden ${
+                        isPrintMode && block.type !== 'text' && block.type !== 'timeline' && block.type !== 'pricing'
+                          ? 'proposal-print-avoid-break'
+                          : ''
+                      }`}
+                      style={{ borderRadius: `${designSettings.radius}px` }}
+                    >
                       <BlockContent
                         block={block}
                         slug={slug}
                         pdfUrl={proposalPdfUrl}
+                        isPrintMode={isPrintMode}
                         t={t}
                         formatCurrency={(value, currency) => formatCurrency(locale, value, currency)}
                       />
@@ -259,7 +340,7 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
             )}
           </section>
 
-          <aside className="space-y-4">
+          {!isPrintMode && <aside className="space-y-4">
             <div className="rounded-2xl border border-[#e7ebf4] bg-white p-5 shadow-sm space-y-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#48679d]">{t('publicProposal.summary.title')}</p>
               <div className="flex items-baseline justify-between">
@@ -283,7 +364,7 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
                 {t('publicProposal.help.cta')}
               </button>
             </div>
-          </aside>
+          </aside>}
         </div>
       </main>
     </div>
@@ -294,12 +375,14 @@ function BlockContent({
   block,
   slug,
   pdfUrl,
+  isPrintMode,
   t,
   formatCurrency,
 }: {
   block: ProposalBlock
   slug: string
   pdfUrl: string
+  isPrintMode: boolean
   t: (key: string, vars?: Record<string, string | number>) => string
   formatCurrency: (value: number, currency?: string) => string
 }) {
@@ -374,7 +457,7 @@ function BlockContent({
             </thead>
             <tbody className="divide-y divide-gray-100">
               {block.data.items.map((item) => (
-                <tr key={item.id}>
+                <tr key={item.id} className={isPrintMode ? 'proposal-print-pricing-row' : undefined}>
                   <td className="py-4 px-4 font-medium text-[color:var(--proposal-text)]">{item.name}</td>
                   <td className="py-4 px-4 text-center">{item.qty}</td>
                   <td className="py-4 px-4 text-right">{formatCurrency(item.price, item.currency || blockCurrency)}</td>
@@ -437,6 +520,7 @@ function BlockContent({
                 width={600}
                 height={160}
                 className="w-full h-40 object-cover"
+                loading={isPrintMode ? 'eager' : undefined}
                 unoptimized
               />
               {image.caption && (
@@ -461,6 +545,7 @@ function BlockContent({
             width={40}
             height={40}
             className="size-10 rounded-full object-cover"
+            loading={isPrintMode ? 'eager' : undefined}
             unoptimized
           />
           <div>
@@ -529,6 +614,36 @@ function BlockContent({
   }
 
   if (block.type === 'signature') {
+    if (isPrintMode) {
+      const signedAt = block.data.signedAt
+      const signedAtText =
+        signedAt && !Number.isNaN(Date.parse(signedAt))
+          ? new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(signedAt))
+          : (signedAt || '-')
+      return (
+        <div className="p-8 rounded-xl border border-[#d7ddea] bg-white space-y-3">
+          <p className="text-sm font-semibold text-[#0d121c]">{block.data.label || t('publicProposal.signature.nameLabel')}</p>
+          {block.data.signatureImage ? (
+            <Image
+              src={block.data.signatureImage}
+              alt={t('publicProposal.signature.imageAlt')}
+              width={360}
+              height={120}
+              className="h-20 w-auto object-contain"
+              loading="eager"
+              unoptimized
+            />
+          ) : (
+            <p className="text-sm text-gray-500">{t('publicProposal.signature.requiredHint')}</p>
+          )}
+          <div className="text-xs text-gray-500 space-y-1">
+            <p>{t('publicProposal.signature.nameLabel')}: {block.data.signedName || '-'}</p>
+            <p>{t('proposalPreview.signature.dateLabel')}: {signedAtText}</p>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="p-8">
         <SignatureBlock
