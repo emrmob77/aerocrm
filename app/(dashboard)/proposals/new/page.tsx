@@ -25,6 +25,7 @@ import {
   sanitizeProposalDesignSettings,
   type ProposalDesignSettings,
 } from '@/lib/proposals/design-utils'
+import { sectorTemplatePresets } from '@/lib/proposals/sector-templates'
 
 type BlockType =
   | 'hero'
@@ -127,6 +128,14 @@ type ProductOption = {
   currency: string
   category: string | null
   active: boolean
+}
+
+type ContactOption = {
+  id: string
+  full_name: string | null
+  company: string | null
+  email: string | null
+  phone: string | null
 }
 
 type SignatureData = {
@@ -390,12 +399,22 @@ const normalizeClientNameValue = (value: string | null | undefined, fallback: st
   return normalized
 }
 
+const createTemporaryProposalNo = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const suffix = crypto.randomUUID().slice(0, 6).toUpperCase()
+  return `TRF-${year}${month}${day}-${suffix}`
+}
+
 export default function ProposalEditorPage() {
   const supabase = useSupabase()
   const { user, authUser, loading: userLoading } = useUser()
   const searchParams = useSearchParams()
   const isTemplateMode = searchParams.get('mode') === 'template'
   const templateId = searchParams.get('templateId')
+  const presetId = searchParams.get('presetId')
   const contactId = searchParams.get('contactId')
   const proposalId = searchParams.get('proposalId')
   const { t, get, locale } = useI18n()
@@ -692,258 +711,112 @@ export default function ProposalEditorPage() {
   }, [t])
 
   const templatePresets = useMemo<TemplatePreset[]>(
-    () => [
-      {
-        id: 'web',
-        name: t('proposalEditor.templates.web.name'),
-        description: t('proposalEditor.templates.web.description'),
-        title: t('proposalEditor.templates.web.title'),
+    () =>
+      sectorTemplatePresets.map((sector) => ({
+        id: sector.id,
+        name: sector.name,
+        description: sector.description,
+        title: sector.title,
         design: {
           background: '#ffffff',
-          text: '#0d121c',
-          accent: '#2563eb',
+          text: '#0f172a',
+          accent: sector.accent,
           radius: 12,
           fontScale: 100,
         },
         build: () => [
           updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
-            title: t('proposalEditor.templates.web.heroTitle'),
-            subtitle: t('proposalEditor.templates.web.heroSubtitle'),
-            backgroundUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200',
+            title: sector.heroTitle,
+            subtitle: sector.heroSubtitle,
+            backgroundUrl: sector.heroImage,
+            style: {
+              ...defaultBlockFrameStyle,
+              overlayOpacity: 62,
+              textColor: '#ffffff',
+              contentAlign: 'left',
+              height: 340,
+              shadowLevel: 2,
+            },
           }),
           updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
-            text: t('proposalEditor.templates.web.scopeTitle'),
+            text: sector.scopeTitle,
             level: 'h2',
             align: 'left',
           }),
           updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
-            content: t('proposalEditor.templates.web.scopeBody'),
+            content: sector.scopeBody,
+            style: {
+              ...defaultBlockFrameStyle,
+              fontSize: 17,
+              lineHeight: 1.8,
+            },
           }),
           updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
             columns: 3,
+            images: sector.gallery.map((image) => ({
+              id: crypto.randomUUID(),
+              url: image.url,
+              caption: image.caption,
+            })),
+          }),
+          updateBlock(createBlock('timeline') as Extract<ProposalBlock, { type: 'timeline' }>, {
+            items: [
+              { id: crypto.randomUUID(), title: 'Analiz & Keşif', description: 'Mevcut süreç analizi ve hedef KPI tanımı.', date: 'Hafta 1' },
+              { id: crypto.randomUUID(), title: 'Kurulum & Uygulama', description: 'Sistem kurulumu, ekip eğitimi ve canlı test.', date: 'Hafta 2-3' },
+              { id: crypto.randomUUID(), title: 'Optimizasyon', description: 'Performans takibi ve dönüşüm artırma iyileştirmeleri.', date: 'Hafta 4' },
+            ],
           }),
           updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
-            items: [
-              { id: crypto.randomUUID(), name: t('proposalEditor.templates.web.pricing.0'), qty: 1, price: 38000 },
-              { id: crypto.randomUUID(), name: t('proposalEditor.templates.web.pricing.1'), qty: 1, price: 52000 },
-            ],
+            source: 'manual',
+            items: sector.pricing.map((item) => ({
+              id: crypto.randomUUID(),
+              name: item.name,
+              qty: 1,
+              unit: 'paket',
+              price: item.price,
+              currency: 'TRY',
+            })),
+            style: {
+              ...defaultBlockFrameStyle,
+              surfaceColor: '#f8fafc',
+              headerColor: '#e2e8f0',
+              headerTextColor: '#334155',
+              borderWidth: 1,
+              borderColor: '#e2e8f0',
+            },
           }),
           updateBlock(createBlock('testimonial') as Extract<ProposalBlock, { type: 'testimonial' }>, {
-            quote: t('proposalEditor.templates.web.testimonial.quote'),
-            author: t('proposalEditor.templates.web.testimonial.author'),
-            role: t('proposalEditor.templates.web.testimonial.role'),
+            quote: `${sector.name} alanında benzer projede 90 gün içinde ölçülebilir büyüme sağladık.`,
+            author: 'Referans Müşteri',
+            role: 'Operasyon Direktörü',
+            avatarUrl: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=200',
           }),
           updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
-            label: t('proposalEditor.templates.web.ctaLabel'),
+            label: 'Proje Toplantısı Planla',
             url: 'https://cal.com/aero/demo',
             variant: 'primary',
+            style: {
+              ...defaultBlockFrameStyle,
+              bgColor: sector.accent,
+              borderColor: sector.accent,
+              textColor: '#ffffff',
+              borderRadius: 12,
+              shadowLevel: 1,
+            },
           }),
           createBlock('signature'),
         ],
-      },
-      {
-        id: 'seo',
-        name: t('proposalEditor.templates.seo.name'),
-        description: t('proposalEditor.templates.seo.description'),
-        title: t('proposalEditor.templates.seo.title'),
-        design: {
-          background: '#ffffff',
-          text: '#0f172a',
-          accent: '#10b981',
-          radius: 12,
-          fontScale: 100,
-        },
-        build: () => [
-          updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
-            title: t('proposalEditor.templates.seo.heroTitle'),
-            subtitle: t('proposalEditor.templates.seo.heroSubtitle'),
-            backgroundUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200',
-          }),
-          updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
-            text: t('proposalEditor.templates.seo.quickWinsTitle'),
-            level: 'h2',
-            align: 'left',
-          }),
-          updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
-            content: t('proposalEditor.templates.seo.quickWinsBody'),
-          }),
-          updateBlock(createBlock('timeline') as Extract<ProposalBlock, { type: 'timeline' }>, {
-            items: [
-              {
-                id: crypto.randomUUID(),
-                title: t('proposalEditor.templates.seo.timeline.0.title'),
-                description: t('proposalEditor.templates.seo.timeline.0.description'),
-                date: t('proposalEditor.templates.seo.timeline.0.date'),
-              },
-              {
-                id: crypto.randomUUID(),
-                title: t('proposalEditor.templates.seo.timeline.1.title'),
-                description: t('proposalEditor.templates.seo.timeline.1.description'),
-                date: t('proposalEditor.templates.seo.timeline.1.date'),
-              },
-              {
-                id: crypto.randomUUID(),
-                title: t('proposalEditor.templates.seo.timeline.2.title'),
-                description: t('proposalEditor.templates.seo.timeline.2.description'),
-                date: t('proposalEditor.templates.seo.timeline.2.date'),
-              },
-            ],
-          }),
-          updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
-            items: [
-              { id: crypto.randomUUID(), name: t('proposalEditor.templates.seo.pricing.0'), qty: 1, price: 18000 },
-              { id: crypto.randomUUID(), name: t('proposalEditor.templates.seo.pricing.1'), qty: 1, price: 12000 },
-            ],
-          }),
-          updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
-            label: t('proposalEditor.templates.seo.ctaLabel'),
-            url: 'https://aero-crm.app/seo',
-            variant: 'secondary',
-          }),
-          createBlock('signature'),
-        ],
-      },
-      {
-        id: 'social',
-        name: t('proposalEditor.templates.social.name'),
-        description: t('proposalEditor.templates.social.description'),
-        title: t('proposalEditor.templates.social.title'),
-        design: {
-          background: '#ffffff',
-          text: '#111827',
-          accent: '#f97316',
-          radius: 12,
-          fontScale: 100,
-        },
-        build: () => [
-          updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
-            title: t('proposalEditor.templates.social.heroTitle'),
-            subtitle: t('proposalEditor.templates.social.heroSubtitle'),
-            backgroundUrl: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200',
-          }),
-          updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
-            content: t('proposalEditor.templates.social.body'),
-          }),
-          updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
-            columns: 3,
-          }),
-          updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
-            items: [
-              { id: crypto.randomUUID(), name: t('proposalEditor.templates.social.pricing.0'), qty: 1, price: 15000 },
-              { id: crypto.randomUUID(), name: t('proposalEditor.templates.social.pricing.1'), qty: 1, price: 9000 },
-            ],
-          }),
-          updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
-            label: t('proposalEditor.templates.social.ctaLabel'),
-            url: 'https://aero-crm.app/social',
-            variant: 'primary',
-          }),
-          createBlock('signature'),
-        ],
-      },
-      {
-        id: 'real-estate',
-        name: t('proposalEditor.templates.realEstate.name'),
-        description: t('proposalEditor.templates.realEstate.description'),
-        title: t('proposalEditor.templates.realEstate.title'),
-        design: {
-          background: '#ffffff',
-          text: '#0f172a',
-          accent: '#ef4444',
-          radius: 12,
-          fontScale: 100,
-        },
-        build: () => [
-          updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
-            title: t('proposalEditor.templates.realEstate.heroTitle'),
-            subtitle: t('proposalEditor.templates.realEstate.heroSubtitle'),
-            backgroundUrl: 'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?w=1200',
-          }),
-          updateBlock(createBlock('gallery') as Extract<ProposalBlock, { type: 'gallery' }>, {
-            columns: 3,
-          }),
-          updateBlock(createBlock('text') as Extract<ProposalBlock, { type: 'text' }>, {
-            content: t('proposalEditor.templates.realEstate.body'),
-          }),
-          updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
-            items: [
-              { id: crypto.randomUUID(), name: t('proposalEditor.templates.realEstate.pricing.0'), qty: 1, price: 14000 },
-              { id: crypto.randomUUID(), name: t('proposalEditor.templates.realEstate.pricing.1'), qty: 1, price: 8000 },
-            ],
-          }),
-          updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
-            label: t('proposalEditor.templates.realEstate.ctaLabel'),
-            url: 'https://aero-crm.app/real-estate',
-            variant: 'outline',
-          }),
-          createBlock('signature'),
-        ],
-      },
-      {
-        id: 'logistics',
-        name: t('proposalEditor.templates.logistics.name'),
-        description: t('proposalEditor.templates.logistics.description'),
-        title: t('proposalEditor.templates.logistics.title'),
-        design: {
-          background: '#ffffff',
-          text: '#0f172a',
-          accent: '#0ea5e9',
-          radius: 12,
-          fontScale: 100,
-        },
-        build: () => [
-          updateBlock(createBlock('hero') as Extract<ProposalBlock, { type: 'hero' }>, {
-            title: t('proposalEditor.templates.logistics.heroTitle'),
-            subtitle: t('proposalEditor.templates.logistics.heroSubtitle'),
-            backgroundUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200',
-          }),
-          updateBlock(createBlock('heading') as Extract<ProposalBlock, { type: 'heading' }>, {
-            text: t('proposalEditor.templates.logistics.flowTitle'),
-            level: 'h2',
-            align: 'left',
-          }),
-          updateBlock(createBlock('timeline') as Extract<ProposalBlock, { type: 'timeline' }>, {
-            items: [
-              {
-                id: crypto.randomUUID(),
-                title: t('proposalEditor.templates.logistics.timeline.0.title'),
-                description: t('proposalEditor.templates.logistics.timeline.0.description'),
-                date: t('proposalEditor.templates.logistics.timeline.0.date'),
-              },
-              {
-                id: crypto.randomUUID(),
-                title: t('proposalEditor.templates.logistics.timeline.1.title'),
-                description: t('proposalEditor.templates.logistics.timeline.1.description'),
-                date: t('proposalEditor.templates.logistics.timeline.1.date'),
-              },
-              {
-                id: crypto.randomUUID(),
-                title: t('proposalEditor.templates.logistics.timeline.2.title'),
-                description: t('proposalEditor.templates.logistics.timeline.2.description'),
-                date: t('proposalEditor.templates.logistics.timeline.2.date'),
-              },
-            ],
-          }),
-          updateBlock(createBlock('pricing') as Extract<ProposalBlock, { type: 'pricing' }>, {
-            items: [
-              { id: crypto.randomUUID(), name: t('proposalEditor.templates.logistics.pricing.0'), qty: 1, price: 24000 },
-              { id: crypto.randomUUID(), name: t('proposalEditor.templates.logistics.pricing.1'), qty: 1, price: 11000 },
-            ],
-          }),
-          updateBlock(createBlock('cta') as Extract<ProposalBlock, { type: 'cta' }>, {
-            label: t('proposalEditor.templates.logistics.ctaLabel'),
-            url: 'https://aero-crm.app/logistics',
-            variant: 'primary',
-          }),
-          createBlock('signature'),
-        ],
-      },
-    ],
-    [createBlock, t]
+      })),
+    [createBlock]
   )
   const [productOptions, setProductOptions] = useState<ProductOption[]>([])
+  const [contactOptions, setContactOptions] = useState<ContactOption[]>([])
   const [productSearch, setProductSearch] = useState('')
+  const [contactSearch, setContactSearch] = useState('')
   const [productsLoading, setProductsLoading] = useState(false)
+  const [contactsLoading, setContactsLoading] = useState(false)
+  const [contactPickerOpen, setContactPickerOpen] = useState(false)
+  const [contactDetailsOpen, setContactDetailsOpen] = useState(false)
   const [documentTitle, setDocumentTitle] = useState(() => t('proposalEditor.defaults.documentTitle'))
   const [activePanel, setActivePanel] = useState<'content' | 'design'>('design')
   const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
@@ -966,6 +839,8 @@ export default function ProposalEditorPage() {
   const [templateSaving, setTemplateSaving] = useState(false)
   const [designSettings, setDesignSettings] = useState<ProposalDesignSettings>(defaultProposalDesignSettings)
   const [isStudioFullscreen, setIsStudioFullscreen] = useState(false)
+  const hasAppliedPresetFromUrl = useRef(false)
+  const [tempProposalNo, setTempProposalNo] = useState('')
 
   const [proposalMeta, setProposalMeta] = useState(() => ({
     clientName: t('proposalEditor.defaults.clientName'),
@@ -978,6 +853,12 @@ export default function ProposalEditorPage() {
       setEditorMode('edit')
     }
   }, [isTemplateMode, editorMode])
+
+  useEffect(() => {
+    if (!tempProposalNo) {
+      setTempProposalNo(createTemporaryProposalNo())
+    }
+  }, [tempProposalNo])
 
   const loadProductOptions = useCallback(async () => {
     if (!authUser) {
@@ -1028,10 +909,58 @@ export default function ProposalEditorPage() {
     setProductsLoading(false)
   }, [authUser, supabase, t, user?.team_id])
 
+  const loadContactOptions = useCallback(async () => {
+    if (!authUser) {
+      setContactOptions([])
+      return
+    }
+
+    setContactsLoading(true)
+    let teamId = user?.team_id ?? null
+
+    if (!teamId) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('team_id')
+        .eq('id', authUser.id)
+        .maybeSingle()
+      teamId = profile?.team_id ?? null
+    }
+
+    let query = supabase
+      .from('contacts')
+      .select('id, full_name, company, email, phone')
+      .order('updated_at', { ascending: false })
+      .limit(300)
+
+    if (teamId) {
+      query = query.or(`team_id.eq.${teamId},user_id.eq.${authUser.id}`)
+    } else {
+      query = query.eq('user_id', authUser.id)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      toast.error(error.message || t('common.tryAgain'))
+      setContactOptions([])
+      setContactsLoading(false)
+      return
+    }
+
+    setContactOptions((data ?? []) as ContactOption[])
+    setContactsLoading(false)
+  }, [authUser, supabase, t, user?.team_id])
+
   useEffect(() => {
     if (userLoading) return
     loadProductOptions()
   }, [loadProductOptions, userLoading])
+
+  useEffect(() => {
+    if (userLoading) return
+    loadContactOptions()
+  }, [loadContactOptions, userLoading])
 
   useEffect(() => {
     if (userLoading) return
@@ -1127,6 +1056,83 @@ export default function ProposalEditorPage() {
       return product.name.toLowerCase().includes(query) || category.includes(query)
     })
   }, [productOptions, productSearch])
+
+  const filteredContactOptions = useMemo(() => {
+    const query = contactSearch.trim().toLowerCase()
+    if (!query) return contactOptions
+    return contactOptions.filter((contact) => {
+      const fullName = contact.full_name?.toLowerCase() ?? ''
+      const company = contact.company?.toLowerCase() ?? ''
+      const email = contact.email?.toLowerCase() ?? ''
+      const phone = contact.phone?.toLowerCase() ?? ''
+      return fullName.includes(query) || company.includes(query) || email.includes(query) || phone.includes(query)
+    })
+  }, [contactOptions, contactSearch])
+
+  useEffect(() => {
+    const query = contactSearch.trim()
+    if (!contactPickerOpen || query.length < 2 || !authUser) return
+
+    let isCancelled = false
+    const searchContacts = async () => {
+      setContactsLoading(true)
+      let teamId = user?.team_id ?? null
+
+      if (!teamId) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('team_id')
+          .eq('id', authUser.id)
+          .maybeSingle()
+        teamId = profile?.team_id ?? null
+      }
+
+      const like = `%${query}%`
+      let searchQuery = supabase
+        .from('contacts')
+        .select('id, full_name, company, email, phone')
+        .order('updated_at', { ascending: false })
+        .limit(40)
+        .or(`full_name.ilike.${like},company.ilike.${like},email.ilike.${like},phone.ilike.${like}`)
+
+      if (teamId) {
+        searchQuery = searchQuery.or(`team_id.eq.${teamId},user_id.eq.${authUser.id}`)
+      } else {
+        searchQuery = searchQuery.eq('user_id', authUser.id)
+      }
+
+      const { data, error } = await searchQuery
+      if (!isCancelled) {
+        if (!error && Array.isArray(data)) {
+          setContactOptions((prev) => {
+            const map = new Map<string, ContactOption>()
+            prev.forEach((item) => map.set(item.id, item))
+            data.forEach((item) => map.set(item.id, item as ContactOption))
+            return Array.from(map.values())
+          })
+        }
+        setContactsLoading(false)
+      }
+    }
+
+    const timer = window.setTimeout(searchContacts, 220)
+    return () => {
+      isCancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [authUser, contactPickerOpen, contactSearch, supabase, user?.team_id])
+
+  const handleSelectContact = useCallback((contact: ContactOption) => {
+    const fallbackClientName = t('proposalEditor.defaults.clientName')
+    const clientName = normalizeClientNameValue(contact.full_name?.trim() || contact.company?.trim(), fallbackClientName)
+    setProposalMeta((prev) => ({
+      ...prev,
+      clientName,
+      contactEmail: contact.email ?? prev.contactEmail,
+      contactPhone: contact.phone ?? prev.contactPhone,
+    }))
+    setContactPickerOpen(false)
+  }, [t])
 
   useEffect(() => {
     const element = canvasMeasureRef.current
@@ -1238,6 +1244,15 @@ export default function ProposalEditorPage() {
     setLeftPanel('templates')
     fetchTemplates(templateScope)
   }
+
+  useEffect(() => {
+    if (hasAppliedPresetFromUrl.current) return
+    if (!presetId || proposalId || templateId) return
+    const preset = templatePresets.find((item) => item.id === presetId)
+    if (!preset) return
+    applyTemplate(preset)
+    hasAppliedPresetFromUrl.current = true
+  }, [presetId, proposalId, templateId, templatePresets])
 
   useEffect(() => {
     if (!templateId || proposalId) return
@@ -1796,20 +1811,23 @@ export default function ProposalEditorPage() {
     [localeCode]
   )
 
+  const proposalNumber = (draftId ?? proposalId ?? tempProposalNo) || '-'
+
   const smartVariableValues = useMemo(
     () => ({
       '{{Müşteri_Adı}}': proposalMeta.clientName,
+      '{{Musteri_Adi}}': proposalMeta.clientName,
       '{{Client_Name}}': proposalMeta.clientName,
       'ABC Şirketi': proposalMeta.clientName,
       'ABC Company': proposalMeta.clientName,
-      '{{Teklif_No}}': draftId ?? proposalId ?? '-',
-      '{{Proposal_No}}': draftId ?? proposalId ?? '-',
+      '{{Teklif_No}}': proposalNumber,
+      '{{Proposal_No}}': proposalNumber,
       '{{Tarih}}': formattedDate,
       '{{Date}}': formattedDate,
       '{{Toplam_Tutar}}': formatCurrency(subtotal, totalCurrency),
       '{{Total_Amount}}': formatCurrency(subtotal, totalCurrency),
     }),
-    [draftId, formattedDate, formatCurrency, proposalId, proposalMeta.clientName, subtotal, totalCurrency]
+    [formattedDate, formatCurrency, proposalMeta.clientName, proposalNumber, subtotal, totalCurrency]
   )
 
   const resolveSmartVariables = useCallback(
@@ -2034,36 +2052,132 @@ export default function ProposalEditorPage() {
           : '-mx-4 -mt-4 lg:-mx-8 lg:-mt-6 h-[calc(100dvh-1rem)] lg:h-[calc(100dvh-1.5rem)] overflow-hidden'
       }`}
     >
-      <header className="relative z-10 border-b border-[#dbe5fa] dark:border-gray-800 bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-lg px-6 py-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-4">
-            <Link href="/proposals" className="mt-1 flex size-8 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-primary/20 dark:bg-[#101722]">
-              <span className="material-symbols-outlined">arrow_back</span>
-            </Link>
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#48679d] dark:text-gray-400">
-                {t('proposalEditor.studio.title')}
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  value={documentTitle}
-                  onChange={(event) => setDocumentTitle(event.target.value)}
-                  className="min-w-[240px] text-lg font-bold text-[#0d121c] dark:text-white bg-transparent border-b border-transparent focus:border-primary outline-none"
-                />
-                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] rounded uppercase font-bold">
-                  {isTemplateMode ? t('proposalEditor.badges.template') : t('proposals.status.draft')}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300">
-                  <span className="material-symbols-outlined text-[14px]">task_alt</span>
-                  {t('proposalEditor.studio.readiness', { score: designScore })}
-                </span>
+      <header className="relative z-10 border-b border-[#dbe5fa] dark:border-gray-800 bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-lg px-6 py-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/proposals" className="flex size-8 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-primary/20 dark:bg-[#101722]">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </Link>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setContactPickerOpen(false)
+                setContactDetailsOpen((prev) => !prev)
+              }}
+              className="inline-flex h-8 max-w-[220px] items-center gap-1 rounded-md border border-[#dbe5fa] bg-[#f8fbff] px-2 text-[11px] font-semibold text-[#48679d] hover:bg-white dark:border-gray-700 dark:bg-[#111b2d] dark:text-gray-300 dark:hover:bg-[#17243a]"
+            >
+              <span className="material-symbols-outlined text-[16px]">person</span>
+              <span className="truncate">{proposalMeta.clientName || t('proposalEditor.summary.client')}</span>
+            </button>
+            {contactDetailsOpen && (
+              <div className="absolute left-0 top-[calc(100%+6px)] z-30 w-[min(92vw,360px)] rounded-lg border border-[#dbe5fa] bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-[#111b2d]">
+                <div className="grid grid-cols-1 gap-2">
+                  <label className="space-y-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[#6f83ad] dark:text-gray-400">
+                      {t('proposalEditor.summary.client')}
+                    </span>
+                    <input
+                      value={proposalMeta.clientName}
+                      onChange={(event) =>
+                        setProposalMeta((prev) => ({ ...prev, clientName: event.target.value }))
+                      }
+                      placeholder={t('proposalEditor.summary.client')}
+                      className="h-8 w-full rounded-md border border-[#dbe5fa] bg-[#f8fbff] px-2 text-xs text-[#0d121c] outline-none focus:border-primary dark:border-gray-700 dark:bg-[#0f172a] dark:text-white"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[#6f83ad] dark:text-gray-400">
+                      {t('proposalEditor.summary.email')}
+                    </span>
+                    <input
+                      value={proposalMeta.contactEmail}
+                      onChange={(event) =>
+                        setProposalMeta((prev) => ({ ...prev, contactEmail: event.target.value }))
+                      }
+                      placeholder="ornek@firma.com"
+                      className="h-8 w-full rounded-md border border-[#dbe5fa] bg-[#f8fbff] px-2 text-xs text-[#0d121c] outline-none focus:border-primary dark:border-gray-700 dark:bg-[#0f172a] dark:text-white"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[#6f83ad] dark:text-gray-400">
+                      {t('proposalEditor.summary.phone')}
+                    </span>
+                    <input
+                      value={proposalMeta.contactPhone}
+                      onChange={(event) =>
+                        setProposalMeta((prev) => ({ ...prev, contactPhone: event.target.value }))
+                      }
+                      placeholder="+90 5xx xxx xx xx"
+                      className="h-8 w-full rounded-md border border-[#dbe5fa] bg-[#f8fbff] px-2 text-xs text-[#0d121c] outline-none focus:border-primary dark:border-gray-700 dark:bg-[#0f172a] dark:text-white"
+                    />
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setContactPickerOpen((prev) => !prev)}
+                  className="mt-2 inline-flex h-8 w-full items-center justify-center gap-1 rounded-md border border-[#cfe0ff] bg-[#f3f7ff] text-[11px] font-semibold text-[#315ea7] hover:bg-[#eaf2ff] dark:border-gray-700 dark:bg-[#152237] dark:text-[#9fc2ff] dark:hover:bg-[#1a2c46]"
+                >
+                  <span className="material-symbols-outlined text-[16px]">contacts</span>
+                  {t('proposalEditor.summary.pickClient')}
+                </button>
+                {contactPickerOpen && (
+                  <div className="mt-2 rounded-lg border border-[#dbe5fa] bg-white p-2 dark:border-gray-700 dark:bg-[#111b2d]">
+                    <div className="flex items-center gap-2 rounded-lg border border-[#dbe5fa] bg-[#f8fbff] px-2 dark:border-gray-700 dark:bg-[#0f172a]">
+                      <span className="material-symbols-outlined text-[16px] text-[#6f83ad]">search</span>
+                      <input
+                        value={contactSearch}
+                        onChange={(event) => setContactSearch(event.target.value)}
+                        placeholder={t('proposalEditor.summary.searchClient')}
+                        className="h-8 w-full bg-transparent text-xs text-[#0d121c] outline-none dark:text-white"
+                      />
+                    </div>
+                    <div className="mt-2 max-h-44 space-y-1 overflow-y-auto pr-1">
+                      {contactsLoading ? (
+                        <p className="px-2 py-2 text-xs text-[#6f83ad] dark:text-gray-400">{t('common.loading')}</p>
+                      ) : filteredContactOptions.length === 0 ? (
+                        <p className="px-2 py-2 text-xs text-[#6f83ad] dark:text-gray-400">{t('proposalEditor.summary.noClient')}</p>
+                      ) : (
+                        filteredContactOptions.map((contact) => {
+                          const displayName = contact.full_name || contact.company || t('proposalEditor.defaults.clientName')
+                          return (
+                            <button
+                              key={contact.id}
+                              type="button"
+                              onClick={() => handleSelectContact(contact)}
+                              className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left hover:bg-[#f5f8ff] dark:hover:bg-[#18263d]"
+                            >
+                              <span className="min-w-0">
+                                <span className="block truncate text-xs font-semibold text-[#0d121c] dark:text-white">{displayName}</span>
+                                <span className="block truncate text-[11px] text-[#6f83ad] dark:text-gray-400">
+                                  {contact.email || contact.phone || '-'}
+                                </span>
+                              </span>
+                              <span className="material-symbols-outlined text-[16px] text-[#6f83ad]">arrow_outward</span>
+                            </button>
+                          )
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-[#5f7197] dark:text-gray-400">
-                {proposalMeta.clientName} • {t('proposalEditor.summary.total')}: {formatCurrency(subtotal, totalCurrency)}
-              </p>
-            </div>
+            )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="min-w-[220px] flex-1 px-2">
+            <input
+              value={documentTitle}
+              onChange={(event) => setDocumentTitle(event.target.value)}
+              className="w-full bg-transparent text-center text-base font-bold text-[#0d121c] dark:text-white outline-none"
+            />
+          </div>
+          <span className="inline-flex h-8 items-center rounded-md border border-[#dbe5fa] bg-[#f8fbff] px-2 text-[10px] font-semibold text-[#48679d] dark:border-gray-700 dark:bg-[#111b2d] dark:text-gray-300">
+            {proposalNumber}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300">
+            <span className="material-symbols-outlined text-[14px]">task_alt</span>
+            {t('proposalEditor.studio.readiness', { score: designScore })}
+          </span>
+          <div className="ml-auto flex items-center gap-2">
           <button
             onClick={handleToggleStudioFullscreen}
             title={isStudioFullscreen ? t('proposalEditor.studio.fullscreenExit') : t('proposalEditor.studio.fullscreenEnter')}

@@ -1867,6 +1867,13 @@ export const messages = {
       },
       summary: {
         total: 'Toplam',
+        client: 'Müşteri',
+        email: 'E-posta',
+        phone: 'Telefon',
+        proposalNo: 'Teklif No',
+        pickClient: 'Müşteri Seç',
+        searchClient: 'Müşteri ara...',
+        noClient: 'Müşteri bulunamadı.',
       },
       pricing: {
         title: 'Yatırım Özeti',
@@ -4809,6 +4816,13 @@ export const messages = {
       },
       summary: {
         total: 'Total',
+        client: 'Client',
+        email: 'Email',
+        phone: 'Phone',
+        proposalNo: 'Proposal No',
+        pickClient: 'Pick Client',
+        searchClient: 'Search client...',
+        noClient: 'No clients found.',
       },
       pricing: {
         title: 'Investment Summary',

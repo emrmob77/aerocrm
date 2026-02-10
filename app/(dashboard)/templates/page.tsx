@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { useUser } from '@/hooks'
 import { formatRelativeTime } from '@/components/dashboard/activity-utils'
 import { useI18n } from '@/lib/i18n'
+import { sectorTemplatePresets } from '@/lib/proposals/sector-templates'
 
 type TemplateRow = {
   id: string
@@ -24,6 +25,7 @@ type TemplateRow = {
 type ScopeType = 'team' | 'public' | 'all'
 
 const getBlockCount = (blocks: unknown) => (Array.isArray(blocks) ? blocks.length : 0)
+const presetBlockCount = 9
 
 export default function TemplatesPage() {
   const { t } = useI18n()
@@ -58,11 +60,13 @@ export default function TemplatesPage() {
         set.add(template.category)
       }
     })
+    sectorTemplatePresets.forEach((template) => set.add(template.category))
     return Array.from(set.values())
   }, [templates])
 
+  const query = searchQuery.trim().toLowerCase()
+
   const filteredTemplates = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
     return templates.filter((template) => {
       if (categoryFilter !== 'all' && template.category !== categoryFilter) {
         return false
@@ -74,10 +78,29 @@ export default function TemplatesPage() {
         template.category?.toLowerCase().includes(query)
       )
     })
-  }, [templates, searchQuery, categoryFilter])
+  }, [templates, query, categoryFilter])
+
+  const filteredPresetTemplates = useMemo(() => {
+    return sectorTemplatePresets.filter((template) => {
+      if (categoryFilter !== 'all' && template.category !== categoryFilter) {
+        return false
+      }
+      if (!query) return true
+      return (
+        template.name.toLowerCase().includes(query) ||
+        template.description.toLowerCase().includes(query) ||
+        template.category.toLowerCase().includes(query)
+      )
+    })
+  }, [categoryFilter, query])
+  const noResults = filteredTemplates.length === 0 && filteredPresetTemplates.length === 0
 
   const handleUseTemplate = (template: TemplateRow) => {
     window.location.href = `/proposals/new?templateId=${template.id}`
+  }
+
+  const handleUsePreset = (presetId: string) => {
+    window.location.href = `/proposals/new?presetId=${presetId}`
   }
 
   const handleDelete = async (template: TemplateRow) => {
@@ -115,7 +138,7 @@ export default function TemplatesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
             <p className="text-xs text-slate-500">{t('templatesPage.stats.total')}</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{templates.length}</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{templates.length + sectorTemplatePresets.length}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-4 shadow-sm">
             <p className="text-xs text-slate-500">{t('templatesPage.stats.popular')}</p>
@@ -173,11 +196,65 @@ export default function TemplatesPage() {
           </div>
         </div>
 
+        {filteredPresetTemplates.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                {t('proposalEditor.templates.readyTitle')}
+              </h2>
+              <span className="text-xs text-slate-400">{filteredPresetTemplates.length}</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {filteredPresetTemplates.map((preset) => (
+                <div
+                  key={preset.id}
+                  className="bg-white dark:bg-slate-800 rounded-2xl border border-[#e2e8f0] dark:border-slate-700 p-5 shadow-sm flex flex-col gap-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-bold text-[#0f172a] dark:text-white">{preset.name}</h3>
+                      <p className="text-xs text-slate-500 mt-1">{preset.description}</p>
+                    </div>
+                    <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-indigo-100 text-indigo-700">
+                      {t('proposalEditor.templates.readyTitle')}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px]">layers</span>
+                      {presetBlockCount} {t('templatesPage.blocks')}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: preset.accent }} />
+                      {preset.title}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span>{preset.category}</span>
+                    <span>{t('templatesPage.public')}</span>
+                  </div>
+
+                  <div className="mt-auto flex flex-wrap gap-2">
+                    <button
+                      onClick={() => handleUsePreset(preset.id)}
+                      className="flex-1 min-w-[120px] px-3 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90"
+                    >
+                      {t('templatesPage.use')}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-6 text-sm text-slate-500">
             {t('templatesPage.loading')}
           </div>
-        ) : filteredTemplates.length === 0 ? (
+        ) : noResults ? (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#e2e8f0] dark:border-slate-700 p-6 text-sm text-slate-500">
             {t('templatesPage.empty')}
           </div>

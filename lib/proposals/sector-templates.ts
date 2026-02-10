@@ -1,0 +1,260 @@
+export type SectorTemplateDefinition = {
+  id: string
+  category: string
+  name: string
+  description: string
+  title: string
+  accent: string
+  heroTitle: string
+  heroSubtitle: string
+  heroImage: string
+  gallery: { url: string; caption: string }[]
+  scopeTitle: string
+  scopeBody: string
+  pricing: { name: string; price: number }[]
+}
+
+export const sectorTemplatePresets: SectorTemplateDefinition[] = [
+  {
+    id: 'real-estate',
+    category: 'Emlak',
+    name: 'Emlak & Gayrimenkul',
+    description: 'Portfoy sunumu ve hizli musteri donusum akisi',
+    title: 'Gayrimenkul Portfoy Teklifi',
+    accent: '#ef4444',
+    heroTitle: '{{Musteri_Adi}} icin Premium Portfoy Yonetimi',
+    heroSubtitle: 'Dogru aliciya hizli ulasim ve satis surecinin uctan uca yonetimi.',
+    heroImage: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1400',
+    gallery: [
+      { url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900', caption: 'Luks konut portfoy yonetimi' },
+      { url: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=900', caption: 'Saha gosterim planlamasi' },
+      { url: 'https://images.unsplash.com/photo-1560185008-b033106af5c3?w=900', caption: 'Yatirimci raporlama panosu' },
+    ],
+    scopeTitle: 'Kapsam ve Teslimatlar',
+    scopeBody: 'Portfoy analizi, fiyatlandirma optimizasyonu, ilan yonetimi ve haftalik performans raporlari tek teklif altinda sunulur.',
+    pricing: [
+      { name: 'Portfoy Konumlandirma', price: 18000 },
+      { name: 'Aylik Pazarlama Operasyonu', price: 12000 },
+    ],
+  },
+  {
+    id: 'healthcare',
+    category: 'Saglik',
+    name: 'Saglik & Klinik',
+    description: 'Hasta kazanimi ve klinik operasyon teklif sablonu',
+    title: 'Klinik Buyume ve Operasyon Teklifi',
+    accent: '#0ea5e9',
+    heroTitle: '{{Musteri_Adi}} Klinigi icin Hasta Buyume Plani',
+    heroSubtitle: 'Randevu donusumunu artiran ve operasyonu sadelestiren butunsel model.',
+    heroImage: 'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=1400',
+    gallery: [
+      { url: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=900', caption: 'Hasta yolculugu haritalama' },
+      { url: 'https://images.unsplash.com/photo-1584515933487-779824d29309?w=900', caption: 'Randevu ve cagri senaryolari' },
+      { url: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=900', caption: 'Klinik performans dashboardu' },
+    ],
+    scopeTitle: 'Kapsam ve Teslimatlar',
+    scopeBody: 'Hedef hasta segmentasyonu, dijital kampanya kurgusu, cagri scriptleri ve klinik KPI izleme kurulumu.',
+    pricing: [
+      { name: 'Hasta Edinim Stratejisi', price: 22000 },
+      { name: 'Operasyon Egitim Programi', price: 14000 },
+    ],
+  },
+  {
+    id: 'legal',
+    category: 'Hukuk',
+    name: 'Hukuk Burosu',
+    description: 'Muvekkil edinimi ve dava surec yonetimi odakli teklif',
+    title: 'Hukuk Burosu Buyume Teklifi',
+    accent: '#475569',
+    heroTitle: '{{Musteri_Adi}} Hukuk Burosu icin Kurumsal Buyume',
+    heroSubtitle: 'Muvekkil kazanimi, surec standardizasyonu ve gorunurluk artisi.',
+    heroImage: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=1400',
+    gallery: [
+      { url: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=900', caption: 'Dosya ve vaka yonetim akisi' },
+      { url: 'https://images.unsplash.com/photo-1607703703674-df96af81dffa?w=900', caption: 'Kurumsal web gorunurlugu' },
+      { url: 'https://images.unsplash.com/photo-1593115057322-e94b77572f20?w=900', caption: 'Muvekkil iletisim standartlari' },
+    ],
+    scopeTitle: 'Kapsam ve Teslimatlar',
+    scopeBody: 'Kurumsal konumlandirma, hizmet paketleme, dijital gorunurluk ve muvekkil donusum surecleri.',
+    pricing: [
+      { name: 'Marka & Hizmet Konumlandirma', price: 16000 },
+      { name: 'Muvekkil Donusum Sistemi', price: 11000 },
+    ],
+  },
+  {
+    id: 'education',
+    category: 'Egitim',
+    name: 'Egitim Kurumu',
+    description: 'Ogrenci kayit ve veli iletisimi icin sektor sablonu',
+    title: 'Egitim Kurumu Kayit Artirma Teklifi',
+    accent: '#2563eb',
+    heroTitle: '{{Musteri_Adi}} icin Kayit Donemi Buyume Plani',
+    heroSubtitle: 'Kayit hunisini guclendiren veli odakli iletisim ve operasyon modeli.',
+    heroImage: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1400',
+    gallery: [
+      { url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=900', caption: 'Kayit donemi kampanya kurgusu' },
+      { url: 'https://images.unsplash.com/photo-1513258496099-48168024aec0?w=900', caption: 'Veli bilgilendirme akislarI' },
+      { url: 'https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=900', caption: 'Sinif doluluk analitigi' },
+    ],
+    scopeTitle: 'Kapsam ve Teslimatlar',
+    scopeBody: 'Kayit kampanyasi planlama, veli iletisim otomasyonlari ve danisman ekibi icin donusum scriptleri.',
+    pricing: [
+      { name: 'Kayit Kampanya Stratejisi', price: 15000 },
+      { name: 'Veli Iletisim & CRM Otomasyonu', price: 13000 },
+    ],
+  },
+  {
+    id: 'construction',
+    category: 'Insaat',
+    name: 'Insaat & Mimarlik',
+    description: 'Proje teklif, kesif ve ilerleme sunum sablonu',
+    title: 'Insaat Proje Yonetim Teklifi',
+    accent: '#f59e0b',
+    heroTitle: '{{Musteri_Adi}} icin Anahtar Teslim Proje Cozumu',
+    heroSubtitle: 'Maliyet, takvim ve kaliteyi tek panelde yoneten proje modeli.',
+    heroImage: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1400',
+    gallery: [
+      { url: 'https://images.unsplash.com/photo-1489515217757-5fd1be406fef?w=900', caption: 'Santiye planlama sureci' },
+      { url: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=900', caption: 'Mimari sunum & kesif yonetimi' },
+      { url: 'https://images.unsplash.com/photo-1479839672679-a46483c0e7c8?w=900', caption: 'Ilerleme raporlama altyapisi' },
+    ],
+    scopeTitle: 'Kapsam ve Teslimatlar',
+    scopeBody: 'Kesif-fiyatlandirma, tedarik plani, proje zaman cizelgesi ve musteri raporlama modulleri.',
+    pricing: [
+      { name: 'Kesif ve Teklif Modelleme', price: 24000 },
+      { name: 'Saha Operasyon Yonetimi', price: 17000 },
+    ],
+  },
+  {
+    id: 'automotive',
+    category: 'Otomotiv',
+    name: 'Otomotiv & Servis',
+    description: 'Servis, filo ve satis sonrasi surec teklif sablonu',
+    title: 'Otomotiv Servis Buyume Teklifi',
+    accent: '#0f172a',
+    heroTitle: '{{Musteri_Adi}} icin Servis Donusum Stratejisi',
+    heroSubtitle: 'Randevu, bakim ve musteri sadakatini artiran operasyon paketi.',
+    heroImage: 'https://images.unsplash.com/photo-1493238792000-8113da705763?w=1400',
+    gallery: [
+      { url: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=900', caption: 'Servis kabul sureci optimizasyonu' },
+      { url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900', caption: 'Filo bakim takibi' },
+      { url: 'https://images.unsplash.com/photo-1625047509248-ec889cbff17f?w=900', caption: 'Musteri sadakat plani' },
+    ],
+    scopeTitle: 'Kapsam ve Teslimatlar',
+    scopeBody: 'Servis funnel analizi, cagri-randevu otomasyonu, bakim kampanya yonetimi ve KPI dashboard.',
+    pricing: [
+      { name: 'Servis Funnel Kurulumu', price: 17000 },
+      { name: 'Bakim Kampanya Operasyonu', price: 9500 },
+    ],
+  },
+  {
+    id: 'hospitality',
+    category: 'Turizm',
+    name: 'Turizm & Otelcilik',
+    description: 'Doluluk ve gelir optimizasyonu icin sektor teklifi',
+    title: 'Otel Gelir Artirma Teklifi',
+    accent: '#8b5cf6',
+    heroTitle: '{{Musteri_Adi}} icin Doluluk ve Gelir Optimizasyonu',
+    heroSubtitle: 'Rezervasyon donusumunu artiran kampanya ve deneyim kurgusu.',
+    heroImage: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1400',
+    gallery: [
+      { url: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=900', caption: 'Premium konaklama deneyimi' },
+      { url: 'https://images.unsplash.com/photo-1551776235-dde6d4829808?w=900', caption: 'Rezervasyon kanali optimizasyonu' },
+      { url: 'https://images.unsplash.com/photo-1519822473471-6c7d5d5f3fb0?w=900', caption: 'Misafir segment kampanyalari' },
+    ],
+    scopeTitle: 'Kapsam ve Teslimatlar',
+    scopeBody: 'Doluluk analizi, kanal bazli fiyatlama stratejisi, upsell paketleri ve misafir sadakat akisi.',
+    pricing: [
+      { name: 'Gelir Yonetim Danismanligi', price: 19000 },
+      { name: 'Dijital Rezervasyon Kampanyasi', price: 13500 },
+    ],
+  },
+  {
+    id: 'manufacturing',
+    category: 'Uretim',
+    name: 'Uretim & Sanayi',
+    description: 'B2B uretim satis surecleri icin teklif sablonu',
+    title: 'Sanayi Satis Operasyon Teklifi',
+    accent: '#14b8a6',
+    heroTitle: '{{Musteri_Adi}} icin B2B Uretim Satis Modeli',
+    heroSubtitle: 'Tekliften siparise kadar izlenebilir ve olceklenebilir surec tasarimi.',
+    heroImage: 'https://images.unsplash.com/photo-1565793298595-6a879b1d9492?w=1400',
+    gallery: [
+      { url: 'https://images.unsplash.com/photo-1581093458791-9f3c3900df4b?w=900', caption: 'Uretim hatti kapasite yonetimi' },
+      { url: 'https://images.unsplash.com/photo-1581093806997-124204d9fa9d?w=900', caption: 'Teklif ve siparis standardi' },
+      { url: 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?w=900', caption: 'B2B musteri paneli' },
+    ],
+    scopeTitle: 'Kapsam ve Teslimatlar',
+    scopeBody: 'B2B teklif standartlastirma, bayi iletisimi, siparis akisi ve uretim-satis entegrasyonu.',
+    pricing: [
+      { name: 'B2B Teklif Altyapisi', price: 26000 },
+      { name: 'Bayi CRM Entegrasyonu', price: 18000 },
+    ],
+  },
+  {
+    id: 'ecommerce',
+    category: 'E-Ticaret',
+    name: 'E-Ticaret',
+    description: 'Satis donusumu ve sepet buyutme odakli teklif sablonu',
+    title: 'E-Ticaret Buyume Teklifi',
+    accent: '#ec4899',
+    heroTitle: '{{Musteri_Adi}} icin E-Ticaret Donusum Paketi',
+    heroSubtitle: 'Trafikten siparise donusumu artiran data odakli buyume plani.',
+    heroImage: 'https://images.unsplash.com/photo-1557821552-17105176677c?w=1400',
+    gallery: [
+      { url: 'https://images.unsplash.com/photo-1556740738-b6a63e27c4df?w=900', caption: 'Checkout iyilestirme modeli' },
+      { url: 'https://images.unsplash.com/photo-1515169067868-5387ec356754?w=900', caption: 'Sepet ortalamasi artirma plani' },
+      { url: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=900', caption: 'Pazaryeri & web entegrasyonu' },
+    ],
+    scopeTitle: 'Kapsam ve Teslimatlar',
+    scopeBody: 'Urun sayfasi donusum optimizasyonu, remarketing kurgulari ve aylik satis performans dashboardu.',
+    pricing: [
+      { name: 'Donusum Optimizasyon Sprinti', price: 21000 },
+      { name: 'Performans Kampanya Yonetimi', price: 16000 },
+    ],
+  },
+  {
+    id: 'logistics',
+    category: 'Lojistik',
+    name: 'Lojistik & Tasimacilik',
+    description: 'Rota, teslimat ve maliyet kontrolune ozel teklif',
+    title: 'Lojistik Operasyon Teklifi',
+    accent: '#0ea5e9',
+    heroTitle: '{{Musteri_Adi}} icin Uctan Uca Lojistik Operasyonu',
+    heroSubtitle: 'Maliyetleri dusurup teslimat hizini artiran yeni operasyon mimarisi.',
+    heroImage: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1400',
+    gallery: [
+      { url: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=900', caption: 'Depo ve rota planlama' },
+      { url: 'https://images.unsplash.com/photo-1494412651409-8963ce7935a7?w=900', caption: 'Arac filo gorunurlugu' },
+      { url: 'https://images.unsplash.com/photo-1529074963764-98f45c47344b?w=900', caption: 'Teslimat SLA raporlari' },
+    ],
+    scopeTitle: 'Kapsam ve Teslimatlar',
+    scopeBody: 'Rota optimizasyonu, filo KPI izleme, teslimat bildirim sistemi ve musteri deneyimi standartlari.',
+    pricing: [
+      { name: 'Rota Optimizasyon Danismanligi', price: 20000 },
+      { name: 'Teslimat Izleme Platformu', price: 14500 },
+    ],
+  },
+  {
+    id: 'food-beverage',
+    category: 'Restoran',
+    name: 'Yeme-Icme & Restoran',
+    description: 'Rezervasyon, paket servis ve musteri sadakati teklifi',
+    title: 'Restoran Buyume Teklifi',
+    accent: '#f97316',
+    heroTitle: '{{Musteri_Adi}} icin Restoran Gelir Artis Plani',
+    heroSubtitle: 'Rezervasyon, teslimat ve tekrar siparisi buyuten entegre pazarlama modeli.',
+    heroImage: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1400',
+    gallery: [
+      { url: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=900', caption: 'Masa doluluk optimizasyonu' },
+      { url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=900', caption: 'Paket servis kanal stratejisi' },
+      { url: 'https://images.unsplash.com/photo-1428515613728-6b4607e44363?w=900', caption: 'Sadakat kampanya tasarimi' },
+    ],
+    scopeTitle: 'Kapsam ve Teslimatlar',
+    scopeBody: 'Rezervasyon akisi, dijital menu donusumu, teslimat kampanyalari ve sadakat CRM altyapisi.',
+    pricing: [
+      { name: 'Rezervasyon & Sadakat Sistemi', price: 14000 },
+      { name: 'Teslimat Kampanya Yonetimi', price: 9000 },
+    ],
+  },
+]
