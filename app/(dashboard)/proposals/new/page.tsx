@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -778,6 +778,9 @@ export default function ProposalEditorPage() {
   const [documentTitle, setDocumentTitle] = useState(() => t('proposalEditor.defaults.documentTitle'))
   const [activePanel, setActivePanel] = useState<'content' | 'design'>('content')
   const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
+  const [zoomLevel, setZoomLevel] = useState(100)
+  const [canvasPageCount, setCanvasPageCount] = useState(1)
+  const canvasMeasureRef = useRef<HTMLDivElement | null>(null)
   const [blocks, setBlocks] = useState<ProposalBlock[]>(() =>
     normalizeBlocks([
       createBlock('hero'),
@@ -961,6 +964,25 @@ export default function ProposalEditorPage() {
       return product.name.toLowerCase().includes(query) || category.includes(query)
     })
   }, [productOptions, productSearch])
+
+  useEffect(() => {
+    const element = canvasMeasureRef.current
+    if (!element) return
+
+    const pageHeight = 1120
+    const measure = () => {
+      const totalHeight = Math.max(element.scrollHeight, pageHeight)
+      setCanvasPageCount(Math.max(1, Math.ceil(totalHeight / pageHeight)))
+    }
+
+    measure()
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(measure)
+      observer.observe(element)
+      return () => observer.disconnect()
+    }
+  }, [blocks, designSettings.fontScale, viewMode, zoomLevel])
 
   const applyTemplate = (template: TemplatePreset) => {
     setBlocks(normalizeBlocks(template.build()))
@@ -2059,45 +2081,56 @@ export default function ProposalEditorPage() {
 
           <main className="flex-1 bg-[#f5f6f8] dark:bg-[#1a212c] overflow-x-hidden p-10 pb-24 flex justify-center relative">
             <CanvasDropZone>
-              <div
-                className={`w-full max-w-[820px] bg-[color:var(--proposal-bg)] text-[color:var(--proposal-text)] min-h-[1120px] shadow-lg flex flex-col transition-all ${
-                  viewMode === 'tablet'
-                    ? 'max-w-[640px]'
-                    : viewMode === 'mobile'
-                      ? 'max-w-[420px]'
-                      : ''
-                }`}
-                style={{
-                  ['--proposal-bg' as never]: designSettings.background,
-                  ['--proposal-text' as never]: designSettings.text,
-                  ['--proposal-accent' as never]: designSettings.accent,
-                  borderRadius: `${designSettings.radius}px`,
-                  fontSize: `${designSettings.fontScale}%`,
-                }}
-              >
-                <SortableContext items={blocks.map((block) => block.id)}>
-                  <div className="flex flex-col gap-6 py-10 px-10">
-                    {blocks.map((block, index) => (
-                      <EditorBlock
-                        key={block.id}
-                        block={block}
-                        index={index}
-                        isSelected={block.id === selectedBlockId}
-                        onSelect={() => setSelectedBlockId(block.id)}
-                        onRemove={() => handleRemoveBlock(block.id)}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-
-                <div className="mt-auto px-10 pb-10">
-                  <button
-                    onClick={() => handleAddBlock('text')}
-                    className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 rounded-lg hover:border-primary hover:text-primary transition-all group"
+              <div className="w-full flex justify-center">
+                <div
+                  className="transition-transform"
+                  style={{
+                    transform: `scale(${zoomLevel / 100})`,
+                    transformOrigin: 'top center',
+                    width: '100%',
+                    maxWidth:
+                      viewMode === 'tablet'
+                        ? '640px'
+                        : viewMode === 'mobile'
+                          ? '420px'
+                          : '820px',
+                  }}
+                >
+                  <div
+                    className="w-full bg-[color:var(--proposal-bg)] text-[color:var(--proposal-text)] min-h-[1120px] shadow-lg flex flex-col"
+                    style={{
+                      ['--proposal-bg' as never]: designSettings.background,
+                      ['--proposal-text' as never]: designSettings.text,
+                      ['--proposal-accent' as never]: designSettings.accent,
+                      borderRadius: `${designSettings.radius}px`,
+                      fontSize: `${designSettings.fontScale}%`,
+                    }}
                   >
-                    <span className="material-symbols-outlined">add_circle</span>
-                    <span className="text-sm font-semibold">{t('proposalEditor.actions.addBlock')}</span>
-                  </button>
+                    <SortableContext items={blocks.map((block) => block.id)}>
+                      <div ref={canvasMeasureRef} className="flex flex-col gap-6 py-10 px-10">
+                        {blocks.map((block, index) => (
+                          <EditorBlock
+                            key={block.id}
+                            block={block}
+                            index={index}
+                            isSelected={block.id === selectedBlockId}
+                            onSelect={() => setSelectedBlockId(block.id)}
+                            onRemove={() => handleRemoveBlock(block.id)}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+
+                    <div className="mt-auto px-10 pb-10">
+                      <button
+                        onClick={() => handleAddBlock('text')}
+                        className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 rounded-lg hover:border-primary hover:text-primary transition-all group"
+                      >
+                        <span className="material-symbols-outlined">add_circle</span>
+                        <span className="text-sm font-semibold">{t('proposalEditor.actions.addBlock')}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CanvasDropZone>
@@ -2125,11 +2158,35 @@ export default function ProposalEditorPage() {
               </div>
               <div className="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
               <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel((prev) => Math.max(60, prev - 10))}
+                    className="size-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
+                    title={t('proposalEditor.actions.zoomOut')}
+                  >
+                    <span className="material-symbols-outlined text-sm">remove</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel(100)}
+                    className="px-2 py-0.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-1"
+                    title={t('proposalEditor.actions.resetZoom')}
+                  >
+                    <span className="material-symbols-outlined text-sm">zoom_in</span> {zoomLevel}%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel((prev) => Math.min(200, prev + 10))}
+                    className="size-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
+                    title={t('proposalEditor.actions.zoomIn')}
+                  >
+                    <span className="material-symbols-outlined text-sm">add</span>
+                  </button>
+                </div>
                 <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">zoom_in</span> 100%
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">pages</span> {t('proposalEditor.canvas.pageCount', { current: 1, total: 1 })}
+                  <span className="material-symbols-outlined text-sm">pages</span>{' '}
+                  {t('proposalEditor.canvas.pageCount', { current: 1, total: canvasPageCount })}
                 </span>
               </div>
             </div>
