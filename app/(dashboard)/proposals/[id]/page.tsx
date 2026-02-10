@@ -1,254 +1,386 @@
-'use client'
+import Link from 'next/link'
+import { notFound, redirect } from 'next/navigation'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { getServerLocale, getServerT } from '@/lib/i18n/server'
+import { normalizeStage } from '@/components/deals/stage-utils'
+import type { Database } from '@/types/database'
 
-import { useMemo, useState } from 'react'
-import { useI18n } from '@/lib/i18n'
+export const dynamic = 'force-dynamic'
 
-export default function ProposalViewPage() {
-  const [signerName, setSignerName] = useState('')
-  const { t, locale } = useI18n()
+type ProposalRow = Pick<
+  Database['public']['Tables']['proposals']['Row'],
+  | 'id'
+  | 'title'
+  | 'status'
+  | 'public_url'
+  | 'created_at'
+  | 'updated_at'
+  | 'expires_at'
+  | 'signed_at'
+  | 'signature_data'
+  | 'deal_id'
+>
 
-  const pricingItems = useMemo(
-    () => [
-      { name: t('proposalPreview.pricing.items.design'), qty: 1, unitPrice: 24500, total: 24500 },
-      { name: t('proposalPreview.pricing.items.integration'), qty: 1, unitPrice: 35000, total: 35000 },
-      { name: t('proposalPreview.pricing.items.seo'), qty: 1, unitPrice: 12000, total: 12000 },
-    ],
-    [t]
-  )
+type ProposalContact = Pick<Database['public']['Tables']['contacts']['Row'], 'full_name' | 'company' | 'email'>
+type ProposalViewRow = Pick<
+  Database['public']['Tables']['proposal_views']['Row'],
+  'id' | 'created_at' | 'ip_address' | 'user_agent' | 'duration_seconds'
+>
+type DealRow = Pick<Database['public']['Tables']['deals']['Row'], 'id' | 'title' | 'stage' | 'value' | 'currency'>
 
-  const timelineItems = useMemo(
-    () => [
-      {
-        icon: 'palette',
-        title: t('proposalPreview.timeline.items.design.title'),
-        duration: t('proposalPreview.timeline.items.design.duration'),
-        description: t('proposalPreview.timeline.items.design.description'),
-        active: true,
-      },
-      {
-        icon: 'code',
-        title: t('proposalPreview.timeline.items.development.title'),
-        duration: t('proposalPreview.timeline.items.development.duration'),
-        description: t('proposalPreview.timeline.items.development.description'),
-        active: false,
-      },
-      {
-        icon: 'rocket_launch',
-        title: t('proposalPreview.timeline.items.launch.title'),
-        duration: t('proposalPreview.timeline.items.launch.duration'),
-        description: t('proposalPreview.timeline.items.launch.description'),
-        active: false,
-      },
-    ],
-    [t]
-  )
+type SignatureData = {
+  name?: string
+  signed_at?: string
+}
 
-  const subtotal = pricingItems.reduce((sum, item) => sum + item.total, 0)
-  const total = subtotal * 1.2 // With VAT
+const formatDateTime = (value: string | null | undefined, locale: string) => {
+  if (!value) return '-'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(parsed)
+}
 
-  const formatCurrency = (value: number) => {
-    const localeValue = locale === 'en' ? 'en-US' : 'tr-TR'
-    const currency = locale === 'en' ? 'USD' : 'TRY'
-    return new Intl.NumberFormat(localeValue, { style: 'currency', currency, minimumFractionDigits: 0 }).format(value)
+const formatMoney = (value: number, locale: string, currency: string) =>
+  new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value)
+
+const maskIpAddress = (value: unknown) => {
+  if (typeof value !== 'string') return '-'
+  const ip = value.trim()
+  if (!ip) return '-'
+  if (ip.includes(':')) return '****:****'
+  const parts = ip.split('.')
+  if (parts.length !== 4) return ip
+  return `${parts[0]}.${parts[1]}.*.*`
+}
+
+const summarizeAgent = (value: string | null) => {
+  if (!value) return '-'
+  const userAgent = value.toLowerCase()
+  if (userAgent.includes('edg/')) return 'Edge'
+  if (userAgent.includes('chrome/')) return 'Chrome'
+  if (userAgent.includes('safari/') && !userAgent.includes('chrome/')) return 'Safari'
+  if (userAgent.includes('firefox/')) return 'Firefox'
+  if (userAgent.includes('mobile')) return 'Mobile Browser'
+  return 'Browser'
+}
+
+const getStatusBadge = (status: string, t: (key: string) => string) => {
+  switch (status) {
+    case 'signed':
+      return { label: t('proposals.status.signed'), className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' }
+    case 'pending':
+      return { label: t('proposals.status.pending'), className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' }
+    case 'sent':
+      return { label: t('proposals.status.sent'), className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' }
+    case 'viewed':
+      return { label: t('proposals.status.viewed'), className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' }
+    case 'draft':
+      return { label: t('proposals.status.draft'), className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }
+    case 'failed':
+      return { label: t('proposals.status.failed'), className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
+    case 'expired':
+      return { label: t('proposals.status.expired'), className: 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }
+    default:
+      return { label: status, className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }
+  }
+}
+
+export default async function ProposalDetailsPage({ params }: { params: { id: string } }) {
+  const supabase = await createServerSupabaseClient()
+  const t = getServerT()
+  const locale = getServerLocale()
+  const localeCode = locale === 'en' ? 'en-US' : 'tr-TR'
+  const copy =
+    locale === 'en'
+      ? {
+          back: 'Back to Proposals',
+          subtitle: 'Proposal status and engagement details',
+          infoTitle: 'Proposal Info',
+          activityTitle: 'View Activity',
+          noViews: 'No view activity yet.',
+          publicLink: 'Public link',
+          openLink: 'Open public page',
+          copiedHint: 'Link can be copied from the table actions.',
+          relatedDeal: 'Related deal',
+          dealStage: 'Deal stage',
+          value: 'Value',
+          customer: 'Customer',
+          customerEmail: 'Customer email',
+          createdAt: 'Created',
+          updatedAt: 'Updated',
+          signedAt: 'Signed at',
+          signer: 'Signer',
+          expiresAt: 'Expires at',
+          totalViews: 'Total views',
+          latestView: 'Latest view',
+          tableTime: 'Time',
+          tableIp: 'IP',
+          tableAgent: 'Client',
+          tableDuration: 'Duration',
+          seconds: 'sec',
+          unknown: 'Unknown',
+        }
+      : {
+          back: 'Tekliflere Dön',
+          subtitle: 'Teklif durumu ve etkileşim detayları',
+          infoTitle: 'Teklif Bilgisi',
+          activityTitle: 'Görüntüleme Aktivitesi',
+          noViews: 'Henüz görüntüleme aktivitesi yok.',
+          publicLink: 'Public link',
+          openLink: 'Public sayfayı aç',
+          copiedHint: 'Linki tablo aksiyonlarından kopyalayabilirsiniz.',
+          relatedDeal: 'İlgili anlaşma',
+          dealStage: 'Anlaşma aşaması',
+          value: 'Değer',
+          customer: 'Müşteri',
+          customerEmail: 'Müşteri e-postası',
+          createdAt: 'Oluşturulma',
+          updatedAt: 'Güncelleme',
+          signedAt: 'İmzalanma',
+          signer: 'İmzalayan',
+          expiresAt: 'Son geçerlilik',
+          totalViews: 'Toplam görüntüleme',
+          latestView: 'Son görüntüleme',
+          tableTime: 'Zaman',
+          tableIp: 'IP',
+          tableAgent: 'İstemci',
+          tableDuration: 'Süre',
+          seconds: 'sn',
+          unknown: 'Bilinmiyor',
+        }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
   }
 
+  const { data: proposalData, error: proposalError } = await supabase
+    .from('proposals')
+    .select('id, title, status, public_url, created_at, updated_at, expires_at, signed_at, signature_data, deal_id, contact:contacts(full_name, company, email)')
+    .eq('id', params.id)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (proposalError || !proposalData) {
+    notFound()
+  }
+
+  const proposal = proposalData as ProposalRow & {
+    contact?: ProposalContact | ProposalContact[] | null
+  }
+  const contact = Array.isArray(proposal.contact) ? proposal.contact[0] : proposal.contact
+
+  const [viewsResult, countResult, dealResult] = await Promise.all([
+    supabase
+      .from('proposal_views')
+      .select('id, created_at, ip_address, user_agent, duration_seconds')
+      .eq('proposal_id', proposal.id)
+      .order('created_at', { ascending: false })
+      .limit(25),
+    supabase
+      .from('proposal_views')
+      .select('id', { head: true, count: 'exact' })
+      .eq('proposal_id', proposal.id),
+    proposal.deal_id
+      ? supabase
+          .from('deals')
+          .select('id, title, stage, value, currency')
+          .eq('id', proposal.deal_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ])
+
+  const views = (viewsResult.data ?? []) as ProposalViewRow[]
+  const viewCount = countResult.count ?? views.length
+  const deal = (dealResult.data ?? null) as DealRow | null
+  const latestView = views[0]
+
+  const signatureData = (proposal.signature_data ?? {}) as SignatureData
+  const signedAt = signatureData.signed_at ?? proposal.signed_at
+  const signerName = signatureData.name ?? null
+  const statusBadge = getStatusBadge(proposal.status ?? 'draft', t)
+  const contactName = contact?.full_name?.trim() || contact?.company?.trim() || copy.unknown
+  const contactEmail = contact?.email?.trim() || copy.unknown
+
+  const dealStage = deal ? normalizeStage(deal.stage) : null
+  const dealValue = deal ? formatMoney(deal.value ?? 0, localeCode, deal.currency ?? (locale === 'en' ? 'USD' : 'TRY')) : null
+
   return (
-    <div className="w-full bg-[#f5f6f8] dark:bg-[#101722] min-h-screen">
-      {/* Urgency Banner */}
-      <div className="w-full bg-primary/10 dark:bg-primary/20 border-b border-primary/20 sticky top-0 z-50 backdrop-blur-md">
-        <div className="max-w-[960px] mx-auto px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-xl">timer</span>
-            <p className="text-sm font-medium text-primary">{t('proposalPreview.urgency.title')}</p>
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <Link
+          href="/proposals"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[#48679d] hover:text-primary"
+        >
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          {copy.back}
+        </Link>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-[#0d121c] dark:text-white">
+              {proposal.title}
+            </h1>
+            <p className="mt-1 text-sm text-[#48679d] dark:text-gray-400">{copy.subtitle}</p>
           </div>
-          <div className="flex gap-3 items-center">
-            <div className="flex flex-col items-center">
-              <span className="text-primary font-bold text-sm">02</span>
-              <span className="text-[10px] uppercase opacity-60">{t('proposalPreview.urgency.hours')}</span>
-            </div>
-            <span className="text-primary font-bold">:</span>
-            <div className="flex flex-col items-center">
-              <span className="text-primary font-bold text-sm">45</span>
-              <span className="text-[10px] uppercase opacity-60">{t('proposalPreview.urgency.minutes')}</span>
-            </div>
-            <span className="text-primary font-bold">:</span>
-            <div className="flex flex-col items-center">
-              <span className="text-primary font-bold text-sm">12</span>
-              <span className="text-[10px] uppercase opacity-60">{t('proposalPreview.urgency.seconds')}</span>
-            </div>
-          </div>
+          <span className={`inline-flex px-3 py-1.5 rounded-full text-xs font-bold h-fit ${statusBadge.className}`}>
+            {statusBadge.label}
+          </span>
         </div>
       </div>
 
-      <div className="flex flex-1 justify-center py-5">
-        <div className="flex flex-col max-w-[960px] flex-1 px-4">
-          {/* Hero Section */}
-          <div className="mb-8">
-            <div
-              className="bg-cover bg-center flex flex-col justify-end overflow-hidden rounded-xl min-h-[320px] shadow-lg relative"
-              style={{
-                backgroundImage: `linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 50%), url("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200")`,
-              }}
-            >
-              <div className="flex flex-col p-6 md:p-10">
-                <span className="bg-primary text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded w-fit mb-3">
-                  {t('proposalPreview.hero.badge')}
-                </span>
-                <h1 className="text-white tracking-tight text-3xl md:text-4xl font-extrabold leading-tight">
-                  {t('proposalPreview.hero.title')}
-                </h1>
-                <p className="text-gray-300 mt-2 text-sm md:text-base">{t('proposalPreview.hero.meta')}</p>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <section className="xl:col-span-2 bg-white dark:bg-[#161e2b] border border-[#e7ebf4] dark:border-gray-800 rounded-xl p-5">
+          <h2 className="text-base font-bold text-[#0d121c] dark:text-white">{copy.infoTitle}</h2>
+          <dl className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <dt className="text-[#48679d] dark:text-gray-400">{copy.customer}</dt>
+              <dd className="mt-1 font-semibold text-[#0d121c] dark:text-white">{contactName}</dd>
+            </div>
+            <div>
+              <dt className="text-[#48679d] dark:text-gray-400">{copy.customerEmail}</dt>
+              <dd className="mt-1 font-semibold text-[#0d121c] dark:text-white">{contactEmail}</dd>
+            </div>
+            <div>
+              <dt className="text-[#48679d] dark:text-gray-400">{copy.createdAt}</dt>
+              <dd className="mt-1 font-semibold text-[#0d121c] dark:text-white">
+                {formatDateTime(proposal.created_at, localeCode)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[#48679d] dark:text-gray-400">{copy.updatedAt}</dt>
+              <dd className="mt-1 font-semibold text-[#0d121c] dark:text-white">
+                {formatDateTime(proposal.updated_at, localeCode)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[#48679d] dark:text-gray-400">{copy.signedAt}</dt>
+              <dd className="mt-1 font-semibold text-[#0d121c] dark:text-white">
+                {formatDateTime(signedAt, localeCode)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[#48679d] dark:text-gray-400">{copy.signer}</dt>
+              <dd className="mt-1 font-semibold text-[#0d121c] dark:text-white">{signerName ?? copy.unknown}</dd>
+            </div>
+            <div>
+              <dt className="text-[#48679d] dark:text-gray-400">{copy.expiresAt}</dt>
+              <dd className="mt-1 font-semibold text-[#0d121c] dark:text-white">
+                {formatDateTime(proposal.expires_at, localeCode)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[#48679d] dark:text-gray-400">{copy.publicLink}</dt>
+              <dd className="mt-1">
+                {proposal.public_url ? (
+                  <a
+                    href={proposal.public_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-primary hover:underline break-all"
+                  >
+                    {proposal.public_url}
+                  </a>
+                ) : (
+                  <span className="font-semibold text-[#0d121c] dark:text-white">{copy.unknown}</span>
+                )}
+              </dd>
+            </div>
+          </dl>
+
+          {deal ? (
+            <div className="mt-5 rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-[#48679d] dark:text-gray-400">{copy.relatedDeal}</p>
+                  <Link href={`/deals/${deal.id}`} className="text-sm font-bold text-[#0d121c] dark:text-white hover:text-primary">
+                    {deal.title}
+                  </Link>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-[#48679d] dark:text-gray-400">
+                    {copy.dealStage}: <span className="font-semibold text-[#0d121c] dark:text-white">{t(`stages.${dealStage}`)}</span>
+                  </p>
+                  <p className="text-sm font-bold text-primary">
+                    {copy.value}: {dealValue}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
+        </section>
 
-          {/* Summary Section */}
-          <div className="mb-10">
-            <h2 className="text-primary text-sm font-bold uppercase tracking-widest mb-2">{t('proposalPreview.summary.kicker')}</h2>
-            <h1 className="text-[#0d121c] dark:text-white tracking-tight text-[32px] font-bold leading-tight pb-3">
-              {t('proposalPreview.summary.title')}
-            </h1>
-            <p className="text-[#4e5a71] dark:text-gray-400 text-lg font-normal leading-relaxed">
-              {t('proposalPreview.summary.body')}
+        <section className="bg-white dark:bg-[#161e2b] border border-[#e7ebf4] dark:border-gray-800 rounded-xl p-5 space-y-4">
+          <div>
+            <p className="text-sm text-[#48679d] dark:text-gray-400">{copy.totalViews}</p>
+            <p className="text-3xl font-extrabold text-[#0d121c] dark:text-white">{viewCount}</p>
+          </div>
+          <div>
+            <p className="text-sm text-[#48679d] dark:text-gray-400">{copy.latestView}</p>
+            <p className="text-sm font-semibold text-[#0d121c] dark:text-white">
+              {latestView ? formatDateTime(latestView.created_at, localeCode) : copy.noViews}
             </p>
           </div>
-
-          {/* Pricing Section */}
-          <div className="mb-12">
-            <div className="bg-white dark:bg-[#101722] border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
-              <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-                <h2 className="text-[#0d121c] dark:text-white text-xl font-bold">{t('proposalPreview.pricing.title')}</h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-gray-500 uppercase">
-                      <th className="px-6 py-4">{t('proposalPreview.pricing.columns.description')}</th>
-                      <th className="px-6 py-4 text-center">{t('proposalPreview.pricing.columns.qty')}</th>
-                      <th className="px-6 py-4 text-right">{t('proposalPreview.pricing.columns.unitPrice')}</th>
-                      <th className="px-6 py-4 text-right">{t('proposalPreview.pricing.columns.total')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm">
-                    {pricingItems.map((item, index) => (
-                      <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="px-6 py-4 font-medium text-[#0d121c] dark:text-white">{item.name}</td>
-                        <td className="px-6 py-4 text-center">{item.qty}</td>
-                        <td className="px-6 py-4 text-right">{formatCurrency(item.unitPrice)}</td>
-                        <td className="px-6 py-4 text-right">{formatCurrency(item.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50">
-                      <td className="px-6 py-6 text-right font-bold text-gray-500" colSpan={3}>
-                        {t('proposalPreview.pricing.subtotal')}
-                      </td>
-                      <td className="px-6 py-6 text-right font-bold text-[#0d121c] dark:text-white">{formatCurrency(subtotal)}</td>
-                    </tr>
-                    <tr className="bg-primary/5">
-                      <td className="px-6 py-6 text-right font-extrabold text-primary text-lg" colSpan={3}>
-                        {t('proposalPreview.pricing.totalWithVat')}
-                      </td>
-                      <td className="px-6 py-6 text-right font-extrabold text-primary text-xl tracking-tight">{formatCurrency(total)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* Timeline Section */}
-          <div className="mb-16">
-            <h2 className="text-[#0d121c] dark:text-white text-xl font-bold mb-6">{t('proposalPreview.timeline.title')}</h2>
-            <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-300 before:to-transparent">
-              {timelineItems.map((item, index) => (
-                <div key={index} className={`relative flex items-center justify-between md:justify-normal ${index % 2 === 0 ? 'md:flex-row-reverse' : ''} group`}>
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border border-white shadow shrink-0 md:order-1 ${index % 2 === 0 ? 'md:-translate-x-1/2' : 'md:translate-x-1/2'} ${item.active ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'}`}>
-                    <span className="material-symbols-outlined text-sm">{item.icon}</span>
-                  </div>
-                  <div className="w-[calc(100%-4rem)] md:w-[45%] p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-                    <div className="flex items-center justify-between space-x-2 mb-1">
-                      <div className="font-bold text-gray-900 dark:text-white">{item.title}</div>
-                      <time className={`text-xs font-medium px-2 py-1 rounded ${item.active ? 'text-primary bg-primary/10' : 'text-gray-500 bg-gray-100 dark:bg-gray-800'}`}>
-                        {item.duration}
-                      </time>
-                    </div>
-                    <div className="text-sm text-gray-500">{item.description}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* E-Signature Section */}
-          <div className="pb-24">
-            <div className="bg-white dark:bg-gray-900 border-2 border-primary/20 rounded-2xl p-8 shadow-xl">
-              <div className="flex flex-col md:flex-row md:items-start gap-8">
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('proposalPreview.signature.title')}</h3>
-                  <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-                    {t('proposalPreview.signature.description')}
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-gray-400 mb-1">{t('proposalPreview.signature.nameLabel')}</label>
-                      <input
-                        type="text"
-                        value={signerName}
-                        onChange={(e) => setSignerName(e.target.value)}
-                        placeholder={t('proposalPreview.signature.namePlaceholder')}
-                        className="w-full bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 focus:ring-primary focus:border-primary text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-gray-400 mb-1">{t('proposalPreview.signature.dateLabel')}</label>
-                      <input
-                        type="text"
-                        disabled
-                        value="24.05.2024"
-                        className="w-full bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-500 cursor-not-allowed"
-                      />
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                    <label className="block text-xs font-bold uppercase text-gray-400 mb-2 flex justify-between">
-                      <span>{t('proposalPreview.signature.canvasLabel')}</span>
-                      <span className="text-primary hover:underline cursor-pointer normal-case">{t('proposalPreview.signature.clear')}</span>
-                    </label>
-                    <div className="h-40 w-full rounded flex items-center justify-center relative cursor-crosshair bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
-                      <div className="absolute bottom-10 left-10 right-10 h-px bg-gray-300"></div>
-                      <p className="text-gray-300 text-xs italic z-0">{t('proposalPreview.signature.canvasHint')}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-gray-100 dark:border-gray-800 pt-8">
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <span className="material-symbols-outlined text-lg">verified_user</span>
-                  <span>{t('proposalPreview.signature.footer')}</span>
-                </div>
-                <button className="w-full md:w-auto bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-10 rounded-xl shadow-lg shadow-green-500/20 transition-all flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined">draw</span>
-                  {t('proposalPreview.signature.submit')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+          {proposal.public_url ? (
+            <a
+              href={proposal.public_url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary/90"
+            >
+              <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+              {copy.openLink}
+            </a>
+          ) : null}
+          <p className="text-xs text-gray-500">{copy.copiedHint}</p>
+        </section>
       </div>
 
-      {/* Sticky Bottom Bar (Mobile) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 md:hidden flex items-center justify-between z-50">
-        <div>
-          <p className="text-[10px] uppercase font-bold text-gray-400">{t('proposalPreview.sticky.totalLabel')}</p>
-          <p className="text-lg font-extrabold text-[#0d121c] dark:text-white">{formatCurrency(total)}</p>
+      <section className="bg-white dark:bg-[#161e2b] border border-[#e7ebf4] dark:border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-[#e7ebf4] dark:border-gray-800">
+          <h2 className="text-base font-bold text-[#0d121c] dark:text-white">{copy.activityTitle}</h2>
         </div>
-        <button className="bg-green-500 text-white font-bold py-3 px-6 rounded-lg text-sm flex items-center gap-2">
-          <span className="material-symbols-outlined text-lg">check_circle</span>
-          {t('proposalPreview.sticky.sign')}
-        </button>
-      </div>
+        {views.length === 0 ? (
+          <div className="px-5 py-8 text-sm text-[#48679d] dark:text-gray-400">{copy.noViews}</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-50 dark:bg-gray-900/50">
+                <tr>
+                  <th className="px-5 py-3 text-xs font-bold uppercase tracking-wide text-[#48679d]">{copy.tableTime}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase tracking-wide text-[#48679d]">{copy.tableIp}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase tracking-wide text-[#48679d]">{copy.tableAgent}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase tracking-wide text-[#48679d] text-right">{copy.tableDuration}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e7ebf4] dark:divide-gray-800">
+                {views.map((view) => (
+                  <tr key={view.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                    <td className="px-5 py-3 text-sm text-[#0d121c] dark:text-white">
+                      {formatDateTime(view.created_at, localeCode)}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-[#48679d] dark:text-gray-400">{maskIpAddress(view.ip_address)}</td>
+                    <td className="px-5 py-3 text-sm text-[#48679d] dark:text-gray-400">{summarizeAgent(view.user_agent)}</td>
+                    <td className="px-5 py-3 text-sm text-right text-[#0d121c] dark:text-white">
+                      {view.duration_seconds ? `${Math.round(view.duration_seconds)} ${copy.seconds}` : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

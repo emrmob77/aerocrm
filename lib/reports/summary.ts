@@ -81,7 +81,7 @@ const STAGE_COLOR_MAP: Record<ReportPipelineStage['id'], string> = {
   lost: 'bg-red-500',
 }
 
-const REPORT_STAGE_ORDER: Array<ReportPipelineStage['id']> = ['lead', 'proposal', 'negotiation', 'won', 'lost']
+const REPORT_STAGE_ORDER: Array<ReportPipelineStage['id']> = ['lead', 'negotiation', 'proposal', 'won', 'lost']
 
 const RANGE_TO_DAYS: Record<DateRange, number> = {
   '7d': 7,

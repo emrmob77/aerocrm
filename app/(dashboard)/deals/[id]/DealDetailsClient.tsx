@@ -378,6 +378,41 @@ export default function DealDetailsClient({
     return stage?.label ?? t('stages.lead')
   }, [draft.stage, stageConfigs, t])
 
+  const proposalCreateHref = useMemo(() => {
+    if (!deal) {
+      return '/proposals/new'
+    }
+
+    const params = new URLSearchParams()
+    params.set('dealId', deal.id)
+    if (deal.contact_id) {
+      params.set('contactId', deal.contact_id)
+    }
+
+    const clientName = selectedContact?.full_name?.trim() || selectedContact?.company?.trim() || ''
+    if (clientName) {
+      params.set('clientName', clientName)
+    }
+    if (selectedContact?.email?.trim()) {
+      params.set('contactEmail', selectedContact.email.trim())
+    }
+    if (selectedContact?.phone?.trim()) {
+      params.set('contactPhone', selectedContact.phone.trim())
+    }
+
+    if (deal.title?.trim()) {
+      params.set('dealTitle', deal.title.trim())
+    }
+    if (Number.isFinite(Number(deal.value))) {
+      params.set('dealValue', String(Number(deal.value)))
+    }
+    if (deal.currency?.trim()) {
+      params.set('dealCurrency', deal.currency.trim())
+    }
+
+    return `/proposals/new?${params.toString()}`
+  }, [deal, selectedContact?.company, selectedContact?.email, selectedContact?.full_name, selectedContact?.phone])
+
   const pipelineDays = useMemo(() => {
     if (!deal?.created_at) return 0
     const diffMs = Date.now() - new Date(deal.created_at).getTime()
@@ -783,6 +818,13 @@ export default function DealDetailsClient({
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                <Link
+                  href={proposalCreateHref}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/30 text-primary text-sm font-bold hover:bg-primary/10 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px]">description</span>
+                  {t('deals.detail.proposals.new')}
+                </Link>
                 {isEditing ? (
                   <>
                     <button
@@ -1105,7 +1147,7 @@ export default function DealDetailsClient({
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-bold text-[#0d121c] dark:text-white">{t('deals.detail.proposals.title')}</h3>
                         <Link
-                          href={`/proposals/new?dealId=${deal.id}`}
+                          href={proposalCreateHref}
                           className="px-4 py-2 rounded-lg bg-primary text-white text-xs font-bold"
                         >
                           {t('deals.detail.proposals.new')}

@@ -7,6 +7,8 @@ import { withApiLogging } from '@/lib/monitoring/api-logger'
 import { applySignatureToBlocks } from '@/lib/proposals/signature-utils'
 import type { Database } from '@/types/database'
 import { notifyInApp } from '@/lib/notifications/server'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { getDbStage, normalizeStage } from '@/components/deals/stage-utils'
 
 type SignPayload = {
   slug?: string
@@ -28,7 +30,7 @@ export const POST = withApiLogging(async (request: Request) => {
   const supabase = await createServerSupabaseClient()
   const { data: proposal, error } = await supabase
     .from('proposals')
-    .select('id, blocks, status, public_url, title, user_id, team_id')
+    .select('id, blocks, status, public_url, title, user_id, team_id, deal_id')
     .like('public_url', `%/p/${slug}`)
     .is('deleted_at', null)
     .maybeSingle()
@@ -37,6 +39,7 @@ export const POST = withApiLogging(async (request: Request) => {
     return NextResponse.json({ error: t('api.proposals.notFound') }, { status: 404 })
   }
 
+  const wasAlreadySigned = proposal.status === 'signed'
   const signedAt = new Date().toISOString()
   const blocks = Array.isArray(proposal.blocks) ? proposal.blocks : []
   const { blocks: nextBlocks } = applySignatureToBlocks(blocks as Array<{ type: string; data?: Record<string, unknown> }>, signature, name, signedAt)
@@ -59,7 +62,52 @@ export const POST = withApiLogging(async (request: Request) => {
     return NextResponse.json({ error: t('api.proposals.signFailed') }, { status: 400 })
   }
 
-  if (proposal.status !== 'signed' && proposal.user_id) {
+  // Always retry deal sync on sign requests so a previous transient failure can self-heal.
+  if (proposal.deal_id) {
+    try {
+      const admin = createSupabaseAdminClient()
+      let dealQuery = admin
+        .from('deals')
+        .select('id, stage')
+        .eq('id', proposal.deal_id)
+
+      if (proposal.team_id) {
+        dealQuery = dealQuery.eq('team_id', proposal.team_id)
+      }
+
+      const { data: deal, error: dealLoadError } = await dealQuery.maybeSingle()
+      if (dealLoadError) {
+        throw dealLoadError
+      }
+      if (deal?.id && normalizeStage(deal.stage) !== 'won') {
+        let updateQuery = admin
+          .from('deals')
+          .update({
+            stage: getDbStage('won'),
+            updated_at: signedAt,
+          })
+          .eq('id', deal.id)
+
+        if (proposal.team_id) {
+          updateQuery = updateQuery.eq('team_id', proposal.team_id)
+        }
+
+        const { error: dealUpdateError } = await updateQuery
+        if (dealUpdateError) {
+          throw dealUpdateError
+        }
+      }
+    } catch (dealSyncError) {
+      console.error('Failed to sync deal stage after proposal sign:', {
+        proposalId: proposal.id,
+        dealId: proposal.deal_id,
+        teamId: proposal.team_id,
+        error: dealSyncError,
+      })
+    }
+  }
+
+  if (!wasAlreadySigned && proposal.user_id) {
     const title = proposal.title ?? t('api.proposals.fallbackTitle')
     await notifyInApp(supabase as unknown as SupabaseClient<Database>, {
       userId: proposal.user_id,

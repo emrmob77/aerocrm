@@ -2,15 +2,18 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
-import { buildPublicProposalUrl } from '@/lib/proposals/link-utils'
+import { buildPublicProposalUrl, resolvePublicProposalOrigin } from '@/lib/proposals/link-utils'
 import { sanitizeProposalDesignSettings } from '@/lib/proposals/design-utils'
 import { ensureUserProfileAndTeam } from '@/lib/team/ensure-user-team'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, Json } from '@/types/database'
+import { normalizeStage } from '@/components/deals/stage-utils'
+import { resolveRequestOrigin } from '@/lib/url/request-origin'
 
 type DraftProposalPayload = {
   proposalId?: string | null
+  dealId?: string | null
   title?: string
   clientName?: string
   contactEmail?: string
@@ -23,6 +26,54 @@ const normalizeText = (value?: string | null) => value?.trim() || null
 const placeholderClientNames = new Set(['abc şirketi', 'abc company', 'müşteri adı', 'client name', 'müşteri', 'customer'])
 const isPlaceholderClientName = (value: string | null) =>
   value ? placeholderClientNames.has(value.toLocaleLowerCase('tr-TR')) : false
+
+const resolveLinkedDealId = async ({
+  supabase,
+  teamId,
+  explicitDealId,
+  contactId,
+}: {
+  supabase: SupabaseClient<Database>
+  teamId: string
+  explicitDealId: string | null
+  contactId: string | null
+}) => {
+  if (explicitDealId) {
+    const { data: deal } = await supabase
+      .from('deals')
+      .select('id')
+      .eq('id', explicitDealId)
+      .eq('team_id', teamId)
+      .maybeSingle()
+    if (deal?.id) {
+      return deal.id
+    }
+  }
+
+  if (!contactId) {
+    return null
+  }
+
+  const { data: deals } = await supabase
+    .from('deals')
+    .select('id, stage, updated_at')
+    .eq('team_id', teamId)
+    .eq('contact_id', contactId)
+    .order('updated_at', { ascending: false })
+    .limit(20)
+
+  const candidates = deals ?? []
+  if (candidates.length === 0) {
+    return null
+  }
+
+  const openDeal = candidates.find((deal) => {
+    const stage = normalizeStage(deal.stage)
+    return stage !== 'won' && stage !== 'lost'
+  })
+
+  return openDeal?.id ?? candidates[0]?.id ?? null
+}
 
 const createProposalVersion = async ({
   supabase,
@@ -97,6 +148,7 @@ export const POST = withApiLogging(async (request: Request) => {
   }
 
   const teamId = ensuredUser.teamId
+  const explicitDealId = normalizeText(payload?.dealId)
   const contactEmail = normalizeText(payload.contactEmail)
   const contactPhone = normalizeText(payload.contactPhone)
   const rawClientName = normalizeText(payload.clientName)
@@ -157,15 +209,35 @@ export const POST = withApiLogging(async (request: Request) => {
     contactId = newContact.id
   }
 
+  const resolvedDealId = await resolveLinkedDealId({
+    supabase: supabase as unknown as SupabaseClient<Database>,
+    teamId,
+    explicitDealId,
+    contactId,
+  })
+
   const blocks = (payload.blocks ?? []) as Json
   const designSettings = sanitizeProposalDesignSettings(payload.designSettings) as Json
 
   if (payload.proposalId) {
+    const { data: existingProposal, error: existingProposalError } = await supabase
+      .from('proposals')
+      .select('id, public_url, deal_id, contact_id')
+      .eq('id', payload.proposalId)
+      .eq('team_id', teamId)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (existingProposalError || !existingProposal?.id) {
+      return NextResponse.json({ error: t('api.proposals.draftUpdateFailed') }, { status: 400 })
+    }
+
     const { data: proposal, error: proposalError } = await supabase
       .from('proposals')
       .update({
         title: payload.title.trim(),
-        contact_id: contactId,
+        deal_id: resolvedDealId ?? existingProposal.deal_id ?? null,
+        contact_id: contactId ?? existingProposal.contact_id ?? null,
         blocks,
         design_settings: designSettings,
         status: 'draft',
@@ -203,13 +275,15 @@ export const POST = withApiLogging(async (request: Request) => {
     })
   }
 
-  const origin = new URL(request.url).origin
-  const publicUrl = buildPublicProposalUrl(origin)
+  const requestOrigin = resolveRequestOrigin(request)
+  const publicProposalOrigin = resolvePublicProposalOrigin(requestOrigin)
+  const publicUrl = buildPublicProposalUrl(publicProposalOrigin)
 
   const { data: proposal, error: proposalError } = await supabase
     .from('proposals')
     .insert({
       title: payload.title.trim(),
+      deal_id: resolvedDealId,
       contact_id: contactId,
       user_id: user.id,
       team_id: teamId,

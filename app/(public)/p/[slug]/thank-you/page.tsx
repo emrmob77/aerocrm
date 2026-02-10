@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
+import { buildProposalSmartVariableMap, resolveSmartVariablesInText } from '@/lib/proposals/smart-variables'
 
 export const revalidate = 0
 
@@ -37,6 +38,14 @@ export default async function PublicProposalThankYouPage({ params }: { params: {
 
   const contactName = (proposal.contact as { full_name?: string } | null)?.full_name ?? t('header.customerFallback')
   const pdfUrl = `/api/proposals/pdf?slug=${encodeURIComponent(params.slug)}`
+  const formattedDate = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date())
+  const smartVariableMap = buildProposalSmartVariableMap({
+    clientName: contactName,
+    proposalNumber: proposal.id,
+    formattedDate,
+    totalFormatted: '-',
+  })
+  const resolvedTitle = resolveSmartVariablesInText(proposal.title ?? t('api.proposals.fallbackTitle'), smartVariableMap)
   const signedAtText =
     signedAt && !Number.isNaN(Date.parse(signedAt))
       ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(signedAt))
@@ -81,7 +90,7 @@ export default async function PublicProposalThankYouPage({ params }: { params: {
           )}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{t('proposalPreview.hero.badge')}</p>
-            <p className="mt-1 text-sm font-semibold text-[#0d121c]">{proposal.title}</p>
+            <p className="mt-1 text-sm font-semibold text-[#0d121c]">{resolvedTitle}</p>
           </div>
         </div>
 

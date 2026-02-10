@@ -97,6 +97,32 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
   const totalValue = deals.reduce((sum, deal) => sum + (deal.value ?? 0), 0)
   const openDeals = deals.filter((deal) => !closedStages.has(normalizeStage(deal.stage))).length
   const lastActivityAt = getLastActivity(contact, deals)
+  const preferredDeal = deals.find((deal) => !closedStages.has(normalizeStage(deal.stage))) ?? deals[0] ?? null
+
+  const proposalParams = new URLSearchParams({ contactId: contact.id })
+  const proposalClientName = contact.full_name?.trim() || contact.company?.trim() || ''
+  if (proposalClientName) {
+    proposalParams.set('clientName', proposalClientName)
+  }
+  if (contact.email?.trim()) {
+    proposalParams.set('contactEmail', contact.email.trim())
+  }
+  if (contact.phone?.trim()) {
+    proposalParams.set('contactPhone', contact.phone.trim())
+  }
+  if (preferredDeal) {
+    proposalParams.set('dealId', preferredDeal.id)
+    if (preferredDeal.title?.trim()) {
+      proposalParams.set('dealTitle', preferredDeal.title.trim())
+    }
+    if (Number.isFinite(Number(preferredDeal.value))) {
+      proposalParams.set('dealValue', String(Number(preferredDeal.value)))
+    }
+    if (preferredDeal.currency?.trim()) {
+      proposalParams.set('dealCurrency', preferredDeal.currency.trim())
+    }
+  }
+  const proposalCreateHref = `/proposals/new?${proposalParams.toString()}`
 
   const initials = getInitials(contact.full_name)
   const avatarStyle = getAvatarStyle(contact.full_name)
@@ -130,7 +156,7 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
               {t('contacts.detail.edit')}
             </Link>
             <Link
-              href={`/proposals/new?contactId=${contact.id}`}
+              href={proposalCreateHref}
               className="px-4 py-2 border border-[#ced8e9] dark:border-gray-700 rounded-lg text-sm font-semibold text-[#48679d] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               {t('contacts.detail.newProposal')}

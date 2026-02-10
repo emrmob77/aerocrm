@@ -14,8 +14,8 @@ type BaseStageConfig = {
 
 const baseStageConfigs: BaseStageConfig[] = [
   { id: 'lead', labelKey: 'stages.lead', dbValues: ['lead', 'aday'] },
-  { id: 'proposal', labelKey: 'stages.proposal', dbValues: ['proposal', 'proposal_sent', 'teklif', 'teklif gönderildi'] },
   { id: 'negotiation', labelKey: 'stages.negotiation', dbValues: ['negotiation', 'görüşme', 'meeting'] },
+  { id: 'proposal', labelKey: 'stages.proposal', dbValues: ['proposal', 'proposal_sent', 'teklif', 'teklif gönderildi'] },
   { id: 'won', labelKey: 'stages.won', dbValues: ['won', 'kazanıldı', 'closed_won'] },
   { id: 'lost', labelKey: 'stages.lost', dbValues: ['lost', 'kaybedildi', 'closed_lost'] },
 ]

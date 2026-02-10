@@ -115,7 +115,7 @@ export function ContactForm({ mode, contactId, initialData, initialCustomFields 
         return
       }
 
-      const { error } = await contactsTable
+      let updateQuery = contactsTable
         .update({
           full_name: formData.full_name.trim(),
           email: formData.email.trim() || null,
@@ -127,14 +127,22 @@ export function ContactForm({ mode, contactId, initialData, initialCustomFields 
         })
         .eq('id', contactId)
 
-      if (error) {
+      if (profile?.team_id) {
+        updateQuery = updateQuery.eq('team_id', profile.team_id)
+      } else {
+        updateQuery = updateQuery.eq('user_id', authUser.id)
+      }
+
+      const { data: updatedContact, error } = await updateQuery.select('id').maybeSingle()
+
+      if (error || !updatedContact?.id) {
         console.error('Update contact error:', error)
-        toast.error(error.message || t('contacts.form.updateError'))
+        toast.error(error?.message || t('contacts.form.updateError'))
         return
       }
 
       toast.success(t('contacts.form.updated'))
-      router.push(`/contacts/${contactId}`)
+      router.push(`/contacts/${updatedContact.id}`)
     } finally {
       setLoading(false)
     }

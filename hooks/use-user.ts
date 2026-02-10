@@ -11,8 +11,6 @@ export function useUser() {
   const { user: authUser, loading: authLoading } = useAuth()
   const { user, setUser } = useAppStore()
   const [loading, setLoading] = useState(true)
-  const hasMatchingProfile = !!authUser && !!user && user.id === authUser.id
-  const resolvedUser = hasMatchingProfile ? user : null
 
   useEffect(() => {
     let isMounted = true
@@ -33,6 +31,8 @@ export function useUser() {
       }
     }
 
+    setLoading(true)
+
     if (user && user.id !== authUser.id) {
       // Prevent rendering stale profile data from a previous session/user.
       setUser(null)
@@ -48,7 +48,7 @@ export function useUser() {
           .from('users')
           .select('id, email, full_name, role, team_id, avatar_url, language, allowed_screens, created_at, updated_at')
           .eq('id', authUser.id)
-          .single()
+          .maybeSingle()
 
         if (!isMounted) {
           return
@@ -56,10 +56,13 @@ export function useUser() {
 
         if (profile) {
           setUser(profile as User)
+        } else {
+          setUser(null)
         }
       } catch (error) {
         if (isMounted) {
           console.error('Error getting user:', error)
+          setUser(null)
         }
       } finally {
         if (isMounted && !silent) {
@@ -92,10 +95,11 @@ export function useUser() {
         supabase.removeChannel(profileChannel)
       }
     }
-  }, [authLoading, authUser, setUser, supabase, user])
+  }, [authLoading, authUser?.id, setUser, supabase])
 
-  const isLoadingProfile = !!authUser && (!hasMatchingProfile || loading)
-  const isLoading = authLoading || isLoadingProfile
+  const hasMatchingProfile = !!authUser && !!user && user.id === authUser.id
+  const resolvedUser = hasMatchingProfile ? user : null
+  const isLoading = authLoading || (!!authUser && loading)
 
   return {
     user: resolvedUser,

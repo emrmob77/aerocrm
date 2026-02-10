@@ -7,13 +7,22 @@ import { sendTwilioMessage, getCredentialsFromEnv } from '@/lib/integrations/twi
 import type { Database, TwilioCredentials } from '@/types/database'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { withApiLogging } from '@/lib/monitoring/api-logger'
-import { buildPublicProposalUrl } from '@/lib/proposals/link-utils'
+import { buildPublicProposalUrl, resolvePublicProposalOrigin } from '@/lib/proposals/link-utils'
 import { sanitizeProposalDesignSettings } from '@/lib/proposals/design-utils'
 import { ensureUserProfileAndTeam } from '@/lib/team/ensure-user-team'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { notifyInApp } from '@/lib/notifications/server'
+import { getDbStage, normalizeStage } from '@/components/deals/stage-utils'
+import { resolveRequestOrigin } from '@/lib/url/request-origin'
+import {
+  buildProposalSmartVariableMap,
+  getProposalPricingSummary,
+  resolveSmartVariablesInJson,
+  resolveSmartVariablesInText,
+} from '@/lib/proposals/smart-variables'
 
 type SendProposalPayload = {
+  proposalId?: string | null
   title?: string
   clientName?: string
   contactEmail?: string
@@ -124,6 +133,99 @@ const getTwilioCredentials = async (
   return getCredentialsFromEnv()
 }
 
+const resolveLinkedDealId = async ({
+  supabase,
+  teamId,
+  explicitDealId,
+  contactId,
+}: {
+  supabase: SupabaseClient<Database>
+  teamId: string
+  explicitDealId: string | null
+  contactId: string | null
+}) => {
+  if (explicitDealId) {
+    const { data: deal } = await supabase
+      .from('deals')
+      .select('id')
+      .eq('id', explicitDealId)
+      .eq('team_id', teamId)
+      .maybeSingle()
+    if (deal?.id) {
+      return deal.id
+    }
+  }
+
+  if (!contactId) {
+    return null
+  }
+
+  const { data: deals } = await supabase
+    .from('deals')
+    .select('id, stage, updated_at')
+    .eq('team_id', teamId)
+    .eq('contact_id', contactId)
+    .order('updated_at', { ascending: false })
+    .limit(20)
+
+  const candidates = deals ?? []
+  if (candidates.length === 0) {
+    return null
+  }
+
+  const openDeal = candidates.find((deal) => {
+    const stage = normalizeStage(deal.stage)
+    return stage !== 'won' && stage !== 'lost'
+  })
+
+  return openDeal?.id ?? candidates[0]?.id ?? null
+}
+
+const syncDealStageAfterProposalSent = async ({
+  supabase,
+  dealId,
+  teamId,
+  updatedAt,
+}: {
+  supabase: SupabaseClient<Database>
+  dealId: string | null
+  teamId: string
+  updatedAt: string
+}) => {
+  if (!dealId) {
+    return
+  }
+
+  try {
+    const { data: deal } = await supabase
+      .from('deals')
+      .select('id, stage')
+      .eq('id', dealId)
+      .eq('team_id', teamId)
+      .maybeSingle()
+
+    if (!deal?.id) {
+      return
+    }
+
+    const currentStage = normalizeStage(deal.stage)
+    if (currentStage === 'proposal' || currentStage === 'won' || currentStage === 'lost') {
+      return
+    }
+
+    await supabase
+      .from('deals')
+      .update({
+        stage: getDbStage('proposal'),
+        updated_at: updatedAt,
+      })
+      .eq('id', deal.id)
+      .eq('team_id', teamId)
+  } catch (error) {
+    console.error('Failed to sync deal stage after proposal send:', error)
+  }
+}
+
 export const POST = withApiLogging(async (request: Request) => {
   const t = getServerT()
   const locale = getServerLocale()
@@ -157,6 +259,8 @@ export const POST = withApiLogging(async (request: Request) => {
   }
 
   const teamId = ensuredUser.teamId
+  const requestedProposalId = normalizeText(payload.proposalId)
+  const explicitDealId = normalizeText(payload.dealId)
   const contactEmail = normalizeText(payload.contactEmail)
   const contactPhone = normalizeText(payload.contactPhone)
   const rawClientName = normalizeText(payload.clientName)
@@ -217,39 +321,130 @@ export const POST = withApiLogging(async (request: Request) => {
     contactId = newContact.id
   }
 
-  const origin = new URL(request.url).origin
-  const publicUrl = buildPublicProposalUrl(origin)
+  const resolvedDealId = await resolveLinkedDealId({
+    supabase: supabase as unknown as SupabaseClient<Database>,
+    teamId,
+    explicitDealId,
+    contactId,
+  })
+
+  const localeCode = locale === 'en' ? 'en-US' : 'tr-TR'
+  const pricingSummary = getProposalPricingSummary(payload.blocks ?? [], locale === 'en' ? 'USD' : 'TRY')
+  const formattedDate = new Intl.DateTimeFormat(localeCode, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date())
+  const formatTotal = (currency: string, total: number) =>
+    new Intl.NumberFormat(localeCode, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(total)
+  const resolveProposalContent = (proposalNumber: string) => {
+    const variableMap = buildProposalSmartVariableMap({
+      clientName,
+      proposalNumber,
+      formattedDate,
+      totalFormatted: formatTotal(pricingSummary.currency, pricingSummary.total),
+    })
+
+    return {
+      title: resolveSmartVariablesInText(payload.title?.trim() || t('api.proposals.fallbackTitle'), variableMap),
+      blocks: resolveSmartVariablesInJson(payload.blocks ?? [], variableMap),
+    }
+  }
+
+  const requestOrigin = resolveRequestOrigin(request)
+  const publicProposalOrigin = resolvePublicProposalOrigin(requestOrigin)
+  const defaultPublicUrl = buildPublicProposalUrl(publicProposalOrigin)
   const expiresAt = buildExpiryDate(payload.expiryEnabled, payload.expiryDuration)
   const designSettings = sanitizeProposalDesignSettings(payload.designSettings)
+  let proposal:
+    | {
+        id: string
+        public_url: string | null
+        expires_at: string | null
+        status: string
+        title: string | null
+        deal_id: string | null
+      }
+    | null = null
 
-  const { data: proposal, error: proposalError } = await supabase
-    .from('proposals')
-    .insert({
-      title: payload.title.trim(),
-      deal_id: payload.dealId ?? null,
-      contact_id: contactId,
-      user_id: user.id,
-      team_id: teamId,
-      blocks: payload.blocks ?? [],
-      design_settings: designSettings,
-      status: 'pending',
-      public_url: publicUrl,
-      expires_at: expiresAt,
-    })
-    .select('id, public_url, expires_at, status, title')
-    .single()
+  if (requestedProposalId) {
+    const { data: existingProposal } = await supabase
+      .from('proposals')
+      .select('id, public_url, contact_id, deal_id')
+      .eq('id', requestedProposalId)
+      .eq('team_id', teamId)
+      .is('deleted_at', null)
+      .maybeSingle()
 
-  if (proposalError || !proposal) {
-    return NextResponse.json({ error: t('api.proposals.saveFailed') }, { status: 400 })
+    if (existingProposal?.id) {
+      const resolvedContent = resolveProposalContent(existingProposal.id)
+      const { data: updatedProposal, error: updateError } = await supabase
+        .from('proposals')
+        .update({
+          title: resolvedContent.title,
+          deal_id: resolvedDealId ?? existingProposal.deal_id ?? null,
+          contact_id: contactId ?? existingProposal.contact_id ?? null,
+          user_id: user.id,
+          blocks: resolvedContent.blocks,
+          design_settings: designSettings,
+          status: 'pending',
+          public_url: existingProposal.public_url || defaultPublicUrl,
+          expires_at: expiresAt,
+        })
+        .eq('id', existingProposal.id)
+        .eq('team_id', teamId)
+        .select('id, public_url, expires_at, status, title, deal_id')
+        .single()
+
+      if (updateError || !updatedProposal) {
+        return NextResponse.json({ error: t('api.proposals.saveFailed') }, { status: 400 })
+      }
+
+      proposal = updatedProposal
+    }
+  }
+
+  if (!proposal) {
+    const newProposalId = crypto.randomUUID()
+    const resolvedContent = resolveProposalContent(newProposalId)
+    const { data: createdProposal, error: proposalError } = await supabase
+      .from('proposals')
+      .insert({
+        id: newProposalId,
+        title: resolvedContent.title,
+        deal_id: resolvedDealId,
+        contact_id: contactId,
+        user_id: user.id,
+        team_id: teamId,
+        blocks: resolvedContent.blocks,
+        design_settings: designSettings,
+        status: 'pending',
+        public_url: defaultPublicUrl,
+        expires_at: expiresAt,
+      })
+      .select('id, public_url, expires_at, status, title, deal_id')
+      .single()
+
+    if (proposalError || !createdProposal) {
+      return NextResponse.json({ error: t('api.proposals.saveFailed') }, { status: 400 })
+    }
+
+    proposal = createdProposal
   }
 
   const method = payload.method ?? 'email'
   const proposalDefaults = getProposalDefaults({ locale, client: clientName })
   const anchorText = proposalDefaults.anchor || t('api.proposals.anchorText')
+  const proposalPublicUrl = proposal.public_url || defaultPublicUrl
 
   const messageBody = buildMessageWithLink(
     payload.message?.trim() || proposalDefaults.message,
-    publicUrl,
+    proposalPublicUrl,
     payload.includeLink,
     anchorText
   )
@@ -264,7 +459,7 @@ export const POST = withApiLogging(async (request: Request) => {
       const template = buildProposalDeliveryEmail({
         subject,
         message: messageBody,
-        link: payload.includeLink === false ? undefined : publicUrl,
+        link: payload.includeLink === false ? undefined : proposalPublicUrl,
         locale,
       })
       await sendEmail({
@@ -301,10 +496,18 @@ export const POST = withApiLogging(async (request: Request) => {
         .eq('provider', 'twilio')
     }
 
+    // Link paylaşımı da gönderim aksiyonu olarak kabul edilir.
     let finalStatus = proposal.status
-    if (method !== 'link') {
-      await supabase.from('proposals').update({ status: 'sent' }).eq('id', proposal.id)
-      finalStatus = 'sent'
+    await supabase.from('proposals').update({ status: 'sent' }).eq('id', proposal.id)
+    finalStatus = 'sent'
+
+    if (finalStatus === 'sent') {
+      await syncDealStageAfterProposalSent({
+        supabase: supabase as unknown as SupabaseClient<Database>,
+        dealId: proposal.deal_id ?? resolvedDealId,
+        teamId,
+        updatedAt: new Date().toISOString(),
+      })
     }
 
     const proposalTitle = proposal.title ?? t('api.proposals.fallbackTitle')
@@ -327,19 +530,17 @@ export const POST = withApiLogging(async (request: Request) => {
       },
     })
 
-    if (method !== 'link') {
-      await dispatchWebhookEvent({
-        supabase,
-        teamId,
-        event: 'proposal.sent',
-        data: {
-          proposal_id: proposal.id,
-          title: proposal.title,
-          status: finalStatus,
-          public_url: proposal.public_url,
-        },
-      })
-    }
+    await dispatchWebhookEvent({
+      supabase,
+      teamId,
+      event: 'proposal.sent',
+      data: {
+        proposal_id: proposal.id,
+        title: proposal.title,
+        status: finalStatus,
+        public_url: proposalPublicUrl,
+      },
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : t('api.proposals.sendFailed')
     await supabase.from('proposals').update({ status: 'failed' }).eq('id', proposal.id)
@@ -348,7 +549,7 @@ export const POST = withApiLogging(async (request: Request) => {
 
   return NextResponse.json({
     proposalId: proposal.id,
-    publicUrl: proposal.public_url,
+    publicUrl: proposalPublicUrl,
     expiresAt: proposal.expires_at,
   })
 })

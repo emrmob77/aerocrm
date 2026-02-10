@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import {
   DndContext,
@@ -416,7 +416,15 @@ export default function ProposalEditorPage() {
   const templateId = searchParams.get('templateId')
   const presetId = searchParams.get('presetId')
   const contactId = searchParams.get('contactId')
+  const dealId = searchParams.get('dealId')?.trim() || null
   const proposalId = searchParams.get('proposalId')
+  const prefillClientNameParam = searchParams.get('clientName')?.trim() || ''
+  const prefillContactEmailParam = searchParams.get('contactEmail')?.trim() || ''
+  const prefillContactPhoneParam = searchParams.get('contactPhone')?.trim() || ''
+  const prefillDealTitleParam = searchParams.get('dealTitle')?.trim() || ''
+  const prefillDealCurrencyParam = searchParams.get('dealCurrency')?.trim() || ''
+  const prefillDealValueRaw = searchParams.get('dealValue')?.trim()
+  const prefillDealValueParam = prefillDealValueRaw ? Number(prefillDealValueRaw) : Number.NaN
   const { t, get, locale } = useI18n()
   const localeCode = locale === 'en' ? 'en-US' : 'tr-TR'
 
@@ -817,7 +825,9 @@ export default function ProposalEditorPage() {
   const [contactsLoading, setContactsLoading] = useState(false)
   const [contactPickerOpen, setContactPickerOpen] = useState(false)
   const [contactDetailsOpen, setContactDetailsOpen] = useState(false)
-  const [documentTitle, setDocumentTitle] = useState(() => t('proposalEditor.defaults.documentTitle'))
+  const [documentTitle, setDocumentTitle] = useState(
+    () => prefillDealTitleParam || t('proposalEditor.defaults.documentTitle')
+  )
   const [activePanel, setActivePanel] = useState<'content' | 'design'>('design')
   const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
   const [zoomLevel, setZoomLevel] = useState(100)
@@ -842,11 +852,24 @@ export default function ProposalEditorPage() {
   const hasAppliedPresetFromUrl = useRef(false)
   const [tempProposalNo, setTempProposalNo] = useState('')
 
-  const [proposalMeta, setProposalMeta] = useState(() => ({
-    clientName: t('proposalEditor.defaults.clientName'),
-    contactEmail: '',
-    contactPhone: '',
-  }))
+  const [proposalMeta, setProposalMeta] = useState(() => {
+    const fallbackClientName = t('proposalEditor.defaults.clientName')
+    return {
+      clientName: normalizeClientNameValue(prefillClientNameParam, fallbackClientName),
+      contactEmail: prefillContactEmailParam,
+      contactPhone: prefillContactPhoneParam,
+    }
+  })
+  const [linkedDealId, setLinkedDealId] = useState<string | null>(dealId)
+  const [linkedDealValue, setLinkedDealValue] = useState<{ value: number; currency: string } | null>(() => {
+    if (!Number.isFinite(prefillDealValueParam)) {
+      return null
+    }
+    return {
+      value: prefillDealValueParam,
+      currency: prefillDealCurrencyParam || (locale === 'en' ? 'USD' : 'TRY'),
+    }
+  })
 
   useEffect(() => {
     if (isTemplateMode && editorMode === 'send') {
@@ -859,6 +882,52 @@ export default function ProposalEditorPage() {
       setTempProposalNo(createTemporaryProposalNo())
     }
   }, [tempProposalNo])
+
+  useEffect(() => {
+    if (dealId) {
+      setLinkedDealId(dealId)
+    }
+  }, [dealId])
+
+  useEffect(() => {
+    const fallbackClientName = t('proposalEditor.defaults.clientName')
+    setProposalMeta((prev) => ({
+      clientName:
+        prefillClientNameParam && (!prev.clientName.trim() || prev.clientName === fallbackClientName)
+          ? normalizeClientNameValue(prefillClientNameParam, fallbackClientName)
+          : prev.clientName,
+      contactEmail:
+        prefillContactEmailParam && !prev.contactEmail.trim()
+          ? prefillContactEmailParam
+          : prev.contactEmail,
+      contactPhone:
+        prefillContactPhoneParam && !prev.contactPhone.trim()
+          ? prefillContactPhoneParam
+          : prev.contactPhone,
+    }))
+  }, [prefillClientNameParam, prefillContactEmailParam, prefillContactPhoneParam, t])
+
+  useEffect(() => {
+    if (!prefillDealTitleParam) return
+    const defaultTitle = t('proposalEditor.defaults.documentTitle')
+    setDocumentTitle((prev) => {
+      if (!prev.trim() || prev === defaultTitle) {
+        return prefillDealTitleParam
+      }
+      return prev
+    })
+  }, [prefillDealTitleParam, t])
+
+  useEffect(() => {
+    if (!Number.isFinite(prefillDealValueParam)) return
+    setLinkedDealValue((prev) => {
+      if (prev) return prev
+      return {
+        value: prefillDealValueParam,
+        currency: prefillDealCurrencyParam || (locale === 'en' ? 'USD' : 'TRY'),
+      }
+    })
+  }, [locale, prefillDealCurrencyParam, prefillDealValueParam])
 
   const loadProductOptions = useCallback(async () => {
     if (!authUser) {
@@ -967,22 +1036,13 @@ export default function ProposalEditorPage() {
     if (!authUser || !contactId) return
     if (proposalId) return
 
-    const teamId = user?.team_id ?? null
-
     const loadContact = async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('contacts')
         .select('full_name, company, email, phone, team_id, user_id')
         .eq('id', contactId)
-
-      if (teamId) {
-        query = query.eq('team_id', teamId)
-      } else {
-        query = query.eq('user_id', authUser.id)
-      }
-
-      const { data } = await query.maybeSingle()
-      if (!data) return
+        .maybeSingle()
+      if (error || !data) return
 
       const fallbackClientName = t('proposalEditor.defaults.clientName')
       const clientName = normalizeClientNameValue(
@@ -999,7 +1059,62 @@ export default function ProposalEditorPage() {
     }
 
     loadContact()
-  }, [authUser, contactId, proposalId, supabase, t, user?.team_id, userLoading])
+  }, [authUser, contactId, proposalId, supabase, t, userLoading])
+
+  useEffect(() => {
+    if (userLoading) return
+    if (!authUser || !dealId) return
+    if (proposalId) return
+
+    const loadDealContext = async () => {
+      const { data, error } = await supabase
+        .from('deals')
+        .select('id, title, value, currency, contact_id')
+        .eq('id', dealId)
+        .maybeSingle()
+      if (error || !data?.id) return
+
+      setLinkedDealId(data.id)
+      setLinkedDealValue({
+        value: Number.isFinite(Number(data.value)) ? Number(data.value) : 0,
+        currency: data.currency?.trim() || (locale === 'en' ? 'USD' : 'TRY'),
+      })
+
+      if (data.contact_id) {
+        const { data: contact } = await supabase
+          .from('contacts')
+          .select('full_name, company, email, phone')
+          .eq('id', data.contact_id)
+          .maybeSingle()
+
+        if (contact) {
+          const fallbackClientName = t('proposalEditor.defaults.clientName')
+          const clientName = normalizeClientNameValue(
+            contact.full_name?.trim() || contact.company?.trim(),
+            fallbackClientName
+          )
+
+          setProposalMeta((prev) => ({
+            ...prev,
+            clientName,
+            contactEmail: contact.email ?? prev.contactEmail,
+            contactPhone: contact.phone ?? prev.contactPhone,
+          }))
+        }
+      }
+
+      setDocumentTitle((prev) => {
+        const nextTitle = (data.title ?? '').trim()
+        if (!nextTitle) return prev
+        if (!prev.trim() || prev === t('proposalEditor.defaults.documentTitle')) {
+          return nextTitle
+        }
+        return prev
+      })
+    }
+
+    loadDealContext()
+  }, [authUser, dealId, locale, proposalId, supabase, t, userLoading])
 
   const fetchTemplates = useCallback(async (scope: TemplateScope) => {
     setTemplatesLoading(true)
@@ -1281,7 +1396,7 @@ export default function ProposalEditorPage() {
     const loadProposal = async () => {
       const { data, error } = await supabase
         .from('proposals')
-        .select('id, title, blocks, design_settings, public_url, contacts(full_name, company, email, phone)')
+        .select('id, title, blocks, design_settings, public_url, deal_id, contact_id, contacts(full_name, company, email, phone)')
         .eq('id', proposalId)
         .is('deleted_at', null)
         .maybeSingle()
@@ -1291,27 +1406,62 @@ export default function ProposalEditorPage() {
         return
       }
 
-      const rawBlocks = data.blocks
-      let nextBlocks: ProposalBlock[] = []
-      if (Array.isArray(rawBlocks)) {
-        nextBlocks = rawBlocks as ProposalBlock[]
-      } else if (typeof rawBlocks === 'string') {
-        try {
-          const parsed = JSON.parse(rawBlocks)
-          if (Array.isArray(parsed)) {
-            nextBlocks = parsed as ProposalBlock[]
-          }
-        } catch {
-          nextBlocks = []
+      const parseBlocks = (value: unknown): ProposalBlock[] => {
+        if (Array.isArray(value)) {
+          return value as ProposalBlock[]
         }
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value)
+            if (Array.isArray(parsed)) {
+              return parsed as ProposalBlock[]
+            }
+          } catch {
+            return []
+          }
+        }
+        return []
+      }
+
+      const rawBlocks = data.blocks
+      let nextBlocks = parseBlocks(rawBlocks)
+      if (nextBlocks.length === 0) {
+        const { data: latestVersion } = await supabase
+          .from('proposal_versions')
+          .select('blocks')
+          .eq('proposal_id', data.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        nextBlocks = parseBlocks(latestVersion?.blocks)
       }
 
       if (nextBlocks.length > 0) {
         setBlocks(normalizeBlocks(nextBlocks))
+      } else {
+        setBlocks(normalizeBlocks([
+          createBlock('hero'),
+          createBlock('text'),
+          createBlock('pricing'),
+          createBlock('signature'),
+        ]))
       }
+
       setDesignSettings(sanitizeProposalDesignSettings(data.design_settings))
 
-      const contact = Array.isArray(data.contacts) ? data.contacts[0] : data.contacts
+      let contact = Array.isArray(data.contacts) ? data.contacts[0] : data.contacts
+      if (!contact && data.contact_id) {
+        const { data: fallbackContact } = await supabase
+          .from('contacts')
+          .select('full_name, company, email, phone')
+          .eq('id', data.contact_id)
+          .maybeSingle()
+        if (fallbackContact) {
+          contact = fallbackContact
+        }
+      }
+
       const fallbackClientName = t('proposalEditor.defaults.clientName')
       const contactName = normalizeClientNameValue(
         contact?.full_name?.trim() || contact?.company?.trim(),
@@ -1326,13 +1476,14 @@ export default function ProposalEditorPage() {
 
       setDraftId(data.id)
       setDocumentTitle(data.title || t('proposalEditor.defaults.documentTitle'))
+      setLinkedDealId(data.deal_id ?? null)
       if (data.public_url) {
         setProposalLink(data.public_url)
       }
     }
 
     loadProposal()
-  }, [authUser, proposalId, supabase, t, userLoading])
+  }, [authUser, createBlock, proposalId, supabase, t, userLoading])
 
   const handleSaveDraft = useCallback(async (mode: 'manual' | 'auto' = 'manual') => {
     if (isSavingDraft) return
@@ -1343,6 +1494,7 @@ export default function ProposalEditorPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           proposalId: draftId,
+          dealId: linkedDealId,
           title: documentTitle,
           clientName: proposalMeta.clientName,
           contactEmail: proposalMeta.contactEmail,
@@ -1383,7 +1535,18 @@ export default function ProposalEditorPage() {
     } finally {
       setIsSavingDraft(false)
     }
-  }, [blocks, designSettings, documentTitle, draftId, isSavingDraft, proposalMeta.clientName, proposalMeta.contactEmail, proposalMeta.contactPhone, t])
+  }, [
+    blocks,
+    designSettings,
+    documentTitle,
+    draftId,
+    isSavingDraft,
+    linkedDealId,
+    proposalMeta.clientName,
+    proposalMeta.contactEmail,
+    proposalMeta.contactPhone,
+    t,
+  ])
 
   useEffect(() => {
     if (!draftId) return
@@ -1812,6 +1975,11 @@ export default function ProposalEditorPage() {
   )
 
   const proposalNumber = (draftId ?? proposalId ?? tempProposalNo) || '-'
+  const hasPricingTotal = subtotal > 0
+  const smartTotalValue = hasPricingTotal ? subtotal : (linkedDealValue?.value ?? 0)
+  const smartTotalCurrency = hasPricingTotal
+    ? totalCurrency
+    : (linkedDealValue?.currency || totalCurrency)
 
   const smartVariableValues = useMemo(
     () => ({
@@ -1824,10 +1992,17 @@ export default function ProposalEditorPage() {
       '{{Proposal_No}}': proposalNumber,
       '{{Tarih}}': formattedDate,
       '{{Date}}': formattedDate,
-      '{{Toplam_Tutar}}': formatCurrency(subtotal, totalCurrency),
-      '{{Total_Amount}}': formatCurrency(subtotal, totalCurrency),
+      '{{Toplam_Tutar}}': formatCurrency(smartTotalValue, smartTotalCurrency),
+      '{{Total_Amount}}': formatCurrency(smartTotalValue, smartTotalCurrency),
     }),
-    [formattedDate, formatCurrency, proposalMeta.clientName, proposalNumber, subtotal, totalCurrency]
+    [
+      formattedDate,
+      formatCurrency,
+      proposalMeta.clientName,
+      proposalNumber,
+      smartTotalCurrency,
+      smartTotalValue,
+    ]
   )
 
   const resolveSmartVariables = useCallback(
@@ -1965,6 +2140,9 @@ export default function ProposalEditorPage() {
             defaultEmail={proposalMeta.contactEmail}
             defaultPhone={proposalMeta.contactPhone}
             proposalLink={proposalLink}
+            proposalRecordId={draftId ?? proposalId}
+            dealId={linkedDealId}
+            resolveText={resolveSmartVariables}
             blocks={blocks}
             designSettings={designSettings}
             onLinkUpdate={setProposalLink}
@@ -5113,6 +5291,9 @@ type SendProposalModalProps = {
   defaultEmail: string
   defaultPhone: string
   proposalLink: string
+  proposalRecordId?: string | null
+  dealId?: string | null
+  resolveText: (value: string) => string
   blocks: ProposalBlock[]
   designSettings: ProposalDesignSettings
   onLinkUpdate?: (nextLink: string) => void
@@ -5127,6 +5308,9 @@ function SendProposalModal({
   defaultEmail,
   defaultPhone,
   proposalLink,
+  proposalRecordId = null,
+  dealId = null,
+  resolveText,
   blocks,
   designSettings,
   onLinkUpdate,
@@ -5134,6 +5318,7 @@ function SendProposalModal({
   onClose,
   layout = 'modal',
 }: SendProposalModalProps) {
+  const router = useRouter()
   const { t } = useI18n()
   const isModal = layout === 'modal'
   const sendMethods = useMemo<Array<{ id: SendMethod; label: string; description: string; icon: string }>>(
@@ -5159,8 +5344,14 @@ function SendProposalModal({
   const [method, setMethod] = useState<SendMethod>('email')
   const [recipientEmail, setRecipientEmail] = useState(defaultEmail)
   const [recipientPhone, setRecipientPhone] = useState(defaultPhone)
-  const [subject, setSubject] = useState(() => t('proposalEditor.send.defaults.subject', { client: clientName }))
-  const [message, setMessage] = useState(() => t('proposalEditor.send.defaults.message'))
+  const [subject, setSubject] = useState(() =>
+    resolveText(t('proposalEditor.send.defaults.subject', { client: clientName }))
+  )
+  const [message, setMessage] = useState(() => resolveText(t('proposalEditor.send.defaults.message')))
+  const [subjectDirty, setSubjectDirty] = useState(false)
+  const [messageDirty, setMessageDirty] = useState(false)
+  const [emailDirty, setEmailDirty] = useState(false)
+  const [phoneDirty, setPhoneDirty] = useState(false)
   const [includeLink, setIncludeLink] = useState(true)
   const [includePdf, setIncludePdf] = useState(true)
   const [expiryEnabled, setExpiryEnabled] = useState(false)
@@ -5170,6 +5361,7 @@ function SendProposalModal({
   const [view, setView] = useState<'form' | 'success'>('form')
   const [copied, setCopied] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [sentProposalId, setSentProposalId] = useState<string | null>(proposalRecordId)
 
   useEffect(() => {
     if (!isModal) return
@@ -5181,11 +5373,58 @@ function SendProposalModal({
 
   useEffect(() => {
     if (view !== 'success') return
+
+    if (!isModal) {
+      return
+    }
+
     const timer = setTimeout(() => {
       onClose()
     }, 2000)
+
     return () => clearTimeout(timer)
-  }, [view, onClose])
+  }, [isModal, onClose, view])
+
+  const openSentProposal = () => {
+    if (!sentProposalId) {
+      return
+    }
+    router.push(`/proposals/${sentProposalId}`)
+  }
+
+  const handleCloseAction = () => {
+    if (!isModal) {
+      return
+    }
+    onClose()
+  }
+
+  useEffect(() => {
+    if (!emailDirty) {
+      setRecipientEmail(defaultEmail)
+    }
+  }, [defaultEmail, emailDirty])
+
+  useEffect(() => {
+    if (!phoneDirty) {
+      setRecipientPhone(defaultPhone)
+    }
+  }, [defaultPhone, phoneDirty])
+
+  useEffect(() => {
+    if (!subjectDirty) {
+      setSubject(resolveText(t('proposalEditor.send.defaults.subject', { client: clientName })))
+    }
+  }, [clientName, resolveText, subjectDirty, t])
+
+  useEffect(() => {
+    if (!messageDirty) {
+      setMessage(resolveText(t('proposalEditor.send.defaults.message')))
+    }
+  }, [messageDirty, resolveText, t])
+
+  const resolvedSubject = resolveText(subject)
+  const resolvedMessage = resolveText(message)
 
   const handleSend = async () => {
     setIsSending(true)
@@ -5195,15 +5434,17 @@ function SendProposalModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          proposalId: proposalRecordId,
           title: proposalTitle,
+          dealId,
           clientName,
           contactEmail: recipientEmail,
           contactPhone: recipientPhone,
           blocks,
           designSettings,
           method,
-          subject,
-          message,
+          subject: resolvedSubject,
+          message: resolvedMessage,
           includeLink,
           includePdf,
           expiryEnabled,
@@ -5220,6 +5461,9 @@ function SendProposalModal({
       const payload = await response.json()
       if (payload?.publicUrl && typeof onLinkUpdate === 'function') {
         onLinkUpdate(payload.publicUrl)
+      }
+      if (payload?.proposalId && typeof payload.proposalId === 'string') {
+        setSentProposalId(payload.proposalId)
       }
       setView('success')
     } catch (error) {
@@ -5245,10 +5489,10 @@ function SendProposalModal({
 
   const linkAnchor = t('email.proposalAnchor')
   const finalEmailMessage = includeLink
-    ? message.includes(linkAnchor)
-      ? message.replace(linkAnchor, `${linkAnchor}\n${proposalLink}`)
-      : `${message}\n\n${proposalLink}`
-    : message
+    ? resolvedMessage.includes(linkAnchor)
+      ? resolvedMessage.replace(linkAnchor, `${linkAnchor}\n${proposalLink}`)
+      : `${resolvedMessage}\n\n${proposalLink}`
+    : resolvedMessage
 
   return (
     <div
@@ -5272,7 +5516,7 @@ function SendProposalModal({
             <h2 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('proposalEditor.actions.sendTitle')}</h2>
             <p className="text-sm text-[#48679d] dark:text-gray-400">{clientName} - {proposalTitle}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={handleCloseAction} className="text-gray-400 hover:text-gray-600">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -5308,7 +5552,10 @@ function SendProposalModal({
                   <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('proposalEditor.send.fields.recipient')}</label>
                   <input
                     value={recipientEmail}
-                    onChange={(event) => setRecipientEmail(event.target.value)}
+                    onChange={(event) => {
+                      setEmailDirty(true)
+                      setRecipientEmail(event.target.value)
+                    }}
                     className="mt-2 w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                   />
                 </div>
@@ -5316,7 +5563,10 @@ function SendProposalModal({
                   <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('proposalEditor.send.fields.subject')}</label>
                   <input
                     value={subject}
-                    onChange={(event) => setSubject(event.target.value)}
+                    onChange={(event) => {
+                      setSubjectDirty(true)
+                      setSubject(event.target.value)
+                    }}
                     className="mt-2 w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                   />
                 </div>
@@ -5324,7 +5574,10 @@ function SendProposalModal({
                   <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('proposalEditor.send.fields.message')}</label>
                   <textarea
                     value={message}
-                    onChange={(event) => setMessage(event.target.value)}
+                    onChange={(event) => {
+                      setMessageDirty(true)
+                      setMessage(event.target.value)
+                    }}
                     rows={6}
                     className="mt-2 w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                   />
@@ -5362,12 +5615,15 @@ function SendProposalModal({
                   <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('proposalEditor.send.fields.phone')}</label>
                   <input
                     value={recipientPhone}
-                    onChange={(event) => setRecipientPhone(event.target.value)}
+                    onChange={(event) => {
+                      setPhoneDirty(true)
+                      setRecipientPhone(event.target.value)
+                    }}
                     className="mt-2 w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                   />
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-[#48679d]">
-                  {whatsappMessage}
+                  {resolveText(whatsappMessage)}
                 </div>
                 <p className="text-xs text-gray-400">{t('proposalEditor.send.hints.whatsapp')}</p>
               </div>
@@ -5379,12 +5635,15 @@ function SendProposalModal({
                   <label className="text-xs font-bold text-[#48679d] uppercase tracking-wider">{t('proposalEditor.send.fields.phone')}</label>
                   <input
                     value={recipientPhone}
-                    onChange={(event) => setRecipientPhone(event.target.value)}
+                    onChange={(event) => {
+                      setPhoneDirty(true)
+                      setRecipientPhone(event.target.value)
+                    }}
                     className="mt-2 w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                   />
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 text-sm text-[#48679d]">
-                  {smsMessage}
+                  {resolveText(smsMessage)}
                 </div>
               </div>
             )}
@@ -5451,6 +5710,9 @@ function SendProposalModal({
             <div className="mx-auto size-14 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
               <span className="material-symbols-outlined text-3xl">check_circle</span>
             </div>
+            <p className="text-xs font-extrabold tracking-[0.18em] text-green-600">
+              {t('deals.badges.proposalSent')}
+            </p>
             <h3 className="text-lg font-bold text-[#0d121c] dark:text-white">{t('proposalEditor.send.success.title')}</h3>
             <p className="text-sm text-[#48679d] dark:text-gray-400">{t('proposalEditor.send.success.subtitle')}</p>
             <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -5462,11 +5724,14 @@ function SendProposalModal({
                 {copied ? t('common.copied') : t('common.copy')}
               </button>
             </div>
-            <button className="w-full mt-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold">
+            <button
+              onClick={openSentProposal}
+              className="w-full mt-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold"
+            >
               {t('proposalEditor.send.success.track')}
             </button>
             <button
-              onClick={onClose}
+              onClick={openSentProposal}
               className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold"
             >
               {t('proposalEditor.send.success.done')}
@@ -5494,7 +5759,7 @@ function SendProposalModal({
             </button>
             <div className="flex items-center gap-2">
               <button
-                onClick={onClose}
+                onClick={handleCloseAction}
                 className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold"
               >
                 {t('common.cancel')}

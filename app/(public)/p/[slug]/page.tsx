@@ -4,6 +4,12 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getServerLocale, getServerT } from '@/lib/i18n/server'
 import { CountdownTimer, ProposalViewTracker, SignatureBlock } from './client'
 import { sanitizeProposalDesignSettings } from '@/lib/proposals/design-utils'
+import {
+  buildProposalSmartVariableMap,
+  getProposalPricingSummary,
+  resolveSmartVariablesInJson,
+  resolveSmartVariablesInText,
+} from '@/lib/proposals/smart-variables'
 
 export const revalidate = 0
 
@@ -28,6 +34,7 @@ type PricingItem = {
   name: string
   qty: number
   price: number
+  currency?: string
 }
 
 type PricingData = {
@@ -102,10 +109,10 @@ type ProposalBlock =
   | { id: string; type: 'cta'; data: CtaData }
   | { id: string; type: 'signature'; data: SignatureData }
 
-const formatCurrency = (locale: string, value: number) =>
+const formatCurrency = (locale: string, value: number, currency?: string) =>
   new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: locale.startsWith('en') ? 'USD' : 'TRY',
+    currency: currency?.trim() || (locale.startsWith('en') ? 'USD' : 'TRY'),
     maximumFractionDigits: 0,
   }).format(value)
 
@@ -168,16 +175,22 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
     notFound()
   }
 
-  const blocks = (proposal.blocks ?? []) as ProposalBlock[]
+  const rawBlocks = (Array.isArray(proposal.blocks) ? proposal.blocks : []) as ProposalBlock[]
   const designSettings = sanitizeProposalDesignSettings((proposal as { design_settings?: unknown }).design_settings)
   const proposalPdfUrl = `/api/proposals/pdf?slug=${encodeURIComponent(slug)}`
   const expiresAt = proposal.expires_at ? new Date(proposal.expires_at) : null
   const isExpired = expiresAt ? expiresAt.getTime() < Date.now() : false
   const contactName = (proposal.contact as { full_name?: string } | null)?.full_name ?? t('header.customerFallback')
-  const total = blocks
-    .filter((block) => block.type === 'pricing')
-    .flatMap((block) => block.data.items)
-    .reduce((sum, item) => sum + item.qty * item.price, 0)
+  const pricingSummary = getProposalPricingSummary(rawBlocks, locale.startsWith('en') ? 'USD' : 'TRY')
+  const formattedDate = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date())
+  const smartVariableMap = buildProposalSmartVariableMap({
+    clientName: contactName,
+    proposalNumber: proposal.id,
+    formattedDate,
+    totalFormatted: formatCurrency(locale, pricingSummary.total, pricingSummary.currency),
+  })
+  const title = resolveSmartVariablesInText(proposal.title ?? t('api.proposals.fallbackTitle'), smartVariableMap)
+  const blocks = resolveSmartVariablesInJson(rawBlocks, smartVariableMap) as ProposalBlock[]
 
   const badge = getBadge(t, String(proposal.status ?? 'pending'), isExpired)
 
@@ -188,7 +201,7 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
         <div className="mx-auto w-full max-w-5xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.2em] text-[#48679d]">{t('publicProposal.header.kicker')}</p>
-            <h1 className="text-2xl sm:text-3xl font-extrabold">{proposal.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold">{title}</h1>
             <p className="text-sm text-gray-500">
               {t('publicProposal.header.preparedFor', { name: contactName })}
             </p>
@@ -237,7 +250,7 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
                         slug={slug}
                         pdfUrl={proposalPdfUrl}
                         t={t}
-                        formatCurrency={(value) => formatCurrency(locale, value)}
+                        formatCurrency={(value, currency) => formatCurrency(locale, value, currency)}
                       />
                     </div>
                   ))}
@@ -251,7 +264,9 @@ export default async function PublicProposalPage({ params }: { params: { slug: s
               <p className="text-xs font-semibold uppercase tracking-wide text-[#48679d]">{t('publicProposal.summary.title')}</p>
               <div className="flex items-baseline justify-between">
                 <span className="text-sm text-gray-500">{t('publicProposal.summary.total')}</span>
-                <span className="text-lg font-extrabold text-[#0d121c]">{formatCurrency(locale, total)}</span>
+                <span className="text-lg font-extrabold text-[#0d121c]">
+                  {formatCurrency(locale, pricingSummary.total, pricingSummary.currency)}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <span className="material-symbols-outlined text-[16px]">person</span>
@@ -286,7 +301,7 @@ function BlockContent({
   slug: string
   pdfUrl: string
   t: (key: string, vars?: Record<string, string | number>) => string
-  formatCurrency: (value: number) => string
+  formatCurrency: (value: number, currency?: string) => string
 }) {
   const headingSizeMap: Record<HeadingData['level'], string> = {
     h1: 'text-3xl',
@@ -332,6 +347,7 @@ function BlockContent({
 
   if (block.type === 'pricing') {
     const total = block.data.items.reduce((sum, item) => sum + item.qty * item.price, 0)
+    const blockCurrency = block.data.items.find((item) => item.currency?.trim())?.currency
     return (
       <div className="p-8">
         <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-[color:var(--proposal-text)]">
@@ -361,9 +377,9 @@ function BlockContent({
                 <tr key={item.id}>
                   <td className="py-4 px-4 font-medium text-[color:var(--proposal-text)]">{item.name}</td>
                   <td className="py-4 px-4 text-center">{item.qty}</td>
-                  <td className="py-4 px-4 text-right">{formatCurrency(item.price)}</td>
+                  <td className="py-4 px-4 text-right">{formatCurrency(item.price, item.currency || blockCurrency)}</td>
                   <td className="py-4 px-4 text-right font-semibold">
-                    {formatCurrency(item.qty * item.price)}
+                    {formatCurrency(item.qty * item.price, item.currency || blockCurrency)}
                   </td>
                 </tr>
               ))}
@@ -374,7 +390,7 @@ function BlockContent({
                   {t('publicProposal.pricing.total')}
                 </td>
                 <td className="py-4 px-4 text-right font-bold text-[color:var(--proposal-accent)] text-lg">
-                  {formatCurrency(total)}
+                  {formatCurrency(total, blockCurrency)}
                 </td>
               </tr>
             </tfoot>
