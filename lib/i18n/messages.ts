@@ -1584,6 +1584,7 @@ export const messages = {
         saveDraft: 'Taslak olarak kaydet',
         addBlock: 'Yeni Blok Ekle',
         addLineItem: 'Yeni kalem ekle',
+        refreshProducts: 'Ürünleri yenile',
         removeItem: 'Kaldır',
         removeImage: 'Görseli kaldır',
         addImage: 'Yeni görsel ekle',
@@ -1749,6 +1750,8 @@ export const messages = {
         manual: 'Manuel',
         columns: 'Kolonlar',
         lineItems: 'Kalemler',
+        unit: 'Ölçü Birimi',
+        currency: 'Para Birimi',
         quote: 'Alıntı',
         name: 'İsim',
         role: 'Ünvan',
@@ -1779,6 +1782,9 @@ export const messages = {
       },
       placeholders: {
         productSearch: 'Ürün ara...',
+        lineItemName: 'Kalem adı',
+        unit: 'Örn: adet, saat, cm, m²',
+        currency: 'TRY',
         imageUrl: 'Görsel URL',
         caption: 'Başlık',
         title: 'Başlık',
@@ -1790,6 +1796,13 @@ export const messages = {
       },
       empty: {
         products: 'Ürün bulunamadı.',
+        selectedProducts: 'Henüz ürün seçilmedi. Yukarıdan katalogdan ürün ekleyin.',
+      },
+      status: {
+        inactiveProduct: 'Pasif ürün',
+      },
+      hints: {
+        manualPricing: 'Manuel kaynakta kalemleri aşağıdan serbestçe ekleyebilir, birim ve para birimini özelleştirebilirsiniz.',
       },
       ctaStyles: {
         primary: 'Primary',
@@ -1812,10 +1825,12 @@ export const messages = {
         columns: {
           description: 'Hizmet / Ürün',
           quantity: 'Adet',
-          unitPrice: 'Birim',
+          unit: 'Ölçü',
+          unitPrice: 'Birim Fiyat',
           total: 'Toplam',
         },
         subtotal: 'Ara Toplam',
+        fallbackUnit: 'adet',
       },
       validation: {
         invalidVideoUrl: 'Geçerli bir video URL girin',
@@ -1856,7 +1871,9 @@ export const messages = {
         pricing: {
           primary: 'Enterprise CRM Lisans',
           secondary: 'Onboarding & Eğitim',
+          defaultUnit: 'adet',
         },
+        newLineItem: 'Yeni Kalem',
         videoTitle: 'Platform demosu',
         galleryCaptions: {
           team: 'Takım işbirliği',
@@ -4461,6 +4478,7 @@ export const messages = {
         saveDraft: 'Save draft',
         addBlock: 'Add new block',
         addLineItem: 'Add line item',
+        refreshProducts: 'Refresh products',
         removeItem: 'Remove',
         removeImage: 'Remove image',
         addImage: 'Add image',
@@ -4626,6 +4644,8 @@ export const messages = {
         manual: 'Manual',
         columns: 'Columns',
         lineItems: 'Line items',
+        unit: 'Unit',
+        currency: 'Currency',
         quote: 'Quote',
         name: 'Name',
         role: 'Role',
@@ -4656,6 +4676,9 @@ export const messages = {
       },
       placeholders: {
         productSearch: 'Search products...',
+        lineItemName: 'Line item name',
+        unit: 'e.g. pcs, hour, cm, m²',
+        currency: 'USD',
         imageUrl: 'Image URL',
         caption: 'Caption',
         title: 'Title',
@@ -4667,6 +4690,13 @@ export const messages = {
       },
       empty: {
         products: 'No products found.',
+        selectedProducts: 'No products selected yet. Add products from the catalog above.',
+      },
+      status: {
+        inactiveProduct: 'Inactive product',
+      },
+      hints: {
+        manualPricing: 'In manual mode, add line items freely below and customize unit and currency per row.',
       },
       ctaStyles: {
         primary: 'Primary',
@@ -4689,10 +4719,12 @@ export const messages = {
         columns: {
           description: 'Service / Product',
           quantity: 'Qty',
+          unit: 'Unit',
           unitPrice: 'Unit Price',
           total: 'Total',
         },
         subtotal: 'Subtotal',
+        fallbackUnit: 'pcs',
       },
       validation: {
         invalidVideoUrl: 'Enter a valid video URL',
@@ -4733,7 +4765,9 @@ export const messages = {
         pricing: {
           primary: 'Enterprise CRM License',
           secondary: 'Onboarding & Training',
+          defaultUnit: 'pcs',
         },
+        newLineItem: 'New Line Item',
         videoTitle: 'Platform demo',
         galleryCaptions: {
           team: 'Team collaboration',

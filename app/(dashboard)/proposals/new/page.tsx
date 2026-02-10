@@ -59,6 +59,7 @@ type PricingItem = {
   id: string
   name: string
   qty: number
+  unit?: string
   price: number
   currency?: string
   productId?: string
@@ -69,6 +70,7 @@ type PricingData = {
   columns: {
     description: boolean
     quantity: boolean
+    unit: boolean
     unitPrice: boolean
     total: boolean
   }
@@ -81,6 +83,7 @@ type ProductOption = {
   price: number
   currency: string
   category: string | null
+  active: boolean
 }
 
 type SignatureData = {
@@ -179,6 +182,7 @@ type SavedTemplate = {
 const defaultPricingColumns: PricingData['columns'] = {
   description: true,
   quantity: true,
+  unit: true,
   unitPrice: true,
   total: true,
 }
@@ -187,6 +191,7 @@ const normalizePricingItem = (item: Partial<PricingItem> | null | undefined): Pr
   id: item?.id ?? crypto.randomUUID(),
   name: item?.name ?? '',
   qty: Number.isFinite(item?.qty) ? (item?.qty as number) : 1,
+  unit: typeof item?.unit === 'string' ? item.unit : '',
   price: Number.isFinite(item?.price) ? (item?.price as number) : 0,
   currency: item?.currency,
   productId: item?.productId,
@@ -366,12 +371,27 @@ export default function ProposalEditorPage() {
           columns: {
             description: true,
             quantity: true,
+            unit: true,
             unitPrice: true,
             total: true,
           },
           items: [
-            { id: crypto.randomUUID(), name: t('proposalEditor.defaults.pricing.primary'), qty: 25, price: 1200, currency: 'TRY' },
-            { id: crypto.randomUUID(), name: t('proposalEditor.defaults.pricing.secondary'), qty: 1, price: 5000, currency: 'TRY' },
+            {
+              id: crypto.randomUUID(),
+              name: t('proposalEditor.defaults.pricing.primary'),
+              qty: 25,
+              unit: t('proposalEditor.defaults.pricing.defaultUnit'),
+              price: 1200,
+              currency: 'TRY',
+            },
+            {
+              id: crypto.randomUUID(),
+              name: t('proposalEditor.defaults.pricing.secondary'),
+              qty: 1,
+              unit: t('proposalEditor.defaults.pricing.defaultUnit'),
+              price: 5000,
+              currency: 'TRY',
+            },
           ],
         },
       }
@@ -793,39 +813,59 @@ export default function ProposalEditorPage() {
     }
   }, [isTemplateMode, editorMode])
 
-  useEffect(() => {
-    if (userLoading) return
-    const teamId = user?.team_id ?? null
-    if (!authUser || !teamId) {
+  const loadProductOptions = useCallback(async () => {
+    if (!authUser) {
       setProductOptions([])
       return
     }
 
-    const loadProducts = async () => {
-      setProductsLoading(true)
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, price, currency, category, active')
-        .eq('team_id', teamId)
-        .eq('active', true)
-        .order('created_at', { ascending: false })
+    setProductsLoading(true)
+    let teamId = user?.team_id ?? null
 
-      if (!error && data) {
-        setProductOptions(
-          data.map((product) => ({
-            id: product.id,
-            name: product.name,
-            price: product.price ?? 0,
-            currency: product.currency ?? 'TRY',
-            category: product.category ?? null,
-          }))
-        )
-      }
-      setProductsLoading(false)
+    if (!teamId) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('team_id')
+        .eq('id', authUser.id)
+        .maybeSingle()
+      teamId = profile?.team_id ?? null
     }
 
-    loadProducts()
-  }, [authUser, user?.team_id, userLoading, supabase])
+    let query = supabase
+      .from('products')
+      .select('id, name, price, currency, category, active')
+      .order('created_at', { ascending: false })
+
+    if (teamId) {
+      query = query.eq('team_id', teamId)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      toast.error(error.message || t('products.errors.fetch'))
+      setProductOptions([])
+      setProductsLoading(false)
+      return
+    }
+
+    setProductOptions(
+      (data ?? []).map((product) => ({
+        id: product.id,
+        name: product.name,
+        price: product.price ?? 0,
+        currency: product.currency ?? 'TRY',
+        category: product.category ?? null,
+        active: product.active ?? true,
+      }))
+    )
+    setProductsLoading(false)
+  }, [authUser, supabase, t, user?.team_id])
+
+  useEffect(() => {
+    if (userLoading) return
+    loadProductOptions()
+  }, [loadProductOptions, userLoading])
 
   useEffect(() => {
     if (userLoading) return
@@ -1258,7 +1298,14 @@ export default function ProposalEditorPage() {
             ...block.data,
             items: [
               ...items,
-              { id: crypto.randomUUID(), name: 'Yeni Kalem', qty: 1, price: 0, currency: 'TRY' },
+              {
+                id: crypto.randomUUID(),
+                name: t('proposalEditor.defaults.newLineItem'),
+                qty: 1,
+                unit: t('proposalEditor.defaults.pricing.defaultUnit'),
+                price: 0,
+                currency: 'TRY',
+              },
             ],
           },
         }
@@ -1302,6 +1349,7 @@ export default function ProposalEditorPage() {
                   ? {
                       ...item,
                       qty: Math.max(1, item.qty + 1),
+                      unit: item.unit ?? t('proposalEditor.defaults.pricing.defaultUnit'),
                       price: product.price,
                       currency: product.currency,
                       productId: product.id,
@@ -1322,6 +1370,7 @@ export default function ProposalEditorPage() {
                 id: crypto.randomUUID(),
                 name: product.name,
                 qty: 1,
+                unit: t('proposalEditor.defaults.pricing.defaultUnit'),
                 price: product.price,
                 currency: product.currency,
                 productId: product.id,
@@ -2205,6 +2254,16 @@ export default function ProposalEditorPage() {
                     const pricingColumns = selectedBlock.data.columns ?? defaultPricingColumns
                     const pricingItems = Array.isArray(selectedBlock.data.items) ? selectedBlock.data.items : []
                     const pricingSource = selectedBlock.data.source ?? 'manual'
+                    const pricingColumnLabelMap: Record<keyof PricingData['columns'], string> = {
+                      description: t('proposalEditor.pricing.columns.description'),
+                      quantity: t('proposalEditor.pricing.columns.quantity'),
+                      unit: t('proposalEditor.pricing.columns.unit'),
+                      unitPrice: t('proposalEditor.pricing.columns.unitPrice'),
+                      total: t('proposalEditor.pricing.columns.total'),
+                    }
+                    const pricingColumnEntries = Object.entries(pricingColumns) as Array<
+                      [keyof PricingData['columns'], boolean]
+                    >
                     return (
                       <div className="space-y-4">
                         <label className="block text-xs font-bold text-[#48679d] dark:text-gray-400 uppercase tracking-wide">
@@ -2214,9 +2273,13 @@ export default function ProposalEditorPage() {
                           <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.fields.source')}</label>
                           <select
                             value={pricingSource}
-                            onChange={(event) =>
-                              updateBlockData(selectedBlock.id, { source: event.target.value as PricingData['source'] })
-                            }
+                            onChange={(event) => {
+                              const nextSource = event.target.value as PricingData['source']
+                              updateBlockData(selectedBlock.id, { source: nextSource })
+                              if (nextSource === 'manual') {
+                                setProductSearch('')
+                              }
+                            }}
                             className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
                           >
                             <option value="crm">{t('proposalEditor.fields.productCatalog')}</option>
@@ -2225,7 +2288,7 @@ export default function ProposalEditorPage() {
                         </div>
                         <div className="space-y-2">
                           <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.columns')}</label>
-                          {Object.entries(pricingColumns).map(([key, value]) => (
+                          {pricingColumnEntries.map(([key, value]) => (
                             <label key={key} className="flex items-center gap-2 text-sm">
                               <input
                                 type="checkbox"
@@ -2237,103 +2300,221 @@ export default function ProposalEditorPage() {
                                 }
                                 className="rounded text-primary focus:ring-primary size-4"
                               />
-                              <span className="capitalize text-[#0d121c] dark:text-white">{key}</span>
+                              <span className="text-[#0d121c] dark:text-white">{pricingColumnLabelMap[key]}</span>
                             </label>
                           ))}
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.productCatalog')}</label>
-                          <div className="relative">
-                            <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[16px] text-gray-400">
-                              search
-                            </span>
-                            <input
-                              value={productSearch}
-                              onChange={(event) => setProductSearch(event.target.value)}
-                              placeholder={t('proposalEditor.placeholders.productSearch')}
-                              className="w-full pl-7 pr-2 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
-                            />
+                        {pricingSource === 'crm' ? (
+                          <div className="space-y-2">
+                            <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.productCatalog')}</label>
+                            <div className="relative">
+                              <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-[16px] text-gray-400">
+                                search
+                              </span>
+                              <input
+                                value={productSearch}
+                                onChange={(event) => setProductSearch(event.target.value)}
+                                placeholder={t('proposalEditor.placeholders.productSearch')}
+                                className="w-full pl-7 pr-2 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
+                              />
+                            </div>
+                            <div className="max-h-40 overflow-y-auto space-y-2 rounded border border-dashed border-gray-200 dark:border-gray-700 p-2">
+                              {productsLoading ? (
+                                <p className="text-[11px] text-gray-400">{t('proposalEditor.loading.products')}</p>
+                              ) : filteredProductOptions.length === 0 ? (
+                                <p className="text-[11px] text-gray-400">{t('proposalEditor.empty.products')}</p>
+                              ) : (
+                                filteredProductOptions.map((product) => (
+                                  <button
+                                    key={product.id}
+                                    type="button"
+                                    onClick={() => addProductToPricing(selectedBlock.id, product)}
+                                    disabled={!product.active}
+                                    className="w-full flex items-center justify-between gap-2 px-2 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary/40 hover:bg-primary/5 text-left text-xs"
+                                  >
+                                    <div>
+                                      <p className="font-semibold text-[#0d121c] dark:text-white">{product.name}</p>
+                                      {product.category && (
+                                        <p className="text-[10px] text-gray-400">{product.category}</p>
+                                      )}
+                                      {!product.active && (
+                                        <p className="text-[10px] text-amber-600">{t('proposalEditor.status.inactiveProduct')}</p>
+                                      )}
+                                    </div>
+                                    <span className="font-semibold text-primary">
+                                      {formatCurrency(product.price, product.currency)}
+                                    </span>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => loadProductOptions()}
+                              className="w-full py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-300 hover:border-primary/40"
+                            >
+                              {t('proposalEditor.actions.refreshProducts')}
+                            </button>
                           </div>
-                          <div className="max-h-40 overflow-y-auto space-y-2 rounded border border-dashed border-gray-200 dark:border-gray-700 p-2">
-                            {productsLoading ? (
-                              <p className="text-[11px] text-gray-400">{t('proposalEditor.loading.products')}</p>
-                            ) : filteredProductOptions.length === 0 ? (
-                              <p className="text-[11px] text-gray-400">{t('proposalEditor.empty.products')}</p>
-                            ) : (
-                              filteredProductOptions.map((product) => (
-                                <button
-                                  key={product.id}
-                                  onClick={() => addProductToPricing(selectedBlock.id, product)}
-                                  className="w-full flex items-center justify-between gap-2 px-2 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary/40 hover:bg-primary/5 text-left text-xs"
-                                >
-                                  <div>
-                                    <p className="font-semibold text-[#0d121c] dark:text-white">{product.name}</p>
-                                    {product.category && (
-                                      <p className="text-[10px] text-gray-400">{product.category}</p>
-                                    )}
-                                  </div>
-                                  <span className="font-semibold text-primary">
-                                    {formatCurrency(product.price, product.currency)}
-                                  </span>
-                                </button>
-                              ))
-                            )}
+                        ) : (
+                          <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 px-3 py-2 text-xs text-gray-500">
+                            {t('proposalEditor.hints.manualPricing')}
                           </div>
-                        </div>
+                        )}
                         <div className="space-y-2">
                           <label className="text-[11px] text-gray-500 block">{t('proposalEditor.fields.lineItems')}</label>
-                          <div className="space-y-2">
-                            {pricingItems.map((item) => (
-                              <div key={item.id} className="grid grid-cols-[1fr_64px_90px_auto] gap-2 items-center">
-                                <input
-                                  value={item.name}
-                                  onChange={(event) => updatePricingItem(selectedBlock.id, item.id, { name: event.target.value })}
-                                  className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
-                                />
-                                <input
-                                  type="number"
-                                  min={1}
-                                  value={item.qty}
-                                  onChange={(event) => {
-                                    const qtyValue = Number(event.target.value)
-                                    updatePricingItem(selectedBlock.id, item.id, {
-                                      qty: Number.isFinite(qtyValue) ? Math.max(1, qtyValue) : 1,
-                                    })
-                                  }}
-                                  className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-center"
-                                />
-                                <div className="relative">
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={item.price}
-                                    onChange={(event) => {
-                                      const priceValue = Number(event.target.value)
-                                      updatePricingItem(selectedBlock.id, item.id, {
-                                        price: Number.isFinite(priceValue) ? priceValue : 0,
-                                      })
-                                    }}
-                                    className="w-full pr-10 pl-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-right"
-                                  />
-                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
-                                    {item.currency ?? 'TRY'}
-                                  </span>
+                          {pricingSource === 'crm' ? (
+                            <div className="space-y-2">
+                              {pricingItems.length === 0 ? (
+                                <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 px-3 py-2 text-xs text-gray-500">
+                                  {t('proposalEditor.empty.selectedProducts')}
                                 </div>
-                                <button
-                                  onClick={() => removePricingItem(selectedBlock.id, item.id)}
-                                  className="text-xs text-red-500 hover:text-red-600"
-                                >
-                                  {t('proposalEditor.actions.removeItem')}
-                                </button>
+                              ) : (
+                                pricingItems.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white/80 dark:bg-gray-900/50"
+                                  >
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-semibold text-[#0d121c] dark:text-white truncate">{item.name}</p>
+                                        <p className="text-[11px] text-gray-500">
+                                          {formatCurrency(item.price ?? 0, item.currency || 'TRY')} / {item.unit || t('proposalEditor.pricing.fallbackUnit')}
+                                        </p>
+                                      </div>
+                                      <button
+                                        onClick={() => removePricingItem(selectedBlock.id, item.id)}
+                                        className="text-xs text-red-500 hover:text-red-600 shrink-0"
+                                      >
+                                        {t('proposalEditor.actions.removeItem')}
+                                      </button>
+                                    </div>
+                                    <div className="mt-2 flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2">
+                                        <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
+                                          {t('proposalEditor.pricing.columns.quantity')}
+                                        </label>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          value={item.qty}
+                                          onChange={(event) => {
+                                            const qtyValue = Number(event.target.value)
+                                            updatePricingItem(selectedBlock.id, item.id, {
+                                              qty: Number.isFinite(qtyValue) ? Math.max(1, qtyValue) : 1,
+                                            })
+                                          }}
+                                          className="w-16 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-center"
+                                        />
+                                      </div>
+                                      <p className="text-xs font-semibold text-[#0d121c] dark:text-white">
+                                        {formatCurrency((item.qty ?? 0) * (item.price ?? 0), item.currency || 'TRY')}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          ) : (
+                            <>
+                              <div className="space-y-2">
+                                {pricingItems.map((item) => (
+                                  <div key={item.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5 bg-white/80 dark:bg-gray-900/50">
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                      <div>
+                                        <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                                          {t('proposalEditor.pricing.columns.description')}
+                                        </label>
+                                        <input
+                                          value={item.name}
+                                          onChange={(event) => updatePricingItem(selectedBlock.id, item.id, { name: event.target.value })}
+                                          placeholder={t('proposalEditor.placeholders.lineItemName')}
+                                          className="w-full px-2.5 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                                          {t('proposalEditor.pricing.columns.quantity')}
+                                        </label>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          value={item.qty}
+                                          onChange={(event) => {
+                                            const qtyValue = Number(event.target.value)
+                                            updatePricingItem(selectedBlock.id, item.id, {
+                                              qty: Number.isFinite(qtyValue) ? Math.max(1, qtyValue) : 1,
+                                            })
+                                          }}
+                                          className="w-full px-2.5 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-center"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                                          {t('proposalEditor.pricing.columns.unit')}
+                                        </label>
+                                        <input
+                                          value={item.unit ?? ''}
+                                          onChange={(event) =>
+                                            updatePricingItem(selectedBlock.id, item.id, { unit: event.target.value.slice(0, 24) })
+                                          }
+                                          placeholder={t('proposalEditor.placeholders.unit')}
+                                          className="w-full px-2.5 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                                          {t('proposalEditor.pricing.columns.unitPrice')}
+                                        </label>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          value={item.price}
+                                          onChange={(event) => {
+                                            const priceValue = Number(event.target.value)
+                                            updatePricingItem(selectedBlock.id, item.id, {
+                                              price: Number.isFinite(priceValue) ? priceValue : 0,
+                                            })
+                                          }}
+                                          className="w-full px-2.5 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-right"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+                                          {t('proposalEditor.fields.currency')}
+                                        </label>
+                                      <input
+                                        value={item.currency ?? ''}
+                                        onChange={(event) =>
+                                          updatePricingItem(selectedBlock.id, item.id, {
+                                            currency: event.target.value.toUpperCase().slice(0, 3),
+                                          })
+                                        }
+                                        placeholder={t('proposalEditor.placeholders.currency')}
+                                          className="w-full px-2 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs text-center uppercase"
+                                      />
+                                      </div>
+                                      <button
+                                        onClick={() => removePricingItem(selectedBlock.id, item.id)}
+                                        className="text-xs text-red-500 hover:text-red-600 justify-self-end self-end"
+                                      >
+                                        {t('proposalEditor.actions.removeItem')}
+                                      </button>
+                                    </div>
+                                    <p className="text-[11px] text-gray-500 mt-2">
+                                      {t('proposalEditor.pricing.columns.total')}: {formatCurrency((item.qty ?? 0) * (item.price ?? 0), item.currency || 'TRY')}
+                                    </p>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                          <button
-                            onClick={() => addPricingItem(selectedBlock.id)}
-                            className="w-full py-2 rounded-lg border border-dashed border-gray-200 text-xs text-gray-500 hover:border-primary"
-                          >
-                            {t('proposalEditor.actions.addLineItem')}
-                          </button>
+                              <button
+                                onClick={() => addPricingItem(selectedBlock.id)}
+                                className="w-full py-2 rounded-lg border border-dashed border-gray-200 text-xs text-gray-500 hover:border-primary"
+                              >
+                                {t('proposalEditor.actions.addLineItem')}
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     )
@@ -3180,6 +3361,7 @@ function BlockContent({
             const visibleColumns = [
               columns.description,
               columns.quantity,
+              columns.unit,
               columns.unitPrice,
               columns.total,
             ].filter(Boolean).length
@@ -3195,6 +3377,7 @@ function BlockContent({
               <tr>
                 {columns.description && <th className="pb-3 font-semibold">{t('proposalEditor.pricing.columns.description')}</th>}
                 {columns.quantity && <th className="pb-3 font-semibold text-center">{t('proposalEditor.pricing.columns.quantity')}</th>}
+                {columns.unit && <th className="pb-3 font-semibold">{t('proposalEditor.pricing.columns.unit')}</th>}
                 {columns.unitPrice && <th className="pb-3 font-semibold text-right">{t('proposalEditor.pricing.columns.unitPrice')}</th>}
                 {columns.total && <th className="pb-3 font-semibold text-right">{t('proposalEditor.pricing.columns.total')}</th>}
               </tr>
@@ -3208,6 +3391,7 @@ function BlockContent({
                       <td className="py-4 font-medium text-[color:var(--proposal-text)]">{resolve(item.name)}</td>
                     )}
                     {columns.quantity && <td className="py-4 text-center">{item.qty}</td>}
+                    {columns.unit && <td className="py-4">{resolve(item.unit || t('proposalEditor.pricing.fallbackUnit'))}</td>}
                     {columns.unitPrice && (
                       <td className="py-4 text-right">{formatCurrency(item.price, item.currency ?? subtotalCurrency)}</td>
                     )}
