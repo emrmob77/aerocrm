@@ -39,20 +39,58 @@ type BlockType =
   | 'cta'
   | 'signature'
 
+type BlockFrameStyle = {
+  blockBg?: string
+  borderColor?: string
+  borderWidth?: number
+  radius?: number
+  paddingX?: number
+  paddingY?: number
+  shadowLevel?: 0 | 1 | 2 | 3
+  textAlign?: 'left' | 'center' | 'right'
+  verticalAlign?: 'top' | 'center' | 'bottom'
+  fontSize?: number
+  fontWeight?: 400 | 500 | 600 | 700 | 800
+  italic?: boolean
+  lineHeight?: number
+}
+
 type HeroData = {
   title: string
   subtitle: string
   backgroundUrl: string
+  style?: {
+    overlayOpacity?: number
+    textColor?: string
+    contentAlign?: 'left' | 'center' | 'right'
+    height?: number
+  } & BlockFrameStyle
 }
 
 type TextData = {
   content: string
+  style?: {
+    textColor?: string
+    fontSize?: number
+    lineHeight?: number
+    align?: 'left' | 'center' | 'right'
+    verticalAlign?: 'top' | 'center' | 'bottom'
+    fontWeight?: 400 | 500 | 600 | 700 | 800
+    italic?: boolean
+  } & BlockFrameStyle
 }
 
 type HeadingData = {
   text: string
   level: 'h1' | 'h2' | 'h3'
   align: 'left' | 'center' | 'right'
+  style?: {
+    textColor?: string
+    letterSpacing?: number
+    fontWeight?: 500 | 600 | 700 | 800
+    italic?: boolean
+    fontSize?: number
+  } & BlockFrameStyle
 }
 
 type PricingItem = {
@@ -75,6 +113,11 @@ type PricingData = {
     total: boolean
   }
   items: PricingItem[]
+  style?: {
+    surfaceColor?: string
+    headerColor?: string
+    headerTextColor?: string
+  } & BlockFrameStyle
 }
 
 type ProductOption = {
@@ -89,11 +132,20 @@ type ProductOption = {
 type SignatureData = {
   label: string
   required: boolean
+  style?: {
+    borderColor?: string
+    iconColor?: string
+    backgroundColor?: string
+  } & BlockFrameStyle
 }
 
 type VideoData = {
   url: string
   title: string
+  style?: {
+    borderColor?: string
+    borderRadius?: number
+  } & BlockFrameStyle
 }
 
 type GalleryImage = {
@@ -105,6 +157,10 @@ type GalleryImage = {
 type GalleryData = {
   columns: 2 | 3
   images: GalleryImage[]
+  style?: {
+    gap?: number
+    imageRadius?: number
+  } & BlockFrameStyle
 }
 
 type TestimonialData = {
@@ -112,6 +168,11 @@ type TestimonialData = {
   author: string
   role: string
   avatarUrl: string
+  style?: {
+    quoteColor?: string
+    accentColor?: string
+    backgroundColor?: string
+  } & BlockFrameStyle
 }
 
 type TimelineItem = {
@@ -123,6 +184,11 @@ type TimelineItem = {
 
 type TimelineData = {
   items: TimelineItem[]
+  style?: {
+    lineColor?: string
+    dotColor?: string
+    dateColor?: string
+  } & BlockFrameStyle
 }
 
 type CountdownData = {
@@ -130,12 +196,22 @@ type CountdownData = {
   days: number
   hours: number
   minutes: number
+  style?: {
+    cardColor?: string
+    numberColor?: string
+  } & BlockFrameStyle
 }
 
 type CtaData = {
   label: string
   url: string
   variant: 'primary' | 'secondary' | 'outline'
+  style?: {
+    bgColor?: string
+    textColor?: string
+    borderColor?: string
+    borderRadius?: number
+  } & BlockFrameStyle
 }
 
 type ProposalBlock =
@@ -187,6 +263,13 @@ const defaultPricingColumns: PricingData['columns'] = {
   total: true,
 }
 
+const defaultBlockFrameStyle: Pick<BlockFrameStyle, 'radius' | 'shadowLevel' | 'paddingX' | 'paddingY'> = {
+  radius: 12,
+  shadowLevel: 0,
+  paddingX: 32,
+  paddingY: 32,
+}
+
 const normalizePricingItem = (item: Partial<PricingItem> | null | undefined): PricingItem => ({
   id: item?.id ?? crypto.randomUUID(),
   name: item?.name ?? '',
@@ -226,27 +309,43 @@ const normalizeTimelineData = (data: Partial<TimelineData> | null | undefined): 
   items: Array.isArray(data?.items) ? data?.items.map((item) => normalizeTimelineItem(item)) : [],
 })
 
-const normalizeBlocks = (items: ProposalBlock[]) =>
+const normalizeBlocks = (items: ProposalBlock[]): ProposalBlock[] =>
   items.map((block) => {
     if (block.type === 'pricing') {
       return {
         ...block,
-        data: normalizePricingData(block.data),
+        data: {
+          ...normalizePricingData(block.data),
+          style: { ...defaultBlockFrameStyle, ...(block.data.style ?? {}) },
+        },
       }
     }
     if (block.type === 'gallery') {
       return {
         ...block,
-        data: normalizeGalleryData(block.data),
+        data: {
+          ...normalizeGalleryData(block.data),
+          style: { ...defaultBlockFrameStyle, ...(block.data.style ?? {}) },
+        },
       }
     }
     if (block.type === 'timeline') {
       return {
         ...block,
-        data: normalizeTimelineData(block.data),
+        data: {
+          ...normalizeTimelineData(block.data),
+          style: { ...defaultBlockFrameStyle, ...(block.data.style ?? {}) },
+        },
       }
     }
-    return block
+
+    return {
+      ...block,
+      data: {
+        ...block.data,
+        style: { ...defaultBlockFrameStyle, ...(block.data.style ?? {}) },
+      },
+    } as ProposalBlock
   })
 
 const updateBlock = <T extends ProposalBlock>(block: T, data: Partial<T['data']>): T => ({
@@ -346,6 +445,13 @@ export default function ProposalEditorPage() {
           title: t('proposalEditor.defaults.heroTitle'),
           subtitle: t('proposalEditor.defaults.heroSubtitle'),
           backgroundUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200',
+          style: {
+            ...defaultBlockFrameStyle,
+            overlayOpacity: 65,
+            textColor: '#ffffff',
+            contentAlign: 'left',
+            height: 320,
+          },
         },
       }
     }
@@ -358,6 +464,13 @@ export default function ProposalEditorPage() {
           text: t('proposalEditor.defaults.headingText'),
           level: 'h2',
           align: 'left',
+          style: {
+            ...defaultBlockFrameStyle,
+            textColor: '#0d121c',
+            letterSpacing: 0,
+            fontWeight: 700,
+            italic: false,
+          },
         },
       }
     }
@@ -393,6 +506,12 @@ export default function ProposalEditorPage() {
               currency: 'TRY',
             },
           ],
+          style: {
+            ...defaultBlockFrameStyle,
+            surfaceColor: '#f8fafc',
+            headerColor: '#e2e8f0',
+            headerTextColor: '#475569',
+          },
         },
       }
     }
@@ -404,6 +523,11 @@ export default function ProposalEditorPage() {
         data: {
           url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
           title: t('proposalEditor.defaults.videoTitle'),
+          style: {
+            ...defaultBlockFrameStyle,
+            borderColor: '#e2e8f0',
+            borderRadius: 12,
+          },
         },
       }
     }
@@ -431,6 +555,11 @@ export default function ProposalEditorPage() {
               caption: t('proposalEditor.defaults.galleryCaptions.mobile'),
             },
           ],
+          style: {
+            ...defaultBlockFrameStyle,
+            gap: 16,
+            imageRadius: 12,
+          },
         },
       }
     }
@@ -444,6 +573,12 @@ export default function ProposalEditorPage() {
           author: t('proposalEditor.defaults.testimonial.author'),
           role: t('proposalEditor.defaults.testimonial.role'),
           avatarUrl: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=200',
+          style: {
+            ...defaultBlockFrameStyle,
+            quoteColor: '#0d121c',
+            accentColor: '#377DF6',
+            backgroundColor: '#f8fafc',
+          },
         },
       }
     }
@@ -473,6 +608,12 @@ export default function ProposalEditorPage() {
               date: t('proposalEditor.defaults.timeline.items.2.date'),
             },
           ],
+          style: {
+            ...defaultBlockFrameStyle,
+            lineColor: '#dbe2ee',
+            dotColor: '#377DF6',
+            dateColor: '#64748b',
+          },
         },
       }
     }
@@ -486,6 +627,11 @@ export default function ProposalEditorPage() {
           days: 5,
           hours: 12,
           minutes: 30,
+          style: {
+            ...defaultBlockFrameStyle,
+            cardColor: '#ffffff',
+            numberColor: '#377DF6',
+          },
         },
       }
     }
@@ -498,6 +644,13 @@ export default function ProposalEditorPage() {
           label: t('proposalEditor.defaults.ctaLabel'),
           url: 'https://cal.com/aero/demo',
           variant: 'primary',
+          style: {
+            ...defaultBlockFrameStyle,
+            bgColor: '#377DF6',
+            textColor: '#ffffff',
+            borderColor: '#377DF6',
+            borderRadius: 10,
+          },
         },
       }
     }
@@ -509,6 +662,12 @@ export default function ProposalEditorPage() {
         data: {
           label: t('proposalEditor.defaults.signatureLabel'),
           required: true,
+          style: {
+            ...defaultBlockFrameStyle,
+            borderColor: '#cbd5e1',
+            iconColor: '#377DF6',
+            backgroundColor: '#ffffff',
+          },
         },
       }
     }
@@ -518,6 +677,16 @@ export default function ProposalEditorPage() {
       type,
       data: {
         content: t('proposalEditor.defaults.textContent'),
+        style: {
+          ...defaultBlockFrameStyle,
+          textColor: '#334155',
+          fontSize: 16,
+          lineHeight: 1.7,
+          align: 'left',
+          verticalAlign: 'top',
+          fontWeight: 400,
+          italic: false,
+        },
       },
     }
   }, [t])
@@ -776,19 +945,12 @@ export default function ProposalEditorPage() {
   const [productSearch, setProductSearch] = useState('')
   const [productsLoading, setProductsLoading] = useState(false)
   const [documentTitle, setDocumentTitle] = useState(() => t('proposalEditor.defaults.documentTitle'))
-  const [activePanel, setActivePanel] = useState<'content' | 'design'>('content')
+  const [activePanel, setActivePanel] = useState<'content' | 'design'>('design')
   const [viewMode, setViewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
   const [zoomLevel, setZoomLevel] = useState(100)
   const [canvasPageCount, setCanvasPageCount] = useState(1)
   const canvasMeasureRef = useRef<HTMLDivElement | null>(null)
-  const [blocks, setBlocks] = useState<ProposalBlock[]>(() =>
-    normalizeBlocks([
-      createBlock('hero'),
-      createBlock('text'),
-      createBlock('pricing'),
-      createBlock('signature'),
-    ])
-  )
+  const [blocks, setBlocks] = useState<ProposalBlock[]>([])
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [activePaletteId, setActivePaletteId] = useState<string | null>(null)
   const [editorMode, setEditorMode] = useState<'edit' | 'preview' | 'send'>('edit')
@@ -803,6 +965,7 @@ export default function ProposalEditorPage() {
   const [templateIsPublic, setTemplateIsPublic] = useState(false)
   const [templateSaving, setTemplateSaving] = useState(false)
   const [designSettings, setDesignSettings] = useState<ProposalDesignSettings>(defaultProposalDesignSettings)
+  const [isStudioFullscreen, setIsStudioFullscreen] = useState(false)
 
   const [proposalMeta, setProposalMeta] = useState(() => ({
     clientName: t('proposalEditor.defaults.clientName'),
@@ -1263,6 +1426,15 @@ export default function ProposalEditorPage() {
     [blocks, selectedBlockId]
   )
 
+  const updateSelectedBlockStyle = useCallback(
+    (updates: Partial<BlockFrameStyle>) => {
+      if (!selectedBlock) return
+      const style = ((selectedBlock.data as { style?: BlockFrameStyle }).style ?? {}) as BlockFrameStyle
+      updateBlockData(selectedBlock.id, { style: { ...style, ...updates } })
+    },
+    [selectedBlock]
+  )
+
   const handleAddBlock = (type: BlockType, index?: number) => {
     const newBlock = createBlock(type)
     setBlocks((prev) => insertBlockAt(prev, newBlock, index))
@@ -1529,7 +1701,12 @@ export default function ProposalEditorPage() {
   }
 
   useEffect(() => {
-    if (!selectedBlockId && blocks.length > 0) {
+    if (blocks.length === 0) {
+      if (selectedBlockId) setSelectedBlockId(null)
+      return
+    }
+    const exists = selectedBlockId ? blocks.some((block) => block.id === selectedBlockId) : false
+    if (!exists) {
       setSelectedBlockId(blocks[0].id)
     }
   }, [blocks, selectedBlockId])
@@ -1645,6 +1822,92 @@ export default function ProposalEditorPage() {
     },
     [smartVariableValues]
   )
+
+  useEffect(() => {
+    if (!isStudioFullscreen) {
+      document.body.style.overflow = ''
+      return
+    }
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isStudioFullscreen])
+
+  useEffect(() => {
+    if (!isStudioFullscreen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsStudioFullscreen(false)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isStudioFullscreen])
+
+  const handleToggleStudioFullscreen = useCallback(() => {
+    setIsStudioFullscreen((prev) => !prev)
+  }, [])
+
+  const designPresets = useMemo(
+    () => [
+      {
+        id: 'executive-blue',
+        name: 'Executive Blue',
+        settings: {
+          background: '#ffffff',
+          text: '#0f172a',
+          accent: '#2563eb',
+          radius: 12,
+          fontScale: 100,
+        } satisfies ProposalDesignSettings,
+      },
+      {
+        id: 'premium-charcoal',
+        name: 'Premium Charcoal',
+        settings: {
+          background: '#0f172a',
+          text: '#f8fafc',
+          accent: '#38bdf8',
+          radius: 14,
+          fontScale: 102,
+        } satisfies ProposalDesignSettings,
+      },
+      {
+        id: 'conversion-green',
+        name: 'Conversion Green',
+        settings: {
+          background: '#f8fffb',
+          text: '#052e16',
+          accent: '#16a34a',
+          radius: 16,
+          fontScale: 101,
+        } satisfies ProposalDesignSettings,
+      },
+      {
+        id: 'warm-contrast',
+        name: 'Warm Contrast',
+        settings: {
+          background: '#fffaf0',
+          text: '#3f2305',
+          accent: '#f97316',
+          radius: 18,
+          fontScale: 100,
+        } satisfies ProposalDesignSettings,
+      },
+    ],
+    []
+  )
+
+  const designScore = useMemo(() => {
+    const typeCount = new Set(blocks.map((block) => block.type)).size
+    const hasHero = blocks.some((block) => block.type === 'hero')
+    const hasPricing = blocks.some((block) => block.type === 'pricing')
+    const hasSignature = blocks.some((block) => block.type === 'signature')
+    const titleReady = documentTitle.trim().length > 0
+    const readiness = [hasHero, hasPricing, hasSignature, titleReady].filter(Boolean).length
+    return Math.min(100, Math.round(typeCount * 12 + readiness * 13))
+  }, [blocks, documentTitle])
 
   if (editorMode === 'send') {
     return (
@@ -1764,30 +2027,53 @@ export default function ProposalEditorPage() {
   }
 
   return (
-    <div className="-mx-4 -mt-4 lg:-mx-8 lg:-mt-8 flex min-h-screen flex-col">
-      <header className="flex h-16 items-center justify-between border-b border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#101722] px-6 z-10">
-        <div className="flex items-center gap-4">
-          <Link href="/proposals" className="size-8 text-primary">
-            <span className="material-symbols-outlined">arrow_back</span>
-          </Link>
-          <div className="flex flex-col">
-            <span className="text-xs text-[#48679d] dark:text-gray-400">{t('proposalEditor.header.title')}</span>
-            <div className="flex items-center gap-2">
-              <input
-                value={documentTitle}
-                onChange={(event) => setDocumentTitle(event.target.value)}
-                className="text-sm font-bold text-[#0d121c] dark:text-white bg-transparent border-b border-transparent focus:border-primary outline-none"
-              />
-              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] rounded uppercase font-bold">
-                {isTemplateMode ? t('proposalEditor.badges.template') : t('proposals.status.draft')}
-              </span>
+    <div
+      className={`flex min-h-screen flex-col bg-gradient-to-b from-[#edf4ff] via-[#f5f7fb] to-[#eef3ff] dark:from-[#0c1320] dark:via-[#101722] dark:to-[#0b1220] ${
+        isStudioFullscreen
+          ? 'fixed inset-0 z-[90] m-0 h-screen w-screen overflow-hidden'
+          : '-mx-4 -mt-4 lg:-mx-8 lg:-mt-6 h-[calc(100dvh-1rem)] lg:h-[calc(100dvh-1.5rem)] overflow-hidden'
+      }`}
+    >
+      <header className="relative z-10 border-b border-[#dbe5fa] dark:border-gray-800 bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-lg px-6 py-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <Link href="/proposals" className="mt-1 flex size-8 items-center justify-center rounded-full bg-white text-primary shadow-sm ring-1 ring-primary/20 dark:bg-[#101722]">
+              <span className="material-symbols-outlined">arrow_back</span>
+            </Link>
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#48679d] dark:text-gray-400">
+                {t('proposalEditor.studio.title')}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={documentTitle}
+                  onChange={(event) => setDocumentTitle(event.target.value)}
+                  className="min-w-[240px] text-lg font-bold text-[#0d121c] dark:text-white bg-transparent border-b border-transparent focus:border-primary outline-none"
+                />
+                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] rounded uppercase font-bold">
+                  {isTemplateMode ? t('proposalEditor.badges.template') : t('proposals.status.draft')}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300">
+                  <span className="material-symbols-outlined text-[14px]">task_alt</span>
+                  {t('proposalEditor.studio.readiness', { score: designScore })}
+                </span>
+              </div>
+              <p className="text-xs text-[#5f7197] dark:text-gray-400">
+                {proposalMeta.clientName} • {t('proposalEditor.summary.total')}: {formatCurrency(subtotal, totalCurrency)}
+              </p>
             </div>
           </div>
-        </div>
-        <div className="hidden lg:flex flex-1 justify-center">
-          <StepNav mode={editorMode} onChange={setEditorMode} hideSend={isTemplateMode} />
-        </div>
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
+          <button
+            onClick={handleToggleStudioFullscreen}
+            title={isStudioFullscreen ? t('proposalEditor.studio.fullscreenExit') : t('proposalEditor.studio.fullscreenEnter')}
+            aria-label={isStudioFullscreen ? t('proposalEditor.studio.fullscreenExit') : t('proposalEditor.studio.fullscreenEnter')}
+            className="flex size-10 items-center justify-center rounded-lg border border-[#e7ebf4] dark:border-gray-700 bg-white dark:bg-gray-800 text-[#0d121c] dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              {isStudioFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+            </span>
+          </button>
           {isTemplateMode ? (
             <>
               <button
@@ -1849,6 +2135,7 @@ export default function ProposalEditorPage() {
             </>
           )}
         </div>
+        </div>
       </header>
       <HistoryModal
         isOpen={historyOpen}
@@ -1879,33 +2166,42 @@ export default function ProposalEditorPage() {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="flex flex-1 overflow-hidden">
-          <aside className="w-72 flex flex-col border-r border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#101722] overflow-y-auto">
-            <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-[#48679d] dark:text-gray-400">{t('proposalEditor.sidebar.blocks')}</h2>
-              <p className="text-xs text-gray-500 mt-1">{t('proposalEditor.sidebar.dragHint')}</p>
+        <div className="flex flex-1 min-h-0 min-w-0 overflow-x-auto overflow-y-hidden">
+          <div className="flex min-h-0 min-w-[1180px] flex-1">
+          <aside className="h-full w-72 min-h-0 shrink-0 flex flex-col border-r border-[#dbe5fa] dark:border-gray-800 bg-white/90 dark:bg-[#101722]/90 overflow-y-auto backdrop-blur-sm">
+            <div className="p-4 border-b border-[#e7ebf4] dark:border-gray-800 space-y-3">
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-[#48679d] dark:text-gray-400">{t('proposalEditor.sidebar.blocks')}</h2>
+                <p className="text-xs text-gray-500 mt-1">{t('proposalEditor.sidebar.dragHint')}</p>
+              </div>
+              <div className="rounded-xl bg-gradient-to-r from-[#e8f0ff] to-[#eefcf5] dark:from-[#1a263b] dark:to-[#112a24] p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#48679d] dark:text-gray-300">
+                  {t('proposalEditor.studio.focusTitle')}
+                </p>
+                <p className="mt-1 text-xs text-[#334155] dark:text-gray-300">{t('proposalEditor.studio.focusHint')}</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e7ebf4] dark:border-gray-800">
+            <div className="grid grid-cols-3 gap-1 px-4 py-3 border-b border-[#e7ebf4] dark:border-gray-800 bg-[#f8fbff] dark:bg-[#0f172a]">
               <button
                 onClick={() => setLeftPanel('blocks')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-                  leftPanel === 'blocks' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                  leftPanel === 'blocks' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
                 {t('proposalEditor.tabs.blocks')}
               </button>
               <button
                 onClick={() => setLeftPanel('templates')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-                  leftPanel === 'templates' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                  leftPanel === 'templates' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
                 {t('proposalEditor.tabs.templates')}
               </button>
               <button
                 onClick={() => setLeftPanel('order')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-                  leftPanel === 'order' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                  leftPanel === 'order' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
                 {t('proposalEditor.tabs.order')}
@@ -2079,9 +2375,12 @@ export default function ProposalEditorPage() {
             </div>
           </aside>
 
-          <main className="flex-1 bg-[#f5f6f8] dark:bg-[#1a212c] overflow-x-hidden p-10 pb-24 flex justify-center relative">
+          <main className="min-h-0 min-w-[520px] flex-1 overflow-x-hidden overflow-y-auto p-8 pb-24 lg:p-10 lg:pb-24 flex justify-center relative">
             <CanvasDropZone>
-              <div className="w-full flex justify-center">
+              <div className="w-full flex flex-col items-center gap-4">
+                <div className="w-full max-w-[820px] rounded-xl border border-[#d7e4ff] bg-white/80 px-4 py-3 text-xs text-[#48679d] shadow-sm dark:border-gray-700 dark:bg-[#101722]/80 dark:text-gray-300">
+                  {t('proposalEditor.studio.canvasHint')}
+                </div>
                 <div
                   className="transition-transform"
                   style={{
@@ -2135,7 +2434,11 @@ export default function ProposalEditorPage() {
               </div>
             </CanvasDropZone>
 
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-[#101722]/90 backdrop-blur-md shadow-2xl rounded-full px-6 py-3 border border-gray-200 dark:border-gray-700 flex items-center gap-6">
+            <div
+              className={`fixed bottom-6 z-30 bg-white/90 dark:bg-[#101722]/90 backdrop-blur-md shadow-2xl rounded-full px-6 py-3 border border-gray-200 dark:border-gray-700 flex items-center gap-6 ${
+                isStudioFullscreen ? 'left-1/2 -translate-x-1/2' : 'left-[58%] -translate-x-1/2 lg:left-[56%]'
+              }`}
+            >
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setViewMode('desktop')}
@@ -2192,7 +2495,7 @@ export default function ProposalEditorPage() {
             </div>
           </main>
 
-          <aside className="w-80 border-l border-[#e7ebf4] dark:border-gray-800 bg-white dark:bg-[#101722] overflow-y-auto">
+          <aside className="h-full w-80 min-h-0 min-w-[320px] shrink-0 border-l border-[#dbe5fa] dark:border-gray-800 bg-white/90 dark:bg-[#101722]/90 overflow-y-auto backdrop-blur-sm">
             <div className="flex border-b border-[#e7ebf4] dark:border-gray-800">
               <button
                 onClick={() => setActivePanel('content')}
@@ -2208,6 +2511,18 @@ export default function ProposalEditorPage() {
               </button>
             </div>
             <div className="p-6 space-y-6">
+              <div className="rounded-xl border border-[#e0eafe] bg-[#f5f8ff] p-4 dark:border-gray-700 dark:bg-[#0f172a]">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#48679d] dark:text-gray-400">
+                    {t('proposalEditor.studio.designHealth')}
+                  </p>
+                  <span className="text-sm font-bold text-primary">{designScore}%</span>
+                </div>
+                <div className="mt-3 h-2 rounded-full bg-white dark:bg-gray-800">
+                  <div className="h-2 rounded-full bg-gradient-to-r from-[#2563eb] to-[#10b981]" style={{ width: `${designScore}%` }} />
+                </div>
+              </div>
+
               {activePanel === 'content' && !selectedBlock && (
                 <div className="text-sm text-gray-500">{t('proposalEditor.panels.empty')}</div>
               )}
@@ -2290,6 +2605,73 @@ export default function ProposalEditorPage() {
                         </select>
                       </div>
                     </div>
+                    <div className="rounded-lg border border-[#e7ebf4] dark:border-gray-800 p-3 space-y-3">
+                      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t('proposalEditor.format.title')}</p>
+                      <div className="flex items-center gap-2">
+                        {([
+                          { key: 'left', icon: 'format_align_left', label: t('proposalEditor.align.left') },
+                          { key: 'center', icon: 'format_align_center', label: t('proposalEditor.align.center') },
+                          { key: 'right', icon: 'format_align_right', label: t('proposalEditor.align.right') },
+                        ] as const).map((option) => (
+                          <button
+                            key={option.key}
+                            type="button"
+                            onClick={() => updateBlockData(selectedBlock.id, { align: option.key })}
+                            className={`size-8 rounded-md border flex items-center justify-center ${
+                              selectedBlock.data.align === option.key ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500'
+                            }`}
+                            title={option.label}
+                          >
+                            <span className="material-symbols-outlined text-[18px]">{option.icon}</span>
+                          </button>
+                        ))}
+                        <div className="ml-auto flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBlockData(selectedBlock.id, {
+                                style: { ...(selectedBlock.data.style ?? {}), fontWeight: (selectedBlock.data.style?.fontWeight ?? 700) >= 700 ? 500 : 700 },
+                              })
+                            }
+                            className={`size-8 rounded-md border flex items-center justify-center ${
+                              (selectedBlock.data.style?.fontWeight ?? 700) >= 700 ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500'
+                            }`}
+                            title={t('proposalEditor.format.bold')}
+                          >
+                            <span className="material-symbols-outlined text-[18px]">format_bold</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBlockData(selectedBlock.id, {
+                                style: { ...(selectedBlock.data.style ?? {}), italic: !(selectedBlock.data.style?.italic ?? false) },
+                              })
+                            }
+                            className={`size-8 rounded-md border flex items-center justify-center ${
+                              selectedBlock.data.style?.italic ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500'
+                            }`}
+                            title={t('proposalEditor.format.italic')}
+                          >
+                            <span className="material-symbols-outlined text-[18px]">format_italic</span>
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.format.fontSize')}</label>
+                        <input
+                          type="number"
+                          min={18}
+                          max={96}
+                          value={selectedBlock.data.style?.fontSize ?? (selectedBlock.data.level === 'h1' ? 36 : selectedBlock.data.level === 'h2' ? 30 : 24)}
+                          onChange={(event) =>
+                            updateBlockData(selectedBlock.id, {
+                              style: { ...(selectedBlock.data.style ?? {}), fontSize: Number(event.target.value) || 24 },
+                            })
+                          }
+                          className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -2303,6 +2685,108 @@ export default function ProposalEditorPage() {
                       onChange={(event) => updateBlockData(selectedBlock.id, { content: event.target.value })}
                       className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm min-h-[160px]"
                     />
+                    <div className="rounded-lg border border-[#e7ebf4] dark:border-gray-800 p-3 space-y-3">
+                      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t('proposalEditor.format.title')}</p>
+                      <div className="flex items-center gap-2">
+                        {([
+                          { key: 'left', icon: 'format_align_left', label: t('proposalEditor.align.left') },
+                          { key: 'center', icon: 'format_align_center', label: t('proposalEditor.align.center') },
+                          { key: 'right', icon: 'format_align_right', label: t('proposalEditor.align.right') },
+                        ] as const).map((option) => (
+                          <button
+                            key={option.key}
+                            type="button"
+                            onClick={() =>
+                              updateBlockData(selectedBlock.id, {
+                                style: { ...(selectedBlock.data.style ?? {}), align: option.key },
+                              })
+                            }
+                            className={`size-8 rounded-md border flex items-center justify-center ${
+                              (selectedBlock.data.style?.align ?? 'left') === option.key ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500'
+                            }`}
+                            title={option.label}
+                          >
+                            <span className="material-symbols-outlined text-[18px]">{option.icon}</span>
+                          </button>
+                        ))}
+                        <div className="ml-auto flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBlockData(selectedBlock.id, {
+                                style: {
+                                  ...(selectedBlock.data.style ?? {}),
+                                  fontWeight: (selectedBlock.data.style?.fontWeight ?? 400) >= 700 ? 400 : 700,
+                                },
+                              })
+                            }
+                            className={`size-8 rounded-md border flex items-center justify-center ${
+                              (selectedBlock.data.style?.fontWeight ?? 400) >= 700 ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500'
+                            }`}
+                            title={t('proposalEditor.format.bold')}
+                          >
+                            <span className="material-symbols-outlined text-[18px]">format_bold</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBlockData(selectedBlock.id, {
+                                style: { ...(selectedBlock.data.style ?? {}), italic: !(selectedBlock.data.style?.italic ?? false) },
+                              })
+                            }
+                            className={`size-8 rounded-md border flex items-center justify-center ${
+                              selectedBlock.data.style?.italic ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500'
+                            }`}
+                            title={t('proposalEditor.format.italic')}
+                          >
+                            <span className="material-symbols-outlined text-[18px]">format_italic</span>
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.format.verticalAlign')}</label>
+                          <div className="flex items-center gap-2">
+                            {([
+                              { key: 'top', icon: 'vertical_align_top', label: t('proposalEditor.format.top') },
+                              { key: 'center', icon: 'vertical_align_center', label: t('proposalEditor.align.center') },
+                              { key: 'bottom', icon: 'vertical_align_bottom', label: t('proposalEditor.format.bottom') },
+                            ] as const).map((option) => (
+                              <button
+                                key={option.key}
+                                type="button"
+                                onClick={() =>
+                                  updateBlockData(selectedBlock.id, {
+                                    style: { ...(selectedBlock.data.style ?? {}), verticalAlign: option.key },
+                                  })
+                                }
+                                className={`size-8 rounded-md border flex items-center justify-center ${
+                                  (selectedBlock.data.style?.verticalAlign ?? 'top') === option.key ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 text-gray-500'
+                                }`}
+                                title={option.label}
+                              >
+                                <span className="material-symbols-outlined text-[18px]">{option.icon}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.format.fontSize')}</label>
+                          <input
+                            type="number"
+                            min={12}
+                            max={48}
+                            value={selectedBlock.data.style?.fontSize ?? 16}
+                            onChange={(event) =>
+                              updateBlockData(selectedBlock.id, {
+                                style: { ...(selectedBlock.data.style ?? {}), fontSize: Number(event.target.value) || 16 },
+                              })
+                            }
+                            className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -2875,6 +3359,723 @@ export default function ProposalEditorPage() {
                   {t('proposalEditor.design.title')}
                 </label>
                 <div className="space-y-4">
+                  <div>
+                    <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.selectBlock')}</label>
+                    <select
+                      value={selectedBlock?.id ?? ''}
+                      onChange={(event) => setSelectedBlockId(event.target.value || null)}
+                      className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+                    >
+                      {blocks.map((block, index) => (
+                        <option key={block.id} value={block.id}>
+                          {index + 1}. {blockMetaMap.get(block.type)?.label ?? block.type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedBlock ? (
+                    <div className="rounded-xl border border-[#e7ebf4] dark:border-gray-800 p-3 space-y-3">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-[#48679d] dark:text-gray-400">
+                        {t('proposalEditor.design.blockSpecific')}
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-3 rounded-lg border border-dashed border-[#dbe5fa] p-3">
+                        <div className="col-span-2">
+                          <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.blockBg')}</label>
+                          <input
+                            type="color"
+                            value={((selectedBlock.data as { style?: BlockFrameStyle }).style?.blockBg ?? '#ffffff')}
+                            onChange={(event) => updateSelectedBlockStyle({ blockBg: event.target.value })}
+                            className="h-8 w-full rounded border border-gray-200"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.borderColor')}</label>
+                          <input
+                            type="color"
+                            value={((selectedBlock.data as { style?: BlockFrameStyle }).style?.borderColor ?? '#dbe2ee')}
+                            onChange={(event) => updateSelectedBlockStyle({ borderColor: event.target.value })}
+                            className="h-8 w-full rounded border border-gray-200"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.borderWidth')}</label>
+                          <input
+                            type="range"
+                            min={0}
+                            max={6}
+                            value={((selectedBlock.data as { style?: BlockFrameStyle }).style?.borderWidth ?? 0)}
+                            onChange={(event) => updateSelectedBlockStyle({ borderWidth: Number(event.target.value) })}
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.cornerRadius')}</label>
+                          <input
+                            type="range"
+                            min={0}
+                            max={32}
+                            value={((selectedBlock.data as { style?: BlockFrameStyle }).style?.radius ?? 12)}
+                            onChange={(event) => updateSelectedBlockStyle({ radius: Number(event.target.value) })}
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.shadow')}</label>
+                          <input
+                            type="range"
+                            min={0}
+                            max={3}
+                            value={((selectedBlock.data as { style?: BlockFrameStyle }).style?.shadowLevel ?? 0)}
+                            onChange={(event) =>
+                              updateSelectedBlockStyle({
+                                shadowLevel: Number(event.target.value) as 0 | 1 | 2 | 3,
+                              })
+                            }
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.paddingX')}</label>
+                          <input
+                            type="range"
+                            min={12}
+                            max={72}
+                            value={((selectedBlock.data as { style?: BlockFrameStyle }).style?.paddingX ?? 32)}
+                            onChange={(event) => updateSelectedBlockStyle({ paddingX: Number(event.target.value) })}
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.paddingY')}</label>
+                          <input
+                            type="range"
+                            min={12}
+                            max={72}
+                            value={((selectedBlock.data as { style?: BlockFrameStyle }).style?.paddingY ?? 32)}
+                            onChange={(event) => updateSelectedBlockStyle({ paddingY: Number(event.target.value) })}
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border border-dashed border-[#dbe5fa] p-3 space-y-3">
+                        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t('proposalEditor.format.title')}</p>
+                        <div className="flex items-center gap-2">
+                          {([
+                            { key: 'left', icon: 'format_align_left', label: t('proposalEditor.align.left') },
+                            { key: 'center', icon: 'format_align_center', label: t('proposalEditor.align.center') },
+                            { key: 'right', icon: 'format_align_right', label: t('proposalEditor.align.right') },
+                          ] as const).map((option) => (
+                            <button
+                              key={option.key}
+                              type="button"
+                              onClick={() => updateSelectedBlockStyle({ textAlign: option.key })}
+                              className={`size-8 rounded-md border flex items-center justify-center ${
+                                (((selectedBlock.data as { style?: BlockFrameStyle }).style?.textAlign ?? 'left') === option.key)
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-gray-200 text-gray-500'
+                              }`}
+                              title={option.label}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">{option.icon}</span>
+                            </button>
+                          ))}
+                          <div className="ml-auto flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateSelectedBlockStyle({
+                                  fontWeight:
+                                    (((selectedBlock.data as { style?: BlockFrameStyle }).style?.fontWeight ?? 400) >= 700 ? 400 : 700) as
+                                      | 400
+                                      | 500
+                                      | 600
+                                      | 700
+                                      | 800,
+                                })
+                              }
+                              className={`size-8 rounded-md border flex items-center justify-center ${
+                                (((selectedBlock.data as { style?: BlockFrameStyle }).style?.fontWeight ?? 400) >= 700)
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-gray-200 text-gray-500'
+                              }`}
+                              title={t('proposalEditor.format.bold')}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">format_bold</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateSelectedBlockStyle({
+                                  italic: !(((selectedBlock.data as { style?: BlockFrameStyle }).style?.italic) ?? false),
+                                })
+                              }
+                              className={`size-8 rounded-md border flex items-center justify-center ${
+                                (((selectedBlock.data as { style?: BlockFrameStyle }).style?.italic) ?? false)
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-gray-200 text-gray-500'
+                              }`}
+                              title={t('proposalEditor.format.italic')}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">format_italic</span>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.format.verticalAlign')}</label>
+                            <div className="flex items-center gap-2">
+                              {([
+                                { key: 'top', icon: 'vertical_align_top', label: t('proposalEditor.format.top') },
+                                { key: 'center', icon: 'vertical_align_center', label: t('proposalEditor.align.center') },
+                                { key: 'bottom', icon: 'vertical_align_bottom', label: t('proposalEditor.format.bottom') },
+                              ] as const).map((option) => (
+                                <button
+                                  key={option.key}
+                                  type="button"
+                                  onClick={() => updateSelectedBlockStyle({ verticalAlign: option.key })}
+                                  className={`size-8 rounded-md border flex items-center justify-center ${
+                                    (((selectedBlock.data as { style?: BlockFrameStyle }).style?.verticalAlign ?? 'top') === option.key)
+                                      ? 'border-primary bg-primary/10 text-primary'
+                                      : 'border-gray-200 text-gray-500'
+                                  }`}
+                                  title={option.label}
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">{option.icon}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.format.fontSize')}</label>
+                            <input
+                              type="number"
+                              min={10}
+                              max={72}
+                              value={((selectedBlock.data as { style?: BlockFrameStyle }).style?.fontSize ?? 16)}
+                              onChange={(event) => updateSelectedBlockStyle({ fontSize: Number(event.target.value) || 16 })}
+                              className="w-full px-3 py-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.lineHeight')}</label>
+                          <input
+                            type="range"
+                            min={1}
+                            max={2.2}
+                            step={0.1}
+                            value={((selectedBlock.data as { style?: BlockFrameStyle }).style?.lineHeight ?? 1.5)}
+                            onChange={(event) => updateSelectedBlockStyle({ lineHeight: Number(event.target.value) })}
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+
+                      {selectedBlock.type === 'hero' && (
+                        <>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.overlayOpacity')}</label>
+                            <input
+                              type="range"
+                              min={10}
+                              max={90}
+                              value={selectedBlock.data.style?.overlayOpacity ?? 65}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), overlayOpacity: Number(event.target.value) },
+                                })
+                              }
+                              className="w-full"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.heroHeight')}</label>
+                            <input
+                              type="range"
+                              min={220}
+                              max={560}
+                              value={selectedBlock.data.style?.height ?? 320}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), height: Number(event.target.value) },
+                                })
+                              }
+                              className="w-full"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.textColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.textColor ?? '#ffffff'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), textColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {selectedBlock.type === 'heading' && (
+                        <>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.textColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.textColor ?? '#0d121c'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), textColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.letterSpacing')}</label>
+                            <input
+                              type="range"
+                              min={-1}
+                              max={4}
+                              step={0.5}
+                              value={selectedBlock.data.style?.letterSpacing ?? 0}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), letterSpacing: Number(event.target.value) },
+                                })
+                              }
+                              className="w-full"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {selectedBlock.type === 'text' && (
+                        <>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.textColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.textColor ?? '#334155'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), textColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.fontSizePx')}</label>
+                            <input
+                              type="range"
+                              min={12}
+                              max={28}
+                              value={selectedBlock.data.style?.fontSize ?? 16}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), fontSize: Number(event.target.value) },
+                                })
+                              }
+                              className="w-full"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.lineHeight')}</label>
+                            <input
+                              type="range"
+                              min={1.2}
+                              max={2.2}
+                              step={0.1}
+                              value={selectedBlock.data.style?.lineHeight ?? 1.7}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), lineHeight: Number(event.target.value) },
+                                })
+                              }
+                              className="w-full"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {selectedBlock.type === 'pricing' && (
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.surfaceColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.surfaceColor ?? '#f8fafc'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), surfaceColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.headerColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.headerColor ?? '#e2e8f0'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), headerColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.headerTextColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.headerTextColor ?? '#475569'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), headerTextColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedBlock.type === 'video' && (
+                        <>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.borderColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.borderColor ?? '#e2e8f0'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), borderColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.cornerRadius')}</label>
+                            <input
+                              type="range"
+                              min={0}
+                              max={36}
+                              value={selectedBlock.data.style?.borderRadius ?? 12}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), borderRadius: Number(event.target.value) },
+                                })
+                              }
+                              className="w-full"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {selectedBlock.type === 'gallery' && (
+                        <>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.gap')}</label>
+                            <input
+                              type="range"
+                              min={4}
+                              max={28}
+                              value={selectedBlock.data.style?.gap ?? 16}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), gap: Number(event.target.value) },
+                                })
+                              }
+                              className="w-full"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.imageRadius')}</label>
+                            <input
+                              type="range"
+                              min={0}
+                              max={28}
+                              value={selectedBlock.data.style?.imageRadius ?? 12}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), imageRadius: Number(event.target.value) },
+                                })
+                              }
+                              className="w-full"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {selectedBlock.type === 'testimonial' && (
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.backgroundColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.backgroundColor ?? '#f8fafc'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), backgroundColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.textColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.quoteColor ?? '#0d121c'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), quoteColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.accentColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.accentColor ?? '#377DF6'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), accentColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedBlock.type === 'timeline' && (
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.lineColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.lineColor ?? '#dbe2ee'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), lineColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.dotColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.dotColor ?? '#377DF6'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), dotColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.dateColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.dateColor ?? '#64748b'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), dateColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedBlock.type === 'countdown' && (
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.cardColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.cardColor ?? '#ffffff'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), cardColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.numberColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.numberColor ?? '#377DF6'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), numberColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedBlock.type === 'cta' && (
+                        <>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.backgroundColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.bgColor ?? '#377DF6'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), bgColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.textColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.textColor ?? '#ffffff'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), textColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.borderColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.borderColor ?? '#377DF6'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), borderColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.cornerRadius')}</label>
+                            <input
+                              type="range"
+                              min={0}
+                              max={28}
+                              value={selectedBlock.data.style?.borderRadius ?? 10}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), borderRadius: Number(event.target.value) },
+                                })
+                              }
+                              className="w-full"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {selectedBlock.type === 'signature' && (
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.backgroundColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.backgroundColor ?? '#ffffff'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), backgroundColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.borderColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.borderColor ?? '#cbd5e1'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), borderColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.iconColor')}</label>
+                            <input
+                              type="color"
+                              value={selectedBlock.data.style?.iconColor ?? '#377DF6'}
+                              onChange={(event) =>
+                                updateBlockData(selectedBlock.id, {
+                                  style: { ...(selectedBlock.data.style ?? {}), iconColor: event.target.value },
+                                })
+                              }
+                              className="h-8 w-full rounded border border-gray-200"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 p-3 text-xs text-gray-500">
+                      {t('proposalEditor.design.blockEmpty')}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-[11px] text-gray-500 block mb-2">{t('proposalEditor.studio.presetThemes')}</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {designPresets.map((preset) => {
+                        const active =
+                          designSettings.background === preset.settings.background &&
+                          designSettings.text === preset.settings.text &&
+                          designSettings.accent === preset.settings.accent
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => setDesignSettings(preset.settings)}
+                            className={`rounded-lg border px-2.5 py-2 text-left transition-colors ${
+                              active ? 'border-primary bg-primary/10' : 'border-gray-200 hover:border-primary/40'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: preset.settings.accent }} />
+                              <span className="text-[11px] font-semibold text-[#0d121c] dark:text-white">{preset.name}</span>
+                            </div>
+                            <div className="mt-1 flex gap-1">
+                              <span className="h-1.5 flex-1 rounded-full" style={{ backgroundColor: preset.settings.background }} />
+                              <span className="h-1.5 flex-1 rounded-full" style={{ backgroundColor: preset.settings.text }} />
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[11px] text-gray-500 block mb-1">{t('proposalEditor.design.textColor')}</label>
@@ -2962,8 +4163,9 @@ export default function ProposalEditorPage() {
               {t('proposalEditor.summary.total')}: <span className="font-bold text-[#0d121c] dark:text-white">{formatCurrency(subtotal)}</span>
             </div>
           </div>
-        </aside>
-      </div>
+          </aside>
+          </div>
+        </div>
       <DragOverlay>
         {activePaletteId ? (
           <div className="bg-white dark:bg-gray-900 border border-primary/30 rounded-lg px-4 py-2 shadow-xl text-sm font-semibold text-primary">
@@ -3376,37 +4578,106 @@ function BlockContent({
     center: 'text-center',
     right: 'text-right',
   }
+  const verticalAlignMap: Record<'top' | 'center' | 'bottom', 'flex-start' | 'center' | 'flex-end'> = {
+    top: 'flex-start',
+    center: 'center',
+    bottom: 'flex-end',
+  }
+
+  const getShadow = (level: number | undefined) => {
+    if (level === 1) return '0 1px 3px rgba(15, 23, 42, 0.12)'
+    if (level === 2) return '0 8px 18px rgba(15, 23, 42, 0.12)'
+    if (level === 3) return '0 18px 34px rgba(15, 23, 42, 0.16)'
+    return 'none'
+  }
+
+  const getFrameStyle = (style?: BlockFrameStyle, defaults?: { bg?: string; radius?: number }) => ({
+    backgroundColor: style?.blockBg ?? defaults?.bg ?? 'transparent',
+    border: `${style?.borderWidth ?? 0}px solid ${style?.borderColor ?? 'transparent'}`,
+    borderRadius: `${style?.radius ?? defaults?.radius ?? 12}px`,
+    padding: `${style?.paddingY ?? 32}px ${style?.paddingX ?? 32}px`,
+    boxShadow: getShadow(style?.shadowLevel),
+    textAlign: style?.textAlign ?? undefined,
+    fontSize: style?.fontSize ? `${style.fontSize}px` : undefined,
+    fontWeight: style?.fontWeight ?? undefined,
+    fontStyle: style?.italic ? 'italic' : undefined,
+    lineHeight: style?.lineHeight ?? undefined,
+  })
 
   return (
     <>
       {block.type === 'hero' && (
+        (() => {
+          const heroStyle = block.data.style ?? {}
+          const overlayOpacity = Math.min(90, Math.max(10, heroStyle.overlayOpacity ?? 65))
+          const contentAlign = heroStyle.contentAlign ?? 'left'
+          const alignClass =
+            contentAlign === 'center' ? 'items-center text-center' : contentAlign === 'right' ? 'items-end text-right' : 'items-start text-left'
+          const heroHeight = Math.min(560, Math.max(220, heroStyle.height ?? 320))
+          return (
         <div
-          className="bg-cover bg-center h-80 flex items-end p-10 text-white relative rounded-b-lg"
+          className={`bg-cover bg-center flex flex-col justify-end relative ${alignClass}`}
           style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.7)), url(\"${block.data.backgroundUrl}\")`,
+            ...getFrameStyle(heroStyle, { radius: 14 }),
+            color: heroStyle.textColor ?? '#ffffff',
+            height: `${heroHeight}px`,
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,${overlayOpacity / 100})), url(\"${block.data.backgroundUrl}\")`,
           }}
         >
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">{resolve(block.data.title)}</h1>
-            <p className="text-lg text-gray-200 opacity-90">{resolve(block.data.subtitle)}</p>
+            <p className="text-lg opacity-90">{resolve(block.data.subtitle)}</p>
           </div>
         </div>
+          )
+        })()
       )}
 
       {block.type === 'heading' && (
-        <div className={`p-8 ${headingAlignMap[block.data.align]}`}>
-          <p className={`${headingSizeMap[block.data.level]} font-bold tracking-tight`}>
+        <div
+          className={headingAlignMap[block.data.align]}
+          style={{ ...getFrameStyle(block.data.style), color: block.data.style?.textColor ?? 'var(--proposal-text)' }}
+        >
+          <p
+            className={headingSizeMap[block.data.level]}
+            style={{
+              letterSpacing: `${block.data.style?.letterSpacing ?? 0}px`,
+              fontWeight: block.data.style?.fontWeight ?? 700,
+              fontStyle: block.data.style?.italic ? 'italic' : 'normal',
+              fontSize: block.data.style?.fontSize ? `${block.data.style.fontSize}px` : undefined,
+            }}
+          >
             {resolve(block.data.text)}
           </p>
         </div>
       )}
 
       {block.type === 'text' && (
-        <div className="p-8 text-[color:var(--proposal-text)] leading-relaxed">{resolve(block.data.content)}</div>
+        <div
+          className="leading-relaxed flex min-h-[120px]"
+          style={{
+            ...getFrameStyle(block.data.style),
+            alignItems: verticalAlignMap[block.data.style?.verticalAlign ?? 'top'],
+            justifyContent: 'stretch',
+            color: block.data.style?.textColor ?? 'var(--proposal-text)',
+            fontSize: `${block.data.style?.fontSize ?? 16}px`,
+            lineHeight: block.data.style?.lineHeight ?? 1.7,
+            textAlign: block.data.style?.align ?? 'left',
+            fontWeight: block.data.style?.fontWeight ?? 400,
+            fontStyle: block.data.style?.italic ? 'italic' : 'normal',
+          }}
+        >
+          <p className="w-full">{resolve(block.data.content)}</p>
+        </div>
       )}
 
       {block.type === 'pricing' && (
-        <div className="p-8 bg-gray-50 dark:bg-gray-900/50 rounded-b-lg">
+        <div
+          style={{
+            ...getFrameStyle(block.data.style, { bg: block.data.style?.surfaceColor ?? '#f8fafc' }),
+            backgroundColor: block.data.style?.surfaceColor ?? '#f8fafc',
+          }}
+        >
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-[color:var(--proposal-text)]">
             <span className="material-symbols-outlined text-[color:var(--proposal-accent)]">shopping_cart</span>
             {t('proposalEditor.pricing.title')}
@@ -3430,7 +4701,13 @@ function BlockContent({
             )
             return (
           <table className="w-full text-sm text-left">
-            <thead className="text-xs uppercase text-gray-500 border-b border-gray-200 dark:border-gray-800">
+            <thead
+              className="text-xs uppercase border-b"
+              style={{
+                color: block.data.style?.headerTextColor ?? '#475569',
+                borderBottomColor: block.data.style?.headerColor ?? '#e2e8f0',
+              }}
+            >
               <tr>
                 {columns.description && <th className="pb-3 font-semibold">{t('proposalEditor.pricing.columns.description')}</th>}
                 {columns.quantity && <th className="pb-3 font-semibold text-center">{t('proposalEditor.pricing.columns.quantity')}</th>}
@@ -3482,13 +4759,19 @@ function BlockContent({
       )}
 
       {block.type === 'video' && (
-        <div className="p-8 space-y-4">
+        <div className="space-y-4" style={getFrameStyle(block.data.style)}>
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold">{t('proposalEditor.blocks.video')}</h4>
             <span className="text-xs text-gray-400 truncate">{resolve(block.data.title)}</span>
           </div>
           {getEmbedUrl(block.data.url) ? (
-            <div className="aspect-video w-full rounded-lg overflow-hidden bg-black">
+            <div
+              className="aspect-video w-full overflow-hidden bg-black"
+              style={{
+                borderRadius: `${block.data.style?.borderRadius ?? 12}px`,
+                border: `1px solid ${block.data.style?.borderColor ?? '#e2e8f0'}`,
+              }}
+            >
               <iframe
                 className="w-full h-full"
                 src={getEmbedUrl(block.data.url)}
@@ -3506,15 +4789,22 @@ function BlockContent({
       )}
 
       {block.type === 'gallery' && (
-        <div className="p-8 space-y-4">
+        <div className="space-y-4" style={getFrameStyle(block.data.style)}>
           <h4 className="text-sm font-semibold">{t('proposalEditor.blocks.gallery')}</h4>
           {(() => {
             const galleryImages = Array.isArray(block.data.images) ? block.data.images : []
             const columnCount = block.data.columns === 3 ? 3 : 2
             return (
-              <div className={`grid gap-4 ${columnCount === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              <div
+                className={`grid ${columnCount === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}
+                style={{ gap: `${block.data.style?.gap ?? 16}px` }}
+              >
                 {galleryImages.map((image) => (
-              <div key={image.id} className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
+              <div
+                key={image.id}
+                className="overflow-hidden border border-gray-200 dark:border-gray-800"
+                style={{ borderRadius: `${block.data.style?.imageRadius ?? 12}px` }}
+              >
                 <div
                   className="h-28 bg-cover bg-center"
                   style={{ backgroundImage: `url(\"${image.url}\")` }}
@@ -3529,9 +4819,15 @@ function BlockContent({
       )}
 
       {block.type === 'testimonial' && (
-        <div className="p-8 space-y-4">
-          <span className="material-symbols-outlined text-3xl text-[color:var(--proposal-accent)]">format_quote</span>
-          <p className="text-lg italic text-[color:var(--proposal-text)]">"{resolve(block.data.quote)}"</p>
+        <div
+          className="space-y-4"
+          style={{
+            ...getFrameStyle(block.data.style, { bg: block.data.style?.backgroundColor ?? '#f8fafc' }),
+            backgroundColor: block.data.style?.backgroundColor ?? '#f8fafc',
+          }}
+        >
+          <span className="material-symbols-outlined text-3xl" style={{ color: block.data.style?.accentColor ?? 'var(--proposal-accent)' }}>format_quote</span>
+          <p className="text-lg italic" style={{ color: block.data.style?.quoteColor ?? 'var(--proposal-text)' }}>"{resolve(block.data.quote)}"</p>
           <div className="flex items-center gap-3">
             <div
               className="size-10 rounded-full bg-cover bg-center border border-gray-200"
@@ -3546,21 +4842,21 @@ function BlockContent({
       )}
 
       {block.type === 'timeline' && (
-        <div className="p-8 space-y-4">
+        <div className="space-y-4" style={getFrameStyle(block.data.style)}>
           <h4 className="text-sm font-semibold">{t('proposalEditor.blocks.timeline')}</h4>
           <div className="space-y-4">
             {(Array.isArray(block.data.items) ? block.data.items : []).map((item, itemIndex, arr) => (
               <div key={item.id} className="flex gap-4">
                 <div className="flex flex-col items-center">
-                  <div className="size-2 rounded-full bg-[color:var(--proposal-accent)]"></div>
+                  <div className="size-2 rounded-full" style={{ backgroundColor: block.data.style?.dotColor ?? 'var(--proposal-accent)' }}></div>
                   {itemIndex !== arr.length - 1 && (
-                    <div className="w-px flex-1 bg-gray-200 dark:bg-gray-700 mt-1"></div>
+                    <div className="w-px flex-1 mt-1" style={{ backgroundColor: block.data.style?.lineColor ?? '#dbe2ee' }}></div>
                   )}
                 </div>
                 <div className="pb-2">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold">{resolve(item.title)}</p>
-                    <span className="text-xs text-gray-400">{resolve(item.date)}</span>
+                    <span className="text-xs" style={{ color: block.data.style?.dateColor ?? '#64748b' }}>{resolve(item.date)}</span>
                   </div>
                   <p className="text-sm text-gray-500">{resolve(item.description)}</p>
                 </div>
@@ -3571,7 +4867,7 @@ function BlockContent({
       )}
 
       {block.type === 'countdown' && (
-        <div className="p-8 space-y-4">
+        <div className="space-y-4" style={getFrameStyle(block.data.style)}>
           <h4 className="text-sm font-semibold">{resolve(block.data.label)}</h4>
           <div className="grid grid-cols-3 gap-4">
             {[
@@ -3582,8 +4878,9 @@ function BlockContent({
               <div
                 key={item.label}
                 className="rounded-xl border border-gray-200 dark:border-gray-800 p-4 text-center"
+                style={{ backgroundColor: block.data.style?.cardColor ?? '#ffffff' }}
               >
-                <p className="text-2xl font-bold text-[color:var(--proposal-accent)]">{item.value}</p>
+                <p className="text-2xl font-bold" style={{ color: block.data.style?.numberColor ?? 'var(--proposal-accent)' }}>{item.value}</p>
                 <p className="text-xs text-gray-500">{item.label}</p>
               </div>
             ))}
@@ -3592,7 +4889,7 @@ function BlockContent({
       )}
 
       {block.type === 'cta' && (
-        <div className="p-8 flex items-center justify-center">
+        <div className="flex items-center justify-center" style={getFrameStyle(block.data.style)}>
           <div
             className={`px-6 py-3 rounded-lg text-sm font-semibold transition-colors ${
               block.data.variant === 'primary'
@@ -3601,11 +4898,20 @@ function BlockContent({
                   ? 'bg-gray-100 text-[#0d121c]'
                   : 'border border-[color:var(--proposal-accent)] text-[color:var(--proposal-accent)]'
             }`}
-            style={
-              block.data.variant === 'primary'
-                ? { backgroundColor: 'var(--proposal-accent)' }
-                : undefined
-            }
+            style={{
+              borderRadius: `${block.data.style?.borderRadius ?? 10}px`,
+              backgroundColor:
+                block.data.variant === 'primary'
+                  ? (block.data.style?.bgColor ?? 'var(--proposal-accent)')
+                  : block.data.variant === 'secondary'
+                    ? (block.data.style?.bgColor ?? '#f3f4f6')
+                    : 'transparent',
+              color:
+                block.data.variant === 'outline'
+                  ? (block.data.style?.borderColor ?? 'var(--proposal-accent)')
+                  : (block.data.style?.textColor ?? undefined),
+              borderColor: block.data.style?.borderColor ?? undefined,
+            }}
           >
             {resolve(block.data.label)}
           </div>
@@ -3613,9 +4919,15 @@ function BlockContent({
       )}
 
       {block.type === 'signature' && (
-        <div className="p-8 rounded-b-lg">
-          <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center text-gray-500">
-            <span className="material-symbols-outlined text-3xl text-[color:var(--proposal-accent)] mb-2">draw</span>
+        <div style={getFrameStyle(block.data.style)}>
+          <div
+            className="border border-dashed rounded-lg p-6 text-center text-gray-500"
+            style={{
+              borderColor: block.data.style?.borderColor ?? '#cbd5e1',
+              backgroundColor: block.data.style?.backgroundColor ?? '#ffffff',
+            }}
+          >
+            <span className="material-symbols-outlined text-3xl mb-2" style={{ color: block.data.style?.iconColor ?? 'var(--proposal-accent)' }}>draw</span>
             <p className="text-sm font-semibold">{resolve(block.data.label)}</p>
             <p className="text-xs">
               {block.data.required ? t('proposalEditor.signature.required') : t('proposalEditor.signature.optional')}
